@@ -8,14 +8,19 @@ function mdl = kbstat(options)
 % kbstat(in, options)
 %
 % INPUT
-%   in          (char or table) Either the path to an Excel or CSV file,
-%               or a Matlab table containing the data. The table must be in
-%               long format, so one row per data point.
-%
 %   options     (struct) Structure containing parameters needed for 
 %               analysis. All fields must be char or string, and if a list
 %               is to be given, it must be a string of words separated by
 %               comma or semicolon.
+%
+%       inFile          (char) Path to an Excel or CSV file. The table
+%                       must be in long format, so one row per data point.
+%
+%       DataRaw         (char) Matlab table. must be in long format, so 
+%                       one row per data point.
+%
+%       Data            (char) Matlab table. must be in long format, so 
+%                       one row per data point.
 %
 %       y               Name of the dependent variable.
 %

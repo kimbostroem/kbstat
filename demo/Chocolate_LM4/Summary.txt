@@ -1,0 +1,48 @@
+Formula:
+	Distance ~ 1 + Chocolate * Gender + (1|Subject) + (1|Chocolate:Subject)
+Removed 0 outliers from 500 observations (0.0 %)
+	
+<strong>Generalized linear mixed-effects model fit by PL</strong>
+
+<strong>Model information:</strong>
+    Number of observations             500
+    Fixed effects coefficients           4
+    Random effects coefficients        750
+    Covariance parameters                3
+    Distribution                    Gamma 
+    Link                            Log   
+    FitMethod                       MPL   
+
+<strong>Formula:</strong>
+    Distance ~ 1 + Chocolate*Gender + (1 | Subject) + (1 | Chocolate:Subject)
+
+<strong>Model fit statistics:</strong>
+    AIC                  BIC                  LogLikelihood       Deviance         
+    -3164.41381135622    -3134.91155466727    1589.20690567811    -3178.41381135622
+
+<strong>Fixed effects coefficients (95% CIs):</strong>
+    Name                                    Estimate                 SE                      tStat                DF 
+    {'(Intercept)'                 }             1.95492230469437     0.00329987558823052      592.42303305824    496
+    {'Chocolate_with'              }        -0.000142672852740951    6.41285893819543e-05    -2.22479324925085    496
+    {'Gender_female'               }          -0.0988546109500221     0.00329987558823052    -29.9570721098096    496
+    {'Chocolate_with:Gender_female'}        -0.000758601338083827    6.41285893819543e-05    -11.8293782132887    496
+
+
+    pValue                   Lower                    Upper                
+                        0         1.94843884679874            1.96140576259
+       0.0265442496616475    -0.000268670029921451    -1.66756755604524e-05
+    2.48699735004176e-113        -0.10533806884565      -0.0923711530543946
+     1.29694909436976e-28    -0.000884598515264326    -0.000632604160903328
+
+<strong>Random effects covariance parameters:</strong>
+Group: Subject (250 Levels)
+    Name1                  Name2                  Type           Estimate          
+    {'(Intercept)'}        {'(Intercept)'}        {'std'}        0.0511117984546262
+
+Group: Chocolate:Subject (500 Levels)
+    Name1                  Name2                  Type           Estimate            
+    {'(Intercept)'}        {'(Intercept)'}        {'std'}        0.000559303290605368
+
+Group: Error
+    Name                        Estimate           
+    {'sqrt(Dispersion)'}        0.00128886318034742
