@@ -353,7 +353,13 @@ options.Data = Data;
 if isfield(options, 'constraint')
     myConstraint = options.constraint;
     parts = strsplit(myConstraint);
-    myVar = parts{1};
+    constraintVar = parts{1};
+    if ~isfield(Data, constraintVar)
+        tmpVar = constraintVar;
+        Data.(constraintVar) = DataRaw.(constraintVar);
+    else
+        tmpVar = '';
+    end
     cmd = sprintf('Data.%s', myConstraint);
     idx = eval(cmd);
     if any(idx)
@@ -361,14 +367,17 @@ if isfield(options, 'constraint')
     else
         warning('Constraint %s cannot be fulfilled -> leave data unchanged', cmd);
     end
-    nLevels = length(unique(Data.(myVar)));
+    nLevels = length(unique(Data.(constraintVar)));
     switch nLevels
         case 0
             warning('x "%s" has no levels left on constraint "%s" -> remove x');
-            x = setdiff(x, myVar);
+            x = setdiff(x, constraintVar);
         case 1
             warning('x "%s" has only 1 level left on constraint "%s" -> remove x');
-            x = setdiff(x, myVar);
+            x = setdiff(x, constraintVar);
+    end
+    if ~isempty(tmpVar)
+        Data = removevars(Data, tmpVar);
     end
 end
 
@@ -847,7 +856,11 @@ if isPlot
             title(titleStr, 'Interpreter', 'none');
 
             % y-axis label
-            ylabel(sprintf('%s [%s]', y, yUnits), 'Interpreter', 'none');
+            if isempty(yUnits)
+                ylabel(sprintf('%s', y, yUnits), 'Interpreter', 'none');
+            else
+                ylabel(sprintf('%s [%s]', y, yUnits), 'Interpreter', 'none');
+            end
         end
     end
 
