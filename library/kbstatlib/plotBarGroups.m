@@ -1,4 +1,4 @@
-function [barPositions, ylimits] = plotBarGroups(values, members, groups, errorBottom, errorTop, formatSpec)
+function [barPositions, ylimits] = plotBarGroups(values, members, groups, errorBottom, errorTop, memberName, groupName, formatSpec)
 
 if nargin < 6
     formatSpec = '%.3f';
@@ -11,12 +11,12 @@ if nargin < 4
     errorBottom = [];
 end
 
-if ~iscategorical(members)
-    members = reordercats(categorical(members), members);
-end
-if ~iscategorical(groups)
-    groups = reordercats(categorical(groups), groups);
-end
+members = strcat(memberName, {' = '}, char(members));
+groups = strcat(groupName, {' = '}, char(groups));
+
+members = string(members);
+groups = string(groups);
+
 nMembers = length(members);
 nGroups = length(groups);
 barPosAmp = 0.3682626 - 0.3298725 * exp(-0.407004 * (nMembers-1)); % position amplitude

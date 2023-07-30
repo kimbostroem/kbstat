@@ -382,13 +382,13 @@ end
 
 % 1st factor = member variable
 memberVar = factors{1};
-members = unique(Data.(memberVar), 'stable');
+members = unique(Data.(memberVar));
 nMembers = length(members);
 
 % 2nd factor = group variable
 if length(factors) > 1
     groupVar = factors{2};
-    groups = unique(Data.(groupVar), 'stable');
+    groups = unique(Data.(groupVar));
     nGroups = length(groups);
 else
     groups = string(factors{1});
@@ -398,7 +398,7 @@ end
 % 3rd factor = column variable
 if length(factors) > 2
     colVar = factors{3};
-    cols = unique(Data.(colVar), 'stable');
+    cols = unique(Data.(colVar));
     nCols = length(cols);
 else
     colVar = 'none';
@@ -409,7 +409,7 @@ end
 % 4th factors = row variable
 if length(factors) > 3
     rowVar = factors{4};
-    rows = unique(Data.(rowVar), 'stable');
+    rows = unique(Data.(rowVar));
     nRows = length(rows);
 else
     rowVar = 'none';
@@ -809,7 +809,7 @@ if isPlot
             myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);
             myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers); 
             myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
-            barPositions = plotBarGroups(myBarValues, members, groups, myBarErrorsBottom, myBarErrorsTop, 'none');
+            barPositions = plotBarGroups(myBarValues, members, groups, myBarErrorsBottom, myBarErrorsTop, memberVar, groupVar, 'none');
             if nGroups > 1
                 leg = legend(gca,'Location', legendLocation);
                 set(leg,'AutoUpdate','off');

@@ -1,5 +1,5 @@
 options = struct;
-options.inFile = 'Chocolate_LM4.xlsx';
+options.inFile = '../Chocolate_LM4.xlsx';
 options.y = 'Distance';
 options.yUnits = 'm';
 options.x = 'Chocolate, Gender';
