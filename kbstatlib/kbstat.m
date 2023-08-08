@@ -130,6 +130,14 @@ function mdl = kbstat(options)
 %                       output folder defaults to the local folder.
 %
 %       isPlot          Plot data as grouped bars with significance brackets
+%       errorBars       What the error bars indicate. This also defines 
+%                       what the bar height indicates
+%                       'std'   Standard deviation. Bar height is mean
+%                       'se'    Standard error. Bar height is the mean
+%                       'ci95'  95% confidence interval. Bar height is the 
+%                               mean
+%                       'q25'   25% and 75% quantiles. Bar height is the 
+%                               median, which is the 50% quantile
 %
 % OUTPUT
 %   mdl                 (Generalized linear mixed-effects model) Result from linear model fit
@@ -271,6 +279,12 @@ if isfield(options, 'isPlot')
     isPlot = getValue(options.isPlot);
 else
     isPlot = true;
+end
+
+if isfield(options, 'errorBars')
+    errorBars = lower(options.errorBars);
+else
+    errorBars = 'std';
 end
 
 % legend location
@@ -705,23 +719,45 @@ for iRow = 1:nRows
                 end
 
                 bar_data = Data(idx, :);
-                values = bar_data.(y);
-                bar_values(iRow, iCol, iGroup, iMember) = median(values, 'omitnan');
-                bar_errorBottom(iRow, iCol, iGroup, iMember) = quantile(values, 0.25);
-                bar_errorTop(iRow, iCol, iGroup, iMember) = quantile(values, 0.75);
+                values = bar_data.(y);                
                 if nGroups > 1
                     statsRow.(groupVar) = string(group);
                 end
                 statsRow.(memberVar) = string(member);
                 statsRow.N = length(values(~isnan(values)));
-                statsRow.median = bar_values(iRow, iCol, iGroup, iMember);
-                statsRow.dQ25 = bar_errorBottom(iRow, iCol, iGroup, iMember) - statsRow.median;
-                statsRow.dQ75 = bar_errorTop(iRow, iCol, iGroup, iMember) - statsRow.median;
+                statsRow.median = median(values, 'omitnan');
+                statsRow.q25 = quantile(values, 0.25);
+                statsRow.q75 = quantile(values, 0.75);
                 statsRow.mean = mean(values, 'omitnan');
                 statsRow.std = std(values, 'omitnan');
                 statsRow.SE = statsRow.std / sqrt(statsRow.N);
                 statsRow.RE = statsRow.SE / statsRow.mean * 100;
+                tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
+                ci95 = statsRow.mean + tci95 * statsRow.SE;  
+                statsRow.ci95_1 = ci95(1);
+                statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
+                % plot values
+                switch errorBars
+                    case 'std'
+                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.std;
+                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.std;
+                    case 'se'
+                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.SE;
+                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.SE;
+                    case 'q25'
+                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.median;
+                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
+                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
+                    case 'ci95'
+                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
+                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
+                end
+                
+                
             end
 
             % get post-hoc p-values
