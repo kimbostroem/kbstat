@@ -313,50 +313,14 @@ end
 
 fprintf('Performing Linear Model analysis for %s...\n', y);
 
-
-%% Make variables that are non-numeric or integer, categorical
-
-% init categories
-factors = {};
-
-% get subject variable
-if ~isempty(id)
-    myIV = id;
-    myLevels = unique(DataRaw.(id));
-    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0))
-        Data.(myIV) = categorical(DataRaw.(myIV)); % make values categorical
-    else
-        Data.(myIV) = DataRaw.(myIV); % adopt continuous values
-    end
-end
-
-% get independent variables
-for iIV = 1:length(x)
-    myIV = x{iIV};
-    myLevels = unique(DataRaw.(myIV));
-    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as ordinal
-        Data.(myIV) = categorical(DataRaw.(myIV), 'Ordinal', true);
-        factors = [factors; myIV]; %#ok<AGROW>
-    elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
-        Data.(myIV) = DataRaw.(myIV); % overtake continuous values
-    else
-        Data.(myIV) = categorical(DataRaw.(myIV)); % else -> consider as categorical
-        factors = [factors; myIV]; %#ok<AGROW>
-    end
-end
-
-% get response variable
-Data.(y) = DataRaw.(y);
-
-% store Data table in options
-options.Data = Data;
-
 %% Apply constraint, if given
+
+DataConstraint = DataRaw;
 
 if isfield(options, 'constraint')
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '|'});
-    allIdx = true(size(Data, 1), 1);
+    allIdx = true(size(DataConstraint, 1), 1);
     auxVars = {};
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
@@ -364,15 +328,15 @@ if isfield(options, 'constraint')
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
         compVar = strtrim(matches{1});
-        if ~ismember(constraintVar, Data.Properties.VariableNames)
+        if ~ismember(constraintVar, DataConstraint.Properties.VariableNames)
             auxVar = constraintVar;
-            Data.(constraintVar) = DataRaw.(constraintVar);
+            DataConstraint.(constraintVar) = DataRaw.(constraintVar);
             auxVars = [auxVars; auxVar]; %#ok<AGROW>
         end
-        constraintVals = Data.(constraintVar);
-        if isordinal(Data.(constraintVar))
+        constraintVals = DataConstraint.(constraintVar);
+        if isordinal(DataConstraint.(constraintVar))
             constraintVals = str2double(string(constraintVals));
-        elseif iscell(Data.(constraintVar))
+        elseif iscell(DataConstraint.(constraintVar))
             constraintVals = string(constraintVals);
         end
         switch compVar
@@ -391,11 +355,11 @@ if isfield(options, 'constraint')
         end        
     end
     if any(allIdx)
-        Data = Data(allIdx, :);
+        DataConstraint = DataConstraint(allIdx, :);
     else
         warning('Constraint %s cannot be fulfilled -> leave data unchanged', cmd);
     end
-    nLevels = length(unique(Data.(constraintVar)));
+    nLevels = length(unique(DataConstraint.(constraintVar)));
     switch nLevels
         case 0
             fprintf('Variable "%s" has no levels left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
@@ -405,10 +369,46 @@ if isfield(options, 'constraint')
             x = setdiff(x, constraintVar);
     end
     for iVar = 1:length(auxVars)
-        Data = removevars(Data, auxVars{iVar});
+        DataConstraint = removevars(DataConstraint, auxVars{iVar});
     end
 end
 
+%% Make variables that are non-numeric or integer, categorical
+
+% init categories
+factors = {};
+
+% get subject variable
+if ~isempty(id)
+    myIV = id;
+    myLevels = unique(DataRaw.(id));
+    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0))
+        Data.(myIV) = categorical(DataConstraint.(myIV)); % make values categorical
+    else
+        Data.(myIV) = DataConstraint.(myIV); % adopt continuous values
+    end
+end
+
+% get independent variables
+for iIV = 1:length(x)
+    myIV = x{iIV};
+    myLevels = unique(DataConstraint.(myIV));
+    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as ordinal
+        Data.(myIV) = categorical(DataConstraint.(myIV), 'Ordinal', true);
+        factors = [factors; myIV]; %#ok<AGROW>
+    elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
+        Data.(myIV) = DataConstraint.(myIV); % overtake continuous values
+    else
+        Data.(myIV) = categorical(DataConstraint.(myIV)); % else -> consider as categorical
+        factors = [factors; myIV]; %#ok<AGROW>
+    end
+end
+
+% get response variable
+Data.(y) = DataConstraint.(y);
+
+% store Data table in options
+options.Data = Data;
 
 %% Create output folder, if not existing
 if ~isfolder(outDir)
@@ -455,8 +455,7 @@ else
 end
 
 % save Data table
-fpath = fullfile(outDir, 'Data.xlsx');
-writetable(Data, fpath, 'WriteMode', 'replacefile');
+saveTable(Data, 'Data', {'csv'}, outDir);
 
 %% Fit linear model and perform ANOVA
 
@@ -568,12 +567,10 @@ if isFitted
     fclose(fid);
 
     % save raw Data table
-    fpath = fullfile(outDir, 'DataRaw.xlsx');
-    writetable(DataRaw, fpath, 'WriteMode', 'replacefile');
+    saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
 
     % save ANOVA table
-    fpath = fullfile(outDir, 'Anova.xlsx');
-    writetable(anovaTable, fpath, 'WriteMode', 'replacefile');
+    saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
     disp(anovaTable) % display table
 
     %% Plot diagnostics
@@ -918,8 +915,7 @@ if isPlot
 end
 
 % save descriptive statistics
-fpath = fullfile(outDir, 'Statistics.xlsx');
-writetable(Stats, fpath, 'WriteMode', 'replacefile');
+saveTable(Stats, 'Statistics', {'xlsx'}, outDir);
 disp(Stats) % display table
 
 %% Post-hoc table
@@ -969,8 +965,7 @@ for iPair = 1:nPairs
 end
 
 % save table
-fpath = fullfile(outDir, 'Posthoc.xlsx');
-writetable(posthocTable, fpath, 'WriteMode', 'replacefile');
+saveTable(posthocTable, 'Posthoc', {'xlsx'}, outDir);
 disp(posthocTable); % display table
 
 % close all figures
