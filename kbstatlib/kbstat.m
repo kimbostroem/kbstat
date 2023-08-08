@@ -356,9 +356,9 @@ options.Data = Data;
 if isfield(options, 'constraint')
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '&&', '|', '||'});
-    allIdx = false(size(Data, 1), 1);
+    allIdx = true(size(Data, 1), 1);
     for iCond = 1:length(conds)
-        cond = strtrim(conds{iCond});        
+        cond = strtrim(conds{iCond});
         [parts, matches] = strsplit(cond, {'=', '==', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
@@ -378,16 +378,15 @@ if isfield(options, 'constraint')
                 idx = (constraintVals == constraintVal);
             otherwise
                 cmd = sprintf('constraintVals %s str2double(constraintVal)', compVar);
-                % cmd = sprintf('Data.%s', cond);
                 idx = eval(cmd);
         end
         if length(ops) > iCond-1
             op = ops{iCond-1};
-            cmd = sprintf('%s %s %s', allIdx, op, idx);
+            cmd = sprintf('allIdx %s idx', op);
             allIdx = eval(cmd);
         else
             allIdx = idx;
-        end        
+        end
     end
     if any(allIdx)
         Data = Data(allIdx, :);
@@ -453,9 +452,13 @@ else
     nRows = 1;
 end
 
+% save Data table
+fpath = fullfile(outDir, 'Data.xlsx');
+writetable(Data, fpath, 'WriteMode', 'replacefile');
 
 %% Fit linear model and perform ANOVA
 
+isFitted = 1;
 anovaTable = table; % init ANOVA table
 
 productTerm = strjoin(interact, ' * ');
@@ -496,155 +499,153 @@ catch ME
     message = sprintf('%s', ME.message);
     fprintf('The linear model fit returned an error:\n\t%s\n', message);
     fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-    return
+    isFitted = 0;
 end
 
-if removeOutliers
-    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-    mdlOutliers = isoutlier(mdlResiduals, 'ThresholdFactor', thresholdFactor);
-    nOutliers = sum(mdlOutliers);
-    fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
-    if nOutliers > 0
-        fprintf('Re-fitting model...\n');
-        Data = Data(~mdlOutliers,:);
-        % re-fit linear model
-        try
-            mdl = fitglme(Data, formula, ...
-                'DummyVarCoding', 'effects', ...
-                'FitMethod', fitMethod, ...
-                'Distribution', distribution, ...
-                'Link', link);
-        catch ME
-            message = sprintf('%s', ME.message);
-            fprintf('The linear model fit returned an error after removing outliers:\n\t%s\n', message);
-            fprintf('Please try again, using a higher "thresholdFactor" and/or fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-            return
+if isFitted
+
+    if removeOutliers
+        mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+        mdlOutliers = isoutlier(mdlResiduals, 'ThresholdFactor', thresholdFactor);
+        nOutliers = sum(mdlOutliers);
+        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
+        if nOutliers > 0
+            fprintf('Re-fitting model...\n');
+            Data = Data(~mdlOutliers,:);
+            % re-fit linear model
+            try
+                mdl = fitglme(Data, formula, ...
+                    'DummyVarCoding', 'effects', ...
+                    'FitMethod', fitMethod, ...
+                    'Distribution', distribution, ...
+                    'Link', link);
+            catch ME
+                message = sprintf('%s', ME.message);
+                fprintf('The linear model fit returned an error after removing outliers:\n\t%s\n', message);
+                fprintf('Please try again, using a higher "thresholdFactor" and/or fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
+                return
+            end
         end
+    else
+        nOutliers = 0;
     end
-else
-    nOutliers = 0;
+
+    % get ANOVA table from model fit
+    results = anova(mdl);
+
+    % print results of model fit into file
+    mdlOutput = formattedDisplayText(mdl);
+    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    fprintf(fid, 'Formula:\n\t%s\n', formula);
+    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
+    fprintf(fid, '\t%s', mdlOutput);
+    fclose(fid);
+
+    anovaTable.Term = string(results.Term(2:end));
+    anovaTable.DF1 = results.DF1(2:end);
+    anovaTable.DF2 = results.DF2(2:end);
+    anovaTable.F = results.FStat(2:end);
+    anovaTable.p = results.pValue(2:end);
+    anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
+    anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
+    anovaTable.significance = string(sigprint(anovaTable.p));
+
+    % save options
+    fpath = fullfile(outDir, 'options.mat');
+    save(fpath, 'options');
+    fpath = fullfile(outDir, 'makeOptions.m');
+    fid = fopen(fpath, 'w+');
+    fields = fieldnames(options);
+    fields = setdiff(fields, 'Data'); % remove "Data" from options
+    fields = setdiff(fields, 'DataRaw'); % remove "DataRaw" from options
+    paramFields = sort(fields); % sort fields alphabetically
+    for iField = 1:length(paramFields)
+        field = paramFields{iField};
+        fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+    end
+    fclose(fid);
+
+    % save raw Data table
+    fpath = fullfile(outDir, 'DataRaw.xlsx');
+    writetable(DataRaw, fpath, 'WriteMode', 'replacefile');
+
+    % save ANOVA table
+    fpath = fullfile(outDir, 'Anova.xlsx');
+    writetable(anovaTable, fpath, 'WriteMode', 'replacefile');
+    disp(anovaTable) % display table
+
+    %% Plot diagnostics
+
+    % Since raw residuals for generalized linear mixed-effects models do not
+    % have a constant variance across observations, we use the conditional
+    % Pearson residuals instead.
+
+    panelWidth = 300;
+    panelHeight = 300;
+    nPanels = 6;
+    nPanelRows = 2;
+    nPanelCols = ceil(nPanels/nPanelRows);
+    figWidth = nPanelCols * panelWidth;
+    figHeight = nPanelRows * panelHeight;
+    figName = 'Diagnostics';
+    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    iPanel = 0;
+
+    % histogram
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+    h = histfit(mdlResiduals);
+    h(1).EdgeColor = 'none';
+    h(2).Color = [1 0 0];
+    h(2).LineStyle = ':';
+    hold on
+    resFit = fitdist(mdlResiduals, 'Normal');
+    xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
+    ylims = ylim;
+    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
+    title('Histogram of residuals');
+    xlabel('Residuals');
+
+    % probability
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
+
+    % symmetry
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
+
+    % fitted-response
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    F = fitted(mdl);
+    R = response(mdl);
+    plot(R, F, 'rx');
+    ylabel('Fitted');
+    title('Fitted vs. Response');
+    xlabel('Response');
+
+    % residuals vs fitted
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
+
+    % lagged residuals
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols,iPanel);
+    plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
+
+
+    % save figure
+    set(fig, 'PaperPositionMode', 'auto');
+    set(fig, 'PaperUnits', 'points');
+    set(fig, 'PaperSize', [figWidth figHeight]);
+    set(fig, 'renderer', 'painters');
+    print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+
 end
-
-% get ANOVA table from model fit
-results = anova(mdl);
-
-% print results of model fit into file
-mdlOutput = formattedDisplayText(mdl);
-fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
-fprintf(fid, 'Formula:\n\t%s\n', formula);
-fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
-fprintf(fid, '\t%s', mdlOutput);
-fclose(fid);
-
-anovaTable.Term = string(results.Term(2:end));
-anovaTable.DF1 = results.DF1(2:end);
-anovaTable.DF2 = results.DF2(2:end);
-anovaTable.F = results.FStat(2:end);
-anovaTable.p = results.pValue(2:end);
-anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
-anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
-anovaTable.significance = string(sigprint(anovaTable.p));
-
-% save options
-fpath = fullfile(outDir, 'options.mat');
-save(fpath, 'options');
-fpath = fullfile(outDir, 'makeOptions.m');
-fid = fopen(fpath, 'w+');
-fields = fieldnames(options);
-fields = setdiff(fields, 'Data'); % remove "Data" from options
-fields = setdiff(fields, 'DataRaw'); % remove "DataRaw" from options
-paramFields = sort(fields); % sort fields alphabetically
-for iField = 1:length(paramFields)
-    field = paramFields{iField};
-    fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
-end
-fclose(fid);
-
-% save raw Data table
-fpath = fullfile(outDir, 'DataRaw.xlsx');
-writetable(DataRaw, fpath, 'WriteMode', 'replacefile');
-
-% save Data table
-fpath = fullfile(outDir, 'Data.xlsx');
-writetable(Data, fpath, 'WriteMode', 'replacefile');
-
-% save ANOVA table
-fpath = fullfile(outDir, 'Anova.xlsx');
-writetable(anovaTable, fpath, 'WriteMode', 'replacefile');
-disp(anovaTable) % display table
-
-
-%% Plot diagnostics
-
-% Since raw residuals for generalized linear mixed-effects models do not
-% have a constant variance across observations, we use the conditional
-% Pearson residuals instead.
-
-panelWidth = 300;
-panelHeight = 300;
-nPanels = 6;
-nPanelRows = 2;
-nPanelCols = ceil(nPanels/nPanelRows);
-figWidth = nPanelCols * panelWidth;
-figHeight = nPanelRows * panelHeight;
-figName = 'Diagnostics';
-fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
-iPanel = 0;
-
-% histogram
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-h = histfit(mdlResiduals);
-h(1).EdgeColor = 'none';
-h(2).Color = [1 0 0];
-h(2).LineStyle = ':';
-hold on
-resFit = fitdist(mdlResiduals, 'Normal');
-xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
-ylims = ylim;
-rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
-title('Histogram of residuals');
-xlabel('Residuals');
-
-% probability
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
-
-% symmetry
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
-
-% fitted-response
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-F = fitted(mdl);
-R = response(mdl);
-plot(R, F, 'rx');
-ylabel('Fitted');
-title('Fitted vs. Response');
-xlabel('Response');
-
-% residuals vs fitted
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
-
-% lagged residuals
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols,iPanel);
-plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
-
-
-% save figure
-set(fig, 'PaperPositionMode', 'auto');
-set(fig, 'PaperUnits', 'points');
-set(fig, 'PaperSize', [figWidth figHeight]);
-set(fig, 'renderer', 'painters');
-print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-
 
 %% Calc plot data
 
