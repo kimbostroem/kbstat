@@ -8,7 +8,7 @@ function mdl = kbstat(options)
 % kbstat(in, options)
 %
 % INPUT
-%   options     (struct) Structure containing parameters needed for 
+%   options     (struct) Structure containing parameters needed for
 %               analysis. All fields must be char or string, and if a list
 %               is to be given, it must be a string of words separated by
 %               comma or semicolon.
@@ -16,10 +16,10 @@ function mdl = kbstat(options)
 %       inFile          (char) Path to an Excel or CSV file. The table
 %                       must be in long format, so one row per data point.
 %
-%       DataRaw         (char) Matlab table. must be in long format, so 
+%       DataRaw         (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
-%       Data            (char) Matlab table. must be in long format, so 
+%       Data            (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
 %       y               Name of the dependent variable.
@@ -34,10 +34,10 @@ function mdl = kbstat(options)
 %                       categorical, i.e. as factors. Only factors
 %                       are included in the barplot chart.
 %
-%       id              Name of the subject variable. 
+%       id              Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
-%       within          List of within-subject variables, separated by 
+%       within          List of within-subject variables, separated by
 %                       comma or semicolon.  Within-subject variables are
 %                       nested within the subject variable, i.e. they vary
 %                       for each subject. Variables that are not declared
@@ -45,15 +45,15 @@ function mdl = kbstat(options)
 %                       i.e. they vary only between, not within, subjects.
 %                       "within" can be a subset of "x", or else its
 %                       members are added to "x". Example:
-%                       options.id = 'subject' 
-%                       options.x = 'time, age, sex' 
+%                       options.id = 'subject'
+%                       options.x = 'time, age, sex'
 %                       options.within = 'dose'.
 %
 %       interact        List of variables whose interaction with each other
 %                       is to be analyzed. Can be a subset of "x", or else
 %                       its members are added to "x". Example:
-%                       options.id = 'subject' 
-%                       options.x = 'time, dose' 
+%                       options.id = 'subject'
+%                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %
 %       fitMethod       Fit method used for the GLM fit.
@@ -326,7 +326,7 @@ if ~isempty(id)
     if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0))
         Data.(myIV) = categorical(DataRaw.(myIV)); % make values categorical
     else
-        Data.(myIV) = DataRaw.(myIV); % adopt continuous values    
+        Data.(myIV) = DataRaw.(myIV); % adopt continuous values
     end
 end
 
@@ -334,11 +334,14 @@ end
 for iIV = 1:length(x)
     myIV = x{iIV};
     myLevels = unique(DataRaw.(myIV));
-    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0))
-        Data.(myIV) = categorical(DataRaw.(myIV)); % make values categorical
+    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as ordinal
+        Data.(myIV) = categorical(DataRaw.(myIV), 'Ordinal', true);
         factors = [factors; myIV]; %#ok<AGROW>
+    elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
+        Data.(myIV) = DataRaw.(myIV); % overtake continuous values
     else
-        Data.(myIV) = DataRaw.(myIV); % adopt continuous values
+        Data.(myIV) = categorical(DataRaw.(myIV)); % else -> consider as categorical
+        factors = [factors; myIV]; %#ok<AGROW>
     end
 end
 
@@ -351,19 +354,43 @@ options.Data = Data;
 %% Apply constraint, if given
 
 if isfield(options, 'constraint')
-    myConstraint = options.constraint;
-    parts = strsplit(myConstraint);
-    constraintVar = parts{1};
-    if ~isfield(Data, constraintVar)
-        tmpVar = constraintVar;
-        Data.(constraintVar) = DataRaw.(constraintVar);
-    else
-        tmpVar = '';
+    constraint = options.constraint;
+    [conds, ops] = strsplit(constraint, {'&', '&&', '|', '||'});
+    allIdx = false(size(Data, 1), 1);
+    for iCond = 1:length(conds)
+        cond = strtrim(conds{iCond});        
+        [parts, matches] = strsplit(cond, {'=', '==', '<', '<=', '>', '>='});
+        constraintVar = strtrim(parts{1});
+        constraintVal = strtrim(parts{2});
+        compVar = strtrim(matches{1});
+        if ~ismember(constraintVar, Data.Properties.VariableNames)
+            tmpVar = constraintVar;
+            Data.(constraintVar) = DataRaw.(constraintVar);
+        else
+            tmpVar = '';
+        end
+        constraintVals = Data.(constraintVar);
+        if isordinal(Data.(constraintVar))
+            constraintVals = str2double(string(constraintVals));
+        end
+        switch compVar
+            case {'=', '=='}
+                idx = (constraintVals == constraintVal);
+            otherwise
+                cmd = sprintf('constraintVals %s str2double(constraintVal)', compVar);
+                % cmd = sprintf('Data.%s', cond);
+                idx = eval(cmd);
+        end
+        if length(ops) > iCond-1
+            op = ops{iCond-1};
+            cmd = sprintf('%s %s %s', allIdx, op, idx);
+            allIdx = eval(cmd);
+        else
+            allIdx = idx;
+        end        
     end
-    cmd = sprintf('Data.%s', myConstraint);
-    idx = eval(cmd);
-    if any(idx)
-        Data = Data(idx, :);
+    if any(allIdx)
+        Data = Data(allIdx, :);
     else
         warning('Constraint %s cannot be fulfilled -> leave data unchanged', cmd);
     end
@@ -732,7 +759,7 @@ for iRow = 1:nRows
                         val1 = Data.(responseVariable)(L1);
                         val2 = Data.(responseVariable)(L2);
                         [~, bar_p(iRow, iCol, iGroup, iPair)] = ttest2(val1, val2);
-                        
+
                         % calc main contrasts
                         L1 = (Data.(memberVar) == pair(1));
                         L2 = (Data.(memberVar) == pair(2));
@@ -816,7 +843,7 @@ if isPlot
 
             % plot panel
             myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);
-            myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers); 
+            myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers);
             myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
             barPositions = plotBarGroups(myBarValues, members, groups, myBarErrorsBottom, myBarErrorsTop, memberVar, groupVar, 'none');
             if nGroups > 1
@@ -937,7 +964,7 @@ for iPair = 1:nPairs
                 posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
             end
         end
-    end    
+    end
 end
 
 % save table
@@ -951,9 +978,9 @@ close all
 end
 
 function value = getValue(in)
-    if ischar(in) || isstring(in)
-        value = str2num(in); %#ok<ST2NM> 
-    else
-        value = in;
-    end
+if ischar(in) || isstring(in)
+    value = str2num(in); %#ok<ST2NM>
+else
+    value = in;
+end
 end
