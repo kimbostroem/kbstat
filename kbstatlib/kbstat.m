@@ -644,7 +644,6 @@ if isFitted
     set(fig, 'PaperPositionMode', 'auto');
     set(fig, 'PaperUnits', 'points');
     set(fig, 'PaperSize', [figWidth figHeight]);
-    set(fig, 'renderer', 'painters');
     print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
 
 end
@@ -912,7 +911,6 @@ if isPlot
     set(fig, 'PaperPositionMode', 'auto');
     set(fig, 'PaperUnits', 'points');
     set(fig, 'PaperSize', [figWidth figHeight]);
-    set(fig, 'renderer', 'painters');
     print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
     print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
     saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
