@@ -355,7 +355,7 @@ options.Data = Data;
 
 if isfield(options, 'constraint')
     constraint = options.constraint;
-    [conds, ops] = strsplit(constraint, {'&', '&&', '|', '||'});
+    [conds, ops] = strsplit(constraint, {'&', '|'});
     allIdx = true(size(Data, 1), 1);
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
@@ -372,6 +372,8 @@ if isfield(options, 'constraint')
         constraintVals = Data.(constraintVar);
         if isordinal(Data.(constraintVar))
             constraintVals = str2double(string(constraintVals));
+        elseif iscell(Data.(constraintVar))
+            constraintVals = string(string(constraintVals));
         end
         switch compVar
             case {'=', '=='}
@@ -380,7 +382,7 @@ if isfield(options, 'constraint')
                 cmd = sprintf('constraintVals %s str2double(constraintVal)', compVar);
                 idx = eval(cmd);
         end
-        if length(ops) > iCond-1
+        if  iCond > 1 && iCond-1 <= length(ops)
             op = ops{iCond-1};
             cmd = sprintf('allIdx %s idx', op);
             allIdx = eval(cmd);
