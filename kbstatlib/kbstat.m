@@ -357,6 +357,7 @@ if isfield(options, 'constraint')
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '|'});
     allIdx = true(size(Data, 1), 1);
+    auxVars = {};
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
         [parts, matches] = strsplit(cond, {'=', '==', '<', '<=', '>', '>='});
@@ -364,16 +365,15 @@ if isfield(options, 'constraint')
         constraintVal = strtrim(parts{2});
         compVar = strtrim(matches{1});
         if ~ismember(constraintVar, Data.Properties.VariableNames)
-            tmpVar = constraintVar;
+            auxVar = constraintVar;
             Data.(constraintVar) = DataRaw.(constraintVar);
-        else
-            tmpVar = '';
+            auxVars = [auxVars; auxVar]; %#ok<AGROW>
         end
         constraintVals = Data.(constraintVar);
         if isordinal(Data.(constraintVar))
             constraintVals = str2double(string(constraintVals));
         elseif iscell(Data.(constraintVar))
-            constraintVals = string(string(constraintVals));
+            constraintVals = string(constraintVals);
         end
         switch compVar
             case {'=', '=='}
@@ -388,7 +388,7 @@ if isfield(options, 'constraint')
             allIdx = eval(cmd);
         else
             allIdx = idx;
-        end
+        end        
     end
     if any(allIdx)
         Data = Data(allIdx, :);
@@ -398,14 +398,14 @@ if isfield(options, 'constraint')
     nLevels = length(unique(Data.(constraintVar)));
     switch nLevels
         case 0
-            warning('x "%s" has no levels left on constraint "%s" -> remove x');
+            fprintf('Variable "%s" has no levels left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
             x = setdiff(x, constraintVar);
         case 1
-            warning('x "%s" has only 1 level left on constraint "%s" -> remove x');
+            fprintf('Variable "%s" has only 1 level left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
             x = setdiff(x, constraintVar);
     end
-    if ~isempty(tmpVar)
-        Data = removevars(Data, tmpVar);
+    for iVar = 1:length(auxVars)
+        Data = removevars(Data, auxVars{iVar});
     end
 end
 
