@@ -176,8 +176,7 @@ end
 options.DataRaw = DataRaw;
 nObservationsRaw = size(DataRaw, 1);
 
-% init Data table
-Data = table;
+DataConstraint = DataRaw;
 
 % all table variables
 tableVars = DataRaw.Properties.VariableNames;
@@ -251,7 +250,7 @@ else % no parameter given
         case 'lognormal'
             link = 'identity';
             responseVariable = sprintf('log%s', y); % re-define response variable to log of y
-            Data.(responseVariable) = log(DataRaw.(y)); % create new column with log'd data
+            DataConstraint.(responseVariable) = log(DataRaw.(y)); % create new column with log'd data
             distribution = 'normal'; % re-set distribution to 'normal'
             fprintf('Using normal-distributed logarithm of y "%s"\n', y); % tell user what's happening
         case 'binomial'
@@ -315,8 +314,6 @@ fprintf('Performing Linear Model analysis for %s...\n', y);
 
 %% Apply constraint, if given
 
-DataConstraint = DataRaw;
-
 if isfield(options, 'constraint')
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '|'});
@@ -375,6 +372,9 @@ end
 
 %% Make variables that are non-numeric or integer, categorical
 
+% init Data table
+Data = table;
+
 % init categories
 factors = {};
 
@@ -406,6 +406,7 @@ end
 
 % get response variable
 Data.(y) = DataConstraint.(y);
+Data.(responseVariable) = DataConstraint.(responseVariable);
 
 % store Data table in options
 options.Data = Data;
