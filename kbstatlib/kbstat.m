@@ -357,6 +357,10 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [parts, matches] = strsplit(cond, {'=', '==', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
+        [num, isNum] = str2num(constraintVal);
+        if isNum
+            constraintVal = num;
+        end
         compVar = strtrim(matches{1});
         if ~ismember(constraintVar, DataConstraint.Properties.VariableNames)
             auxVar = constraintVar;
@@ -387,7 +391,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     if any(allIdx)
         DataConstraint = DataConstraint(allIdx, :);
     else
-        warning('Constraint %s cannot be fulfilled -> leave data unchanged', cmd);
+        warning('Constraint cannot be fulfilled -> leave data unchanged');
     end
     nLevels = length(unique(DataConstraint.(constraintVar)));
     switch nLevels
@@ -465,6 +469,7 @@ if length(factors) > 1
     groups = unique(Data.(groupVar), levelOrder);
     nGroups = length(groups);
 else
+    groupVar = '';
     groups = string(factors{1});
     nGroups = 1;
 end
