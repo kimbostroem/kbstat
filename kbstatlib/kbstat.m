@@ -448,8 +448,8 @@ Data.(responseVariable) = DataConstraint.(responseVariable);
 % store Data table in options
 options.Data = Data;
 
-% remove duplicate rows (can be caused by constraints on a redundant higher-level table
-Data = unique(Data,'rows');
+% % remove duplicate rows (can be caused by constraints on a redundant higher-level table
+% Data = unique(Data,'rows');
 
 %% Create output folder, if not existing
 if ~isfolder(outDir)
