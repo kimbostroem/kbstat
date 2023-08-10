@@ -138,6 +138,12 @@ function mdl = kbstat(options)
 %                               mean
 %                       'q25'   25% and 75% quantiles. Bar height is the 
 %                               median, which is the 50% quantile
+%       levelOrder      The order in which the levels are displayed in the 
+%                       plots.
+%                       'sorted'    sorted alphanumerically (default)
+%                       'stable'    sorted in the order of occurrence in 
+%                                   the data table
+%       title           Title for plots
 %
 % OUTPUT
 %   mdl                 (Generalized linear mixed-effects model) Result from linear model fit
@@ -249,7 +255,7 @@ else % no parameter given
 end
 
 % link (for GLM)
-if isfield(options, 'link')
+if isfield(options, 'link') && ~isempty(options.link)
     link = options.link;
 else % no parameter given
     switch lower(distribution)
@@ -272,6 +278,13 @@ else % no parameter given
         otherwise
             error('Unknown distribution "%s"', distribution);
     end
+end
+
+% level order
+if isfield(options, 'levelOrder')
+    levelOrder = options.levelOrder;
+else
+    levelOrder = 'sorted';
 end
 
 % Flag to plot data
@@ -324,11 +337,17 @@ if ~isfolder(outDir)
     mkdir(outDir);
 end
 
+if isfield(options, 'title')
+    plotTitle = options.title;
+else
+    plotTitle = '';
+end
+
 fprintf('Performing Linear Model analysis for %s...\n', y);
 
 %% Apply constraint, if given
 
-if isfield(options, 'constraint')
+if isfield(options, 'constraint') && ~isempty(options.constraint)
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '|'});
     allIdx = true(size(DataConstraint, 1), 1);
@@ -374,10 +393,10 @@ if isfield(options, 'constraint')
     switch nLevels
         case 0
             fprintf('Variable "%s" has no levels left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
-            x = setdiff(x, constraintVar);
+            x = setdiff(x, constraintVar, 'stable');
         case 1
             fprintf('Variable "%s" has only 1 level left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
-            x = setdiff(x, constraintVar);
+            x = setdiff(x, constraintVar, 'stable');
     end
     for iVar = 1:length(auxVars)
         DataConstraint = removevars(DataConstraint, auxVars{iVar});
@@ -425,6 +444,9 @@ Data.(responseVariable) = DataConstraint.(responseVariable);
 % store Data table in options
 options.Data = Data;
 
+% remove duplicate rows (can be caused by constraints on a redundant higher-level table
+Data = unique(Data,'rows');
+
 %% Create output folder, if not existing
 if ~isfolder(outDir)
     mkdir(outDir);
@@ -434,13 +456,13 @@ end
 
 % 1st factor = member variable
 memberVar = factors{1};
-members = unique(Data.(memberVar));
+members = unique(Data.(memberVar), levelOrder);
 nMembers = length(members);
 
 % 2nd factor = group variable
 if length(factors) > 1
     groupVar = factors{2};
-    groups = unique(Data.(groupVar));
+    groups = unique(Data.(groupVar), levelOrder);
     nGroups = length(groups);
 else
     groups = string(factors{1});
@@ -450,7 +472,7 @@ end
 % 3rd factor = column variable
 if length(factors) > 2
     colVar = factors{3};
-    cols = unique(Data.(colVar));
+    cols = unique(Data.(colVar), levelOrder);
     nCols = length(cols);
 else
     colVar = 'none';
@@ -461,7 +483,7 @@ end
 % 4th factors = row variable
 if length(factors) > 3
     rowVar = factors{4};
-    rows = unique(Data.(rowVar));
+    rows = unique(Data.(rowVar), levelOrder);
     nRows = length(rows);
 else
     rowVar = 'none';
@@ -572,8 +594,8 @@ if isFitted
     fpath = fullfile(outDir, 'makeOptions.m');
     fid = fopen(fpath, 'w+');
     fields = fieldnames(options);
-    fields = setdiff(fields, 'Data'); % remove "Data" from options
-    fields = setdiff(fields, 'DataRaw'); % remove "DataRaw" from options
+    fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
+    fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
     paramFields = sort(fields); % sort fields alphabetically
     for iField = 1:length(paramFields)
         field = paramFields{iField};
@@ -603,6 +625,11 @@ if isFitted
     figHeight = nPanelRows * panelHeight;
     figName = 'Diagnostics';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    if ~isempty(plotTitle)
+        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none');
+    else
+        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none');
+    end
     iPanel = 0;
 
     % histogram
@@ -895,27 +922,27 @@ if isPlot
                 end
             end
 
+            % title
+            if ~isempty(plotTitle)
+                sgtitle(sprintf('Results for %s', plotTitle), 'interpreter', 'none');
+            end
             titleAdds = {};
-
             % 3rd x, if given
             if nCols > 1
                 col = cols(iCol);
                 titleAdds = [titleAdds, cellstr(sprintf('%s = %s', colVar, col))]; %#ok<AGROW>
             end
-
             % 4th x, if given
             if nRows > 1
                 row = rows(iRow);
                 titleAdds = [titleAdds, cellstr(sprintf('%s = %s', rowVar, row))]; %#ok<AGROW>
             end
-
             titleAddStr = strjoin(titleAdds, ', ');
             if ~isempty(titleAddStr)
                 titleStr = sprintf('%s (%s)', y, titleAddStr);
             else
                 titleStr = sprintf('%s', y);
             end
-
             title(titleStr, 'Interpreter', 'none');
 
             % y-axis label
