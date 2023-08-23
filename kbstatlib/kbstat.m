@@ -354,7 +354,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     auxVars = {};
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
-        [parts, matches] = strsplit(cond, {'=', '==', '<', '<=', '>', '>='});
+        [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
         [num, isNum] = str2num(constraintVal);
@@ -376,6 +376,8 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         switch compVar
             case {'=', '=='}
                 idx = (constraintVals == constraintVal);
+            case '~='
+                idx = (constraintVals ~= constraintVal);
             case '<'
                 idx = (constraintVals < constraintVal);
             case '<='
