@@ -376,9 +376,16 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         switch compVar
             case {'=', '=='}
                 idx = (constraintVals == constraintVal);
+            case '<'
+                idx = (constraintVals < constraintVal);
+            case '<='
+                idx = (constraintVals <= constraintVal);
+            case '>'
+                idx = (constraintVals > constraintVal);
+            case '>='
+                idx = (constraintVals >= constraintVal);
             otherwise
-                cmd = sprintf('constraintVals %s str2double(constraintVal)', compVar);
-                idx = eval(cmd);
+                error('No valid comparison operator ''%s''', compVar);
         end
         if  iCond > 1 && iCond-1 <= length(ops)
             op = ops{iCond-1};
