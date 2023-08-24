@@ -109,8 +109,10 @@ function mdl = kbstat(options)
 %                       multiply the outlier criterion.
 %                       OPTIONAL, default = 3
 %
-%       constraint      Constrain the data before analysis. Must be
-%                       of the form
+%       constraint      One or more restrictive constraints on the data before analysis. 
+%						Must be of the form
+%						'con1 & con2 & ...'
+%						where con1, con2, ... are conditions of the form
 %                       'variable == value'
 %                       'variable ~= value'
 %                       'variable < value'
@@ -121,7 +123,8 @@ function mdl = kbstat(options)
 %                       "variable" is an actual variable in the data table,
 %                       and "variable" is either an existing category, in
 %                       the case of categorical variables, or a numeric
-%                       value.
+%                       value. In the case of a category, the value must be put in 
+%						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset
 %
 %       outDir          Output folder for generated files.
@@ -157,6 +160,7 @@ function mdl = kbstat(options)
 %   options.interact = 'shoe, speed, joint';
 %   options.distribution = 'gamma';
 %   options.removeOutliers = 'true';
+%	options.constraint = 'speed < 2 & joint == "ankle_joint"'
 %   kbstat('path/to/Data.xlsx', options);
 %
 % (c) 2022 by Predimo GmbH
