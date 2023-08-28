@@ -726,6 +726,12 @@ bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
 bar_p = nan(nRows, nCols, nGroups, nPairs);
 main_p = nan(nPairs);
 
+% violin_values(nGroups, nMembers)=struct;%%%%%%
+
+maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.shoe==s1 & Data.speed==s2), repmat({'BF','MM','NS'},2,1), repmat({'20'; '25'},1,3), 'UniformOutput', false)),[],'all');
+violin_values = nan(nGroups, nMembers, maxNValues);%%%%%%
+
+
 % calc plot data and fill arrays
 for iRow = 1:nRows
 
@@ -782,6 +788,11 @@ for iRow = 1:nRows
                 statsRow.ci95_1 = ci95(1);
                 statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
+
+                % violin_values(iGroup,iMember).data = values;
+
+                violin_values(iGroup,iMember,1:length(values)) = values; %%%%%%%
+
                 % plot values
                 switch errorBars
                     case 'std'
@@ -912,7 +923,7 @@ if isPlot
 
     figWidth = nCols * panelWidth;
     figHeight = nRows * panelHeight;
-    figName = 'DataPlot';
+    figName = 'ViolinPlot';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
     for iRow = 1:nRows
 
@@ -923,52 +934,59 @@ if isPlot
             subplot(nRows, nCols, iPanel);
 
             % plot panel
-            myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);
-            myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers);
-            myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
-            barPositions = plotBarGroups(myBarValues, members, groups, myBarErrorsBottom, myBarErrorsTop, memberVar, groupVar, 'none');
-            if nGroups > 1
-                leg = legend(gca,'Location', legendLocation);
-                set(leg,'AutoUpdate','off');
-            end
-            for iGroup = 1:nGroups
-                for iPair = 1:nPairs
-                    pairIdx = pairIdxs(iPair, :);
-                    if bar_pCorr(iRow, iCol, iGroup, iPair) < 0.05
-                        sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iRow, iCol, iGroup, iPair));
-                    end
-                end
-            end
+            % myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);%%%%%%
+            % myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers);
+            % myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
+             if isempty(yUnits)
+                ylabelStr=sprintf('%s', y, yUnits);
+            else
+                ylabelStr=sprintf('%s [%s]', y, yUnits);
+             end
+            ylabelStr = strrep(ylabelStr,'_', ' ');
+            plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+            plotViolinGroups(violin_values, members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr);
+            % if nGroups > 1
+            %     leg = legend(gca,'Location', legendLocation);
+            %     set(leg,'AutoUpdate','off');
+            % end
+            % for iGroup = 1:nGroups
+            %     for iPair = 1:nPairsts
+            %         pairIdx = pairIdxs(iPair, :);
+            %         if bar_pCorr(iRow, iCol, iGroup, iPair) < 0.05
+            %             sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iRow, iCol, iGroup, iPair));
+            %         end
+            %     end
+            % end
 
             % title
-            if ~isempty(plotTitle)
-                sgtitle(sprintf('Results for %s', plotTitle), 'interpreter', 'none');
-            end
-            titleAdds = {};
+            % if ~isempty(plotTitle)
+            %     sgtitle(sprintf('Results for %s', plotTitle), 'interpreter', 'none');
+            % end
+            % titleAdds = {};
             % 3rd x, if given
-            if nCols > 1
-                col = cols(iCol);
-                titleAdds = [titleAdds, cellstr(sprintf('%s = %s', colVar, col))]; %#ok<AGROW>
-            end
-            % 4th x, if given
-            if nRows > 1
-                row = rows(iRow);
-                titleAdds = [titleAdds, cellstr(sprintf('%s = %s', rowVar, row))]; %#ok<AGROW>
-            end
-            titleAddStr = strjoin(titleAdds, ', ');
-            if ~isempty(titleAddStr)
-                titleStr = sprintf('%s (%s)', y, titleAddStr);
-            else
-                titleStr = sprintf('%s', y);
-            end
-            title(titleStr, 'Interpreter', 'none');
-
-            % y-axis label
-            if isempty(yUnits)
-                ylabel(sprintf('%s', y, yUnits), 'Interpreter', 'none');
-            else
-                ylabel(sprintf('%s [%s]', y, yUnits), 'Interpreter', 'none');
-            end
+            % if nCols > 1
+            %     col = cols(iCol);
+            %     titleAdds = [titleAdds, cellstr(sprintf('%s = %s', colVar, col))]; %#ok<AGROW>
+            % end
+            % % 4th x, if given
+            % if nRows > 1
+            %     row = rows(iRow);
+            %     titleAdds = [titleAdds, cellstr(sprintf('%s = %s', rowVar, row))]; %#ok<AGROW>
+            % end
+            % titleAddStr = strjoin(titleAdds, ', ');
+            % if ~isempty(titleAddStr)
+            %     titleStr = sprintf('%s (%s)', y, titleAddStr);
+            % else
+            %     titleStr = sprintf('%s', y);
+            % end
+            % title(titleStr, 'Interpreter', 'none');
+            % 
+            % % y-axis label
+            % if isempty(yUnits)
+            %     ylabel(sprintf('%s', y, yUnits), 'Interpreter', 'none');
+            % else
+            %     ylabel(sprintf('%s [%s]', y, yUnits), 'Interpreter', 'none');
+            % end
         end
     end
 
