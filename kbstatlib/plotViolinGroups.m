@@ -11,6 +11,7 @@ htl=tiledlayout(1,2, 'TileSpacing','none');
 barPositions=[1:3; 1:3];
 pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairIdxs, 1);
+hnt = gobjects(nGroups, 1);
 for iGroup=1:nGroups
     hnt(iGroup) = nexttile;
     violinplot(squeeze(values(iGroup,:,:))');
