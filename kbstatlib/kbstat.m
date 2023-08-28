@@ -726,10 +726,8 @@ bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
 bar_p = nan(nRows, nCols, nGroups, nPairs);
 main_p = nan(nPairs);
 
-% violin_values(nGroups, nMembers)=struct;%%%%%%
-
 maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.shoe==s1 & Data.speed==s2), repmat({'BF','MM','NS'},2,1), repmat({'20'; '25'},1,3), 'UniformOutput', false)),[],'all');
-violin_values = nan(nGroups, nMembers, maxNValues);%%%%%%
+violin_values = nan(nGroups, nMembers, maxNValues);
 
 
 % calc plot data and fill arrays
@@ -788,8 +786,6 @@ for iRow = 1:nRows
                 statsRow.ci95_1 = ci95(1);
                 statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
-
-                % violin_values(iGroup,iMember).data = values;
 
                 violin_values(iGroup,iMember,1:length(values)) = values; %%%%%%%
 
