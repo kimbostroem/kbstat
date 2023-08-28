@@ -163,10 +163,7 @@ function mdl = kbstat(options)
 %	options.constraint = 'speed < 2 & joint == "ankle_joint"'
 %   kbstat('path/to/Data.xlsx', options);
 %
-% (c) 2022 by Predimo GmbH
-% Website: http://www.predimo.com
-% Author: Kim Boström
-% Last revision: 2022-09-17 (KB) Added documentation
+% Author: Kim Joris Boström
 
 %% Get parameters
 
@@ -713,7 +710,6 @@ panelHeight = 300; % height of each panel
 
 % define posthoc comparison pairs
 pairs = nchoosek(members, 2);
-pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairs, 1);
 
 % init statistics table
@@ -726,7 +722,7 @@ bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
 bar_p = nan(nRows, nCols, nGroups, nPairs);
 main_p = nan(nPairs);
 
-maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.shoe==s1 & Data.speed==s2), repmat({'BF','MM','NS'},2,1), repmat({'20'; '25'},1,3), 'UniformOutput', false)),[],'all');
+maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
 violin_values = nan(nGroups, nMembers, maxNValues);
 
 
@@ -940,49 +936,7 @@ if isPlot
              end
             ylabelStr = strrep(ylabelStr,'_', ' ');
             plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
-            plotViolinGroups(violin_values, members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr);
-            % if nGroups > 1
-            %     leg = legend(gca,'Location', legendLocation);
-            %     set(leg,'AutoUpdate','off');
-            % end
-            % for iGroup = 1:nGroups
-            %     for iPair = 1:nPairsts
-            %         pairIdx = pairIdxs(iPair, :);
-            %         if bar_pCorr(iRow, iCol, iGroup, iPair) < 0.05
-            %             sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iRow, iCol, iGroup, iPair));
-            %         end
-            %     end
-            % end
-
-            % title
-            % if ~isempty(plotTitle)
-            %     sgtitle(sprintf('Results for %s', plotTitle), 'interpreter', 'none');
-            % end
-            % titleAdds = {};
-            % 3rd x, if given
-            % if nCols > 1
-            %     col = cols(iCol);
-            %     titleAdds = [titleAdds, cellstr(sprintf('%s = %s', colVar, col))]; %#ok<AGROW>
-            % end
-            % % 4th x, if given
-            % if nRows > 1
-            %     row = rows(iRow);
-            %     titleAdds = [titleAdds, cellstr(sprintf('%s = %s', rowVar, row))]; %#ok<AGROW>
-            % end
-            % titleAddStr = strjoin(titleAdds, ', ');
-            % if ~isempty(titleAddStr)
-            %     titleStr = sprintf('%s (%s)', y, titleAddStr);
-            % else
-            %     titleStr = sprintf('%s', y);
-            % end
-            % title(titleStr, 'Interpreter', 'none');
-            % 
-            % % y-axis label
-            % if isempty(yUnits)
-            %     ylabel(sprintf('%s', y, yUnits), 'Interpreter', 'none');
-            % else
-            %     ylabel(sprintf('%s [%s]', y, yUnits), 'Interpreter', 'none');
-            % end
+            plotViolinGroups(violin_values, members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr);            
         end
     end
 
