@@ -212,14 +212,14 @@ end
 responseVariable = y; % set response variable to y
 
 % subject variable
-if isfield(options, 'id')
+if isfield(options, 'id') && ~isempty(options.id)
     id = options.id;
 else
     id = '';
 end
 
 % within-subject variables
-if isfield(options, 'within')
+if isfield(options, 'within') && ~isempty(options.within)
     within = strtrim(strsplit(options.within, {',', ';'}));
     x = union(x, within, 'stable'); % add within-subject variables to independent variables
 else
@@ -227,7 +227,7 @@ else
 end
 
 % interaction variables
-if isfield(options, 'interact')
+if isfield(options, 'interact') && ~isempty(options.interact)
     interact = strtrim(strsplit(options.interact, {',', ';'}));
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 else
@@ -235,21 +235,21 @@ else
 end
 
 % posthoc method
-if isfield(options, 'posthocMethod')
+if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
     posthocMethod = 'emm';
 end
 
 % fit method
-if isfield(options, 'fitMethod')
+if isfield(options, 'fitMethod') && ~isempty(options.fitMethod)
     fitMethod = options.fitMethod;
 else
     fitMethod = 'MPL';
 end
 
 % distribution (for GLM)
-if isfield(options, 'distribution')
+if isfield(options, 'distribution') && ~isempty(options.distribution)
     distribution = options.distribution;
 else % no parameter given
     distribution = 'normal';
@@ -282,54 +282,54 @@ else % no parameter given
 end
 
 % level order
-if isfield(options, 'levelOrder')
+if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
     levelOrder = 'sorted';
 end
 
 % Flag to plot data
-if isfield(options, 'isPlot')
+if isfield(options, 'isPlot') && ~isempty(options.isPlot)
     isPlot = getValue(options.isPlot);
 else
     isPlot = true;
 end
 
-if isfield(options, 'errorBars')
+if isfield(options, 'errorBars') && ~isempty(options.errorBars)
     errorBars = lower(options.errorBars);
 else
     errorBars = 'std';
 end
 
 % legend location
-if isfield(options, 'legendLocation')
+if isfield(options, 'legendLocation') && ~isempty(options.legendLocation)
     legendLocation = options.legendLocation;
 else
     legendLocation = 'Best';
 end
 
 % flag to rescale all panel plots to the same y-scale
-if isfield(options, 'isRescale')
+if isfield(options, 'isRescale') && ~isempty(options.isRescale)
     isRescale = getValue(options.isRescale);
 else
     isRescale = false;
 end
 
 % flag if outliers should be removed
-if isfield(options, 'removeOutliers')
+if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
     removeOutliers = getValue(options.removeOutliers);
 else
     removeOutliers = false;
 end
 
-if isfield(options, 'thresholdFactor')
+if isfield(options, 'thresholdFactor') && ~isempty(options.thresholdFactor)
     thresholdFactor = getValue(options.thresholdFactor);
 else
     thresholdFactor = 4;
 end
 
 % output folder
-if isfield(options, 'outDir')
+if isfield(options, 'outDir') && ~isempty(options.outDir)
     outDir = options.outDir;
 else
     outDir = fullfile(inDir, inName);
@@ -338,7 +338,7 @@ if ~isfolder(outDir)
     mkdir(outDir);
 end
 
-if isfield(options, 'title')
+if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
     plotTitle = '';
