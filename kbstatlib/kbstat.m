@@ -664,9 +664,9 @@ if isFitted
     figName = 'Diagnostics';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
     if ~isempty(plotTitle)
-        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none');
+        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     else
-        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none');
+        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     end
     iPanel = 0;
 
@@ -940,10 +940,11 @@ end
 if isPlot
 
     figWidth = nCols * panelWidth;
-    figHeight = nRows * panelHeight;
+    figHeight = nRows * panelHeight + 50;
     figName = 'ViolinPlot';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);    
     layout = tiledlayout(nRows, nCols);
+    title(layout, sprintf('Data plots for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     for iRow = 1:nRows
 
         for iCol = 1:nCols
