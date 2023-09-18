@@ -742,7 +742,7 @@ Stats = table;
 bar_values = nan(nRows, nCols, nGroups, nMembers);
 bar_errorTop = nan(nRows, nCols, nGroups, nMembers);
 bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
-bar_p = nan(nRows, nCols, nGroups, nPairs);
+bar_p = nan(nGroups, nPairs, nRows, nCols);
 main_p = nan(nPairs);
 
 maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
@@ -865,7 +865,7 @@ for iRow = 1:nRows
                         L2 = (Data.(memberVar) == pair(2) & idx);
                         val1 = Data.(responseVariable)(L1);
                         val2 = Data.(responseVariable)(L2);
-                        [~, bar_p(iRow, iCol, iGroup, iPair)] = ttest2(val1, val2);
+                        [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
 
                         % calc main contrasts
                         L1 = (Data.(memberVar) == pair(1));
@@ -905,7 +905,7 @@ for iRow = 1:nRows
                         L2 = idx & (emm.table.(memberVar) == pair(2));
                         L = (L1 - L2)';
                         contrasts = contrasts_wald(mdl, emm, L);
-                        bar_p(iRow, iCol, iGroup, iPair) = contrasts.pVal;
+                        bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
 
                         % calc main contrasts
                         L1 = (emm.table.(memberVar) == pair(1));
@@ -919,18 +919,21 @@ for iRow = 1:nRows
     end
 end
 
-% statistical correction of posthoc p-values
-sizeOrig = size(bar_p); % vstore original dimensions
-bar_p = bar_p(:); % make column vector
-bar_pCorr = bar_p; % create array of corrected p-values
-idx = ~isnan(bar_p); % identify NaN-entries
-[~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
-bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-% statistical correction of main posthoc p-Values
-main_pCorr = main_p; % create array of corrected p-values
-idx = ~isnan(main_pCorr); % identify NaN-entries
-[~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+% If pairwise t-test, the posthoc comparisons must be statistically corrected
+bar_pCorr = bar_p;
+main_pCorr = main_p;
+if strcmp(posthocMethod, 'ttest')
+    sizeOrig = size(bar_p); % vstore original dimensions
+    bar_p = bar_p(:); % make column vector
+    bar_pCorr = bar_p; % create array of corrected p-values
+    idx = ~isnan(bar_p); % identify NaN-entries
+    [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+    bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
+    bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+    % statistical correction of main posthoc p-Values
+    idx = ~isnan(main_pCorr); % identify NaN-entries
+    [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+end
 
 %% Plot data
 
@@ -969,7 +972,7 @@ if isPlot
             else
                 plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
             end
-            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr, panel);            
+            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, bar_pCorr(:, :, iRow, iCol), plotTitle, ylabelStr, panel);            
         end
     end
 
@@ -1038,8 +1041,8 @@ for iPair = 1:nPairs
                 end
                 tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-                tableRow.p = bar_p(iRow, iCol, iGroup, iPair);
-                tableRow.pCorr = bar_pCorr(iRow, iCol, iGroup, iPair);
+                tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
+                tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
                 tableRow.significance = string(sigprint(tableRow.pCorr));
                 posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
             end
