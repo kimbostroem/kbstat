@@ -56,6 +56,10 @@ function mdl = kbstat(options)
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %
+%       formula         Formula in Wilkinson Notation. If given, it 
+%                       overrides the automatically generated formula
+%                       produced from the provided variables.
+%
 %       fitMethod       Fit method used for the GLM fit.
 %                       OPTIONAL, default = 'MPL'.
 %                       Possible values:
@@ -196,6 +200,14 @@ DataConstraint = DataRaw;
 % all table variables
 tableVars = DataRaw.Properties.VariableNames;
 
+% convert all character cell arrays to string arrays
+for iVar = 1:length(tableVars)
+    tableVar = tableVars{iVar};
+    if iscell(DataConstraint.(tableVar))
+        DataConstraint.(tableVar) = string(DataConstraint.(tableVar));
+    end
+end
+
 % independent variable(s)
 x = strtrim(strsplit(options.x, {',', ';'}));
 
@@ -232,6 +244,13 @@ if isfield(options, 'interact') && ~isempty(options.interact)
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 else
     interact = {};
+end
+
+% formula
+if isfield(options, 'formula') && ~isempty(options.formula)
+    formula = options.formula;
+else
+    formula = '';
 end
 
 % posthoc method
@@ -358,6 +377,8 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
+        constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
+        constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
         [num, isNum] = str2num(constraintVal);
         if isNum
             constraintVal = num;
@@ -401,7 +422,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     if any(allIdx)
         DataConstraint = DataConstraint(allIdx, :);
     else
-        warning('Constraint cannot be fulfilled -> leave data unchanged');
+        warning('Constraint ''%s'' cannot be fulfilled -> leave data unchanged', constraint);
     end
     nLevels = length(unique(DataConstraint.(constraintVar)));
     switch nLevels
@@ -539,7 +560,9 @@ if ~isempty(randomSlopes)
     terms = [terms, randomSlopes];
 end
 
-formula = sprintf('%s ~ %s', responseVariable, strjoin(terms, ' + '));
+if isempty(formula)
+    formula = sprintf('%s ~ %s', responseVariable, strjoin(terms, ' + '));
+end
 fprintf('\t%s\n', formula);
 
 try
