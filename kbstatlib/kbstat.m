@@ -746,7 +746,7 @@ bar_p = nan(nRows, nCols, nGroups, nPairs);
 main_p = nan(nPairs);
 
 maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
-violin_values = nan(nGroups, nMembers, maxNValues);
+violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols);
 
 
 % calc plot data and fill arrays
@@ -806,7 +806,7 @@ for iRow = 1:nRows
                 statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
 
-                violin_values(iGroup,iMember,1:length(values)) = values; %%%%%%%
+                violin_values(iGroup, iMember, 1:length(values), iRow, iCol) = values; %%%%%%%
 
                 % plot values
                 switch errorBars
@@ -940,26 +940,36 @@ if isPlot
     figHeight = nRows * panelHeight;
     figName = 'ViolinPlot';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    layout = tiledlayout(nRows, nCols);
     for iRow = 1:nRows
 
         for iCol = 1:nCols
 
-            % start panel subplot
+            % % start panel subplot
             iPanel = sub2ind([nCols, nRows], iCol, iRow);
-            subplot(nRows, nCols, iPanel);
+            % subplot(nRows, nCols, iPanel);
+            panel = tiledlayout(layout, 1, 1);
+            panel.Layout.Tile = iPanel;
+            panel.Layout.TileSpan = [1 1];            
+            ax = nexttile(panel);
+            ax.XAxis.TickValues = [];
+            ax.YAxis.TickValues = [];
 
             % plot panel
-            % myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);%%%%%%
-            % myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers);
-            % myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
-             if isempty(yUnits)
-                ylabelStr=sprintf('%s', y, yUnits);
+            if isempty(yUnits)
+                ylabelStr = sprintf('%s', y, yUnits);
             else
-                ylabelStr=sprintf('%s [%s]', y, yUnits);
+                ylabelStr = sprintf('%s [%s]', y, yUnits);
              end
             ylabelStr = strrep(ylabelStr,'_', ' ');
-            plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
-            plotViolinGroups(violin_values, members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr);            
+            if length(cols) > 1 && length(rows) > 1
+                plotTitle = sprintf('%s = %s, %s = %s', colVar, cols(iCol), rowVar, rows(iRow));
+            elseif length(rows) > 1
+                plotTitle = sprintf('%s = %s', rowVar, rows(iRow));
+            else
+                plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+            end
+            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr, panel);            
         end
     end
 
