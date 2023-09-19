@@ -1,0 +1,10 @@
+options.distribution = "gamma";
+options.id = "Subject";
+options.inFile = "Chocolate.csv";
+options.interact = "Chocolate, Gender";
+options.posthocMethod = "emm";
+options.removeOutliers = "true";
+options.within = "Chocolate";
+options.x = "Chocolate, Gender";
+options.y = "Distance";
+options.yUnits = "m";
