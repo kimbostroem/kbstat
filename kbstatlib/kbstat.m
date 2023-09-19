@@ -56,7 +56,10 @@ function mdl = kbstat(options)
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %
-%       formula         Formula in Wilkinson Notation. If given, it 
+%       randomSlopes    Flag if random slopes should be estimated.
+%                       OPTIONAL, default = true.
+%
+%       formula         Formula in Wilkinson Notation. If given, it
 %                       overrides the automatically generated formula
 %                       produced from the provided variables.
 %
@@ -87,7 +90,7 @@ function mdl = kbstat(options)
 %                       'loglog'	    g(mu) = log(-log(mu))
 %                       'probit'	    g(mu) = norminv(mu)
 %                       'comploglog'	g(mu) = log(-log(1-mu))
-%                       'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma 
+%                       'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma
 %                       Scalar p	    g(mu) = mu.^p           Default for InverseGaussian (p= -2)
 %
 %       posthocMethod   Method for the posthoc pairwise comparison.
@@ -106,7 +109,7 @@ function mdl = kbstat(options)
 %                       from the data before analysis.
 %                       OPTIONAL, default = true.
 %
-%       outlierThreshold If "removeOutliers" is set, outliers are detected 
+%       outlierThreshold If "removeOutliers" is set, outliers are detected
 %                       as points lying outside the interquartile range
 %                       (IQR) multiplied by outlierThreshold.
 %                       OPTIONAL, default = 1.5.
@@ -117,7 +120,7 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = length(x), i.e. number of
 %                       independent variables.
 %
-%       constraint      One or more restrictive constraints on the data before analysis. 
+%       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
 %						'con1 & con2 & ...'
 %						where con1, con2, ... are conditions of the form
@@ -131,9 +134,12 @@ function mdl = kbstat(options)
 %                       "variable" is an actual variable in the data table,
 %                       and "variable" is either an existing category, in
 %                       the case of categorical variables, or a numeric
-%                       value. In the case of a category, the value must be put in 
+%                       value. In the case of a category, the value must be put in
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
+%
+%       applyAbs        Flag if "abs" is to be applied to the values of the
+%                       dependent variable before doing anything else.
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -141,18 +147,18 @@ function mdl = kbstat(options)
 %                       output folder defaults to the local folder.
 %
 %       isPlot          Plot data as grouped bars with significance brackets
-%       errorBars       What the error bars indicate. This also defines 
+%       errorBars       What the error bars indicate. This also defines
 %                       what the bar height indicates
 %                       'std'   Standard deviation. Bar height is mean
 %                       'se'    Standard error. Bar height is the mean
-%                       'ci95'  95% confidence interval. Bar height is the 
+%                       'ci95'  95% confidence interval. Bar height is the
 %                               mean
-%                       'q25'   25% and 75% quantiles. Bar height is the 
+%                       'q25'   25% and 75% quantiles. Bar height is the
 %                               median, which is the 50% quantile
-%       levelOrder      The order in which the levels are displayed in the 
+%       levelOrder      The order in which the levels are displayed in the
 %                       plots.
 %                       'sorted'    sorted alphanumerically (default)
-%                       'stable'    sorted in the order of occurrence in 
+%                       'stable'    sorted in the order of occurrence in
 %                                   the data table
 %       title           Title for plots
 %
@@ -227,6 +233,13 @@ end
 responseVariable = y; % set response variable to y
 
 % subject variable
+if isfield(options, 'applyAbs') && ~isempty(options.applyAbs)
+    applyAbs = getValue(options.applyAbs);
+else
+    applyAbs = false;
+end
+
+% subject variable
 if isfield(options, 'id') && ~isempty(options.id)
     id = options.id;
 else
@@ -247,6 +260,13 @@ if isfield(options, 'interact') && ~isempty(options.interact)
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 else
     interact = {};
+end
+
+% random slopes
+if isfield(options, 'randomSlopes') && ~isempty(options.randomSlopes)
+    randomSlopes = getValue(options.randomSlopes);
+else
+    randomSlopes = true;
 end
 
 % formula
@@ -346,7 +366,7 @@ end
 if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
-    plotTitle = '';
+    plotTitle = options.y;
 end
 
 fprintf('Performing Linear Model analysis for %s...\n', y);
@@ -403,7 +423,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
             allIdx = eval(cmd);
         else
             allIdx = idx;
-        end        
+        end
     end
     if any(allIdx)
         DataConstraint = DataConstraint(allIdx, :);
@@ -461,6 +481,10 @@ end
 % get response variable
 Data.(y) = DataConstraint.(y);
 Data.(responseVariable) = DataConstraint.(responseVariable);
+if applyAbs
+    Data.(responseVariable) = abs(Data.(responseVariable));
+end
+
 
 % store Data table in options
 options.Data = Data;
@@ -539,7 +563,7 @@ if removeOutliers
                 idxTest = idxTest & (Data.(memberVar) == member);
                 if nGroups > 1
                     group = groups(iGroup);
-                    idxTest = idxTest & (Data.(groupVar) == group);                    
+                    idxTest = idxTest & (Data.(groupVar) == group);
                 end
                 yData = Data.(responseVariable)(idxTest);
                 idxOut(idxTest) = getOutliers(yData, outlierThreshold);
@@ -594,7 +618,7 @@ if removeOutliers
         end
     end
 
-    % remove outliers    
+    % remove outliers
     nOutliers = sum(idxOut);
     nObsRaw = size(Data, 1);
     if nOutliers > 0
@@ -603,7 +627,7 @@ if removeOutliers
     end
 end
 
-    
+
 
 
 % save Data table
@@ -611,15 +635,19 @@ saveTable(Data, 'Data', {'csv'}, outDir);
 
 %% Fit linear model and perform ANOVA
 
-isFitted = 1;
 anovaTable = table; % init ANOVA table
 
 productTerm = strjoin(interact, ' * ');
 xNoInteract = [{'1'}, setdiff(x, interact, 'stable')];
 sumTerm = strjoin(xNoInteract, ' + ');
 if ~isempty(id) && length(unique(Data.(id))) > 1
-    randomEffect = '';
-    randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+    if randomSlopes
+        randomEffect = '';
+        randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+    else
+        randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+        randomSlopes = '';
+    end
 else
     randomEffect = '';
     randomSlopes = '';
@@ -646,145 +674,140 @@ fprintf('\t%s\n', formula);
 
 try
     if ~isempty(link) % link function given -> use it
-    mdl = fitglme(Data, formula, ...
-        'DummyVarCoding', 'effects', ...
-        'FitMethod', fitMethod, ...
-        'Distribution', distribution, ...
-        'link', link);
+        mdl = fitglme(Data, formula, ...
+            'DummyVarCoding', 'effects', ...
+            'FitMethod', fitMethod, ...
+            'Distribution', distribution, ...
+            'link', link);
     else % no link function given -> use built-in default
         mdl = fitglme(Data, formula, ...
-        'DummyVarCoding', 'effects', ...
-        'FitMethod', fitMethod, ...
-        'Distribution', distribution);
+            'DummyVarCoding', 'effects', ...
+            'FitMethod', fitMethod, ...
+            'Distribution', distribution);
     end
 
 catch ME
     message = sprintf('%s', ME.message);
     fprintf('The linear model fit returned an error:\n\t%s\n', message);
     fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-    isFitted = 0;
+    return
 end
 
-if isFitted
 
-    % get ANOVA table from model fit
-    results = anova(mdl);
+% get ANOVA table from model fit
+results = anova(mdl);
 
-    % print results of model fit into file
-    mdlOutput = formattedDisplayText(mdl);
-    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
-    fprintf(fid, 'Formula:\n\t%s\n', formula);
-    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-    fprintf(fid, '\t%s', mdlOutput);
-    fclose(fid);
+% print results of model fit into file
+mdlOutput = formattedDisplayText(mdl);
+fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+fprintf(fid, 'Formula:\n\t%s\n', formula);
+fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+fprintf(fid, '\t%s', mdlOutput);
+fclose(fid);
 
-    anovaTable.Term = string(results.Term(2:end));
-    anovaTable.DF1 = results.DF1(2:end);
-    anovaTable.DF2 = results.DF2(2:end);
-    anovaTable.F = results.FStat(2:end);
-    anovaTable.p = results.pValue(2:end);
-    anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
-    anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
-    anovaTable.significance = string(sigprint(anovaTable.p));
+anovaTable.Term = string(results.Term(2:end));
+anovaTable.DF1 = results.DF1(2:end);
+anovaTable.DF2 = results.DF2(2:end);
+anovaTable.F = results.FStat(2:end);
+anovaTable.p = results.pValue(2:end);
+anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
+anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
+anovaTable.significance = string(sigprint(anovaTable.p));
 
-    % save options
-    fpath = fullfile(outDir, 'options.mat');
-    save(fpath, 'options');
-    fpath = fullfile(outDir, 'makeOptions.m');
-    fid = fopen(fpath, 'w+');
-    fields = fieldnames(options);
-    fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
-    fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
-    paramFields = sort(fields); % sort fields alphabetically
-    for iField = 1:length(paramFields)
-        field = paramFields{iField};
-        fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
-    end
-    fclose(fid);
-
-    % save raw Data table
-    saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
-
-    % save ANOVA table
-    saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
-    disp(anovaTable) % display table
-
-    %% Plot diagnostics
-
-    % Since raw residuals for generalized linear mixed-effects models do not
-    % have a constant variance across observations, we use the conditional
-    % Pearson residuals instead.
-
-    panelWidth = 300;
-    panelHeight = 300;
-    nPanels = 6;
-    nPanelRows = 2;
-    nPanelCols = ceil(nPanels/nPanelRows);
-    figWidth = nPanelCols * panelWidth;
-    figHeight = nPanelRows * panelHeight;
-    figName = 'Diagnostics';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
-    if ~isempty(plotTitle)
-        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-    else
-        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-    end
-    iPanel = 0;
-
-    % histogram
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols, iPanel);
-    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-    h = histfit(mdlResiduals);
-    h(1).EdgeColor = 'none';
-    h(2).Color = [1 0 0];
-    h(2).LineStyle = ':';
-    hold on
-    resFit = fitdist(mdlResiduals, 'Normal');
-    xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
-    ylims = ylim;
-    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
-    title('Histogram of residuals');
-    xlabel('Residuals');
-
-    % probability
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols, iPanel);
-    plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
-
-    % symmetry
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols, iPanel);
-    plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
-
-    % fitted-response
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols, iPanel);
-    F = fitted(mdl);
-    R = response(mdl);
-    plot(R, F, 'rx');
-    ylabel('Fitted');
-    title('Fitted vs. Response');
-    xlabel('Response');
-
-    % residuals vs fitted
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols, iPanel);
-    plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
-
-    % lagged residuals
-    iPanel = iPanel+1;
-    subplot(nPanelRows, nPanelCols,iPanel);
-    plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
-
-
-    % save figure
-    set(fig, 'PaperPositionMode', 'auto');
-    set(fig, 'PaperUnits', 'points');
-    set(fig, 'PaperSize', [figWidth figHeight]);
-    print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-
+% save options
+fpath = fullfile(outDir, 'options.mat');
+save(fpath, 'options');
+fpath = fullfile(outDir, 'makeOptions.m');
+fid = fopen(fpath, 'w+');
+fields = fieldnames(options);
+fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
+fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
+paramFields = sort(fields); % sort fields alphabetically
+for iField = 1:length(paramFields)
+    field = paramFields{iField};
+    fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
 end
+fclose(fid);
+
+% save raw Data table
+saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
+
+% save ANOVA table
+saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
+disp(anovaTable) % display table
+
+%% Plot diagnostics
+
+% Since raw residuals for generalized linear mixed-effects models do not
+% have a constant variance across observations, we use the conditional
+% Pearson residuals instead.
+
+panelWidth = 300;
+panelHeight = 300;
+nPanels = 6;
+nPanelRows = 2;
+nPanelCols = ceil(nPanels/nPanelRows);
+figWidth = nPanelCols * panelWidth;
+figHeight = nPanelRows * panelHeight;
+figName = 'Diagnostics';
+fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+
+sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+iPanel = 0;
+
+% histogram
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols, iPanel);
+mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+h = histfit(mdlResiduals);
+h(1).EdgeColor = 'none';
+h(2).Color = [1 0 0];
+h(2).LineStyle = ':';
+hold on
+resFit = fitdist(mdlResiduals, 'Normal');
+xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
+ylims = ylim;
+rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
+title('Histogram of residuals');
+xlabel('Residuals');
+
+% probability
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols, iPanel);
+plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
+
+% symmetry
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols, iPanel);
+plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
+
+% fitted-response
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols, iPanel);
+F = fitted(mdl);
+R = response(mdl);
+plot(R, F, 'rx');
+ylabel('Fitted');
+title('Fitted vs. Response');
+xlabel('Response');
+
+% residuals vs fitted
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols, iPanel);
+plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
+
+% lagged residuals
+iPanel = iPanel+1;
+subplot(nPanelRows, nPanelCols,iPanel);
+plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
+
+
+% save figure
+set(fig, 'PaperPositionMode', 'auto');
+set(fig, 'PaperUnits', 'points');
+set(fig, 'PaperSize', [figWidth figHeight]);
+print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+
 
 %% Calc plot data
 
@@ -848,7 +871,7 @@ for iRow = 1:nRows
                 end
 
                 bar_data = Data(idx, :);
-                values = bar_data.(y);                
+                values = bar_data.(y);
                 if nGroups > 1
                     statsRow.(groupVar) = string(group);
                 end
@@ -862,7 +885,7 @@ for iRow = 1:nRows
                 statsRow.SE = statsRow.std / sqrt(statsRow.N);
                 statsRow.RE = statsRow.SE / statsRow.mean * 100;
                 tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
-                ci95 = statsRow.mean + tci95 * statsRow.SE;  
+                ci95 = statsRow.mean + tci95 * statsRow.SE;
                 statsRow.ci95_1 = ci95(1);
                 statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
@@ -888,8 +911,8 @@ for iRow = 1:nRows
                         bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
                         bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
                 end
-                
-                
+
+
             end
 
             % get post-hoc p-values
@@ -1003,9 +1026,9 @@ if isPlot
     figWidth = nCols * panelWidth;
     figHeight = nRows * panelHeight + 50;
     figName = 'ViolinPlot';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);    
+    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
     layout = tiledlayout(nRows, nCols);
-    title(layout, sprintf('Data plots for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+    title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     for iRow = 1:nRows
 
         for iCol = 1:nCols
@@ -1015,7 +1038,7 @@ if isPlot
             % subplot(nRows, nCols, iPanel);
             panel = tiledlayout(layout, 1, 1);
             panel.Layout.Tile = iPanel;
-            panel.Layout.TileSpan = [1 1];            
+            panel.Layout.TileSpan = [1 1];
             ax = nexttile(panel);
             ax.XAxis.TickValues = [];
             ax.YAxis.TickValues = [];
@@ -1025,16 +1048,18 @@ if isPlot
                 ylabelStr = sprintf('%s', y, yUnits);
             else
                 ylabelStr = sprintf('%s [%s]', y, yUnits);
-             end
+            end
             ylabelStr = strrep(ylabelStr,'_', ' ');
             if length(cols) > 1 && length(rows) > 1
-                plotTitle = sprintf('%s = %s, %s = %s', colVar, cols(iCol), rowVar, rows(iRow));
+                panelTitle = sprintf('%s = %s, %s = %s', colVar, cols(iCol), rowVar, rows(iRow));
             elseif length(rows) > 1
-                plotTitle = sprintf('%s = %s', rowVar, rows(iRow));
+                panelTitle = sprintf('%s = %s', rowVar, rows(iRow));
+            elseif length(cols) > 1
+                panelTitle = sprintf('%s = %s', colVar, cols(iCol));
             else
-                plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+                panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
             end
-            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, bar_pCorr(:, :, iRow, iCol), plotTitle, ylabelStr, panel);            
+            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel);
         end
     end
 
