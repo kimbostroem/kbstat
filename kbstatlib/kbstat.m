@@ -97,24 +97,25 @@ function mdl = kbstat(options)
 %                       "none"      Do not perform posthoc analysis
 %                       OPTIONAL, default = 'emm'.
 %
-%       legendLocation  Location of the legend in each panel of
-%                       the data plot.
-%                       OPTIONAL, default = 'best'.
-%
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
 %                       common scale.
 %                       OPTIONAL, default = false.
 %
 %       removeOutliers  Flag if outliers should be removed
-%                       from the data before analysis
+%                       from the data before analysis.
+%                       OPTIONAL, default = true.
 %
-%       thresholdFactor If "removeOutliers" is set, define the factor to
-%                       multiply the outlier criterion using the quantile 
-%                       method, so that the limits are
-%                       upper = Q75 + thresholdFactor * (Q75-Q25)
-%                       lower = Q25 - thresholdFactor * (Q75-Q25)
-%                       OPTIONAL, default = 1.5
+%       outlierThreshold If "removeOutliers" is set, outliers are detected 
+%                       as points lying outside the interquartile range
+%                       (IQR) multiplied by outlierThreshold.
+%                       OPTIONAL, default = 1.5.
+%
+%       outlierLevel    If "removeOutliers" is set, outliers are detected
+%                       by constraining the dataset to values of the the
+%                       n-th independent variable, where n = outlierLevel.
+%                       OPTIONAL, default = length(x), i.e. number of
+%                       independent variables.
 %
 %       constraint      One or more restrictive constraints on the data before analysis. 
 %						Must be of the form
@@ -132,7 +133,7 @@ function mdl = kbstat(options)
 %                       the case of categorical variables, or a numeric
 %                       value. In the case of a category, the value must be put in 
 %						double quotes, as in 'bla = "bli"'.
-%                       OPTIONAL, default = unset
+%                       OPTIONAL, default = unset.
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -166,7 +167,6 @@ function mdl = kbstat(options)
 %   options.within = 'shoe, speed, joint';
 %   options.interact = 'shoe, speed, joint';
 %   options.distribution = 'gamma';
-%   options.removeOutliers = 'true';
 %	options.constraint = 'speed < 2 & joint == "ankle_joint"'
 %   kbstat('path/to/Data.xlsx', options);
 %
@@ -295,9 +295,9 @@ else % no parameter given
         case 'poisson'
             link = 'log';
         case 'gamma'
-            link = 'log';
+            link = -1;
         case 'inversegaussian'
-            link = 'log';
+            link = -2;
         otherwise
             error('Unknown distribution "%s"', distribution);
     end
@@ -323,13 +323,6 @@ else
     errorBars = 'std';
 end
 
-% legend location
-if isfield(options, 'legendLocation') && ~isempty(options.legendLocation)
-    legendLocation = options.legendLocation;
-else
-    legendLocation = 'Best';
-end
-
 % flag to rescale all panel plots to the same y-scale
 if isfield(options, 'isRescale') && ~isempty(options.isRescale)
     isRescale = getValue(options.isRescale);
@@ -341,13 +334,22 @@ end
 if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
     removeOutliers = getValue(options.removeOutliers);
 else
-    removeOutliers = false;
+    removeOutliers = true;
+end
+nOutliers = 0;
+
+% threshold factor for removing outliers
+if isfield(options, 'outlierThreshold') && ~isempty(options.outlierThreshold)
+    outlierThreshold = getValue(options.outlierThreshold);
+else
+    outlierThreshold = 1.5;
 end
 
-if isfield(options, 'thresholdFactor') && ~isempty(options.thresholdFactor)
-    thresholdFactor = getValue(options.thresholdFactor);
+% level for removing outliers
+if isfield(options, 'outlierLevel') && ~isempty(options.outlierLevel)
+    outlierLevel = getValue(options.outlierLevel);
 else
-    thresholdFactor = 1.5;
+    outlierLevel = length(x);
 end
 
 % output folder
@@ -482,22 +484,6 @@ Data.(responseVariable) = DataConstraint.(responseVariable);
 % store Data table in options
 options.Data = Data;
 
-% remove outliers
-if removeOutliers
-    yData = Data.(responseVariable);
-    Q = quantile(yData,  [0.25, 0.75]);
-    IQR = Q(2) - Q(1);
-    up =  Q(2) + thresholdFactor * IQR;
-    lo =  Q(1) - thresholdFactor * IQR;
-    idx = (yData <= up) & (yData >= lo);
-    nOutliers = sum(~idx);
-    nObsRaw = size(Data, 1);
-    if nOutliers > 0
-        Data = Data(idx, :);
-        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-    end
-end
-
 % % remove duplicate rows (can be caused by constraints on a redundant higher-level table
 % Data = unique(Data,'rows');
 
@@ -545,6 +531,99 @@ else
     rows = "none";
     nRows = 1;
 end
+
+if removeOutliers
+
+    idxOut = false(size(Data.(responseVariable), 1), 1);
+    idxTest = true(size(Data.(responseVariable), 1), 1);
+
+    if outlierLevel == 0 % level 0: all data
+        yData = Data.(responseVariable)(idxTest);
+        idxOut = getOutliers(yData, outlierThreshold);
+
+    elseif outlierLevel == 1 % level 1: 1st dependent variable
+        for iMember = 1:nMembers
+            idxTest = true(size(Data.(responseVariable), 1), 1);
+            member = members(iMember);
+            idxTest = idxTest & (Data.(memberVar) == member);
+            yData = Data.(responseVariable)(idxTest);
+            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+        end
+
+    elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
+        for iMember = 1:nMembers
+            for iGroup = 1:nGroups
+                idxTest = true(size(Data.(responseVariable), 1), 1);
+                member = members(iMember);
+                idxTest = idxTest & (Data.(memberVar) == member);
+                if nGroups > 1
+                    group = groups(iGroup);
+                    idxTest = idxTest & (Data.(groupVar) == group);                    
+                end
+                yData = Data.(responseVariable)(idxTest);
+                idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+            end
+        end
+
+    elseif outlierLevel == 3 % level 3: 3rd dependent variable, if given
+        for iMember = 1:nMembers
+            for iGroup = 1:nGroups
+                for iCol = 1:nCols
+                    idxTest = true(size(Data.(responseVariable), 1), 1);
+                    member = members(iMember);
+                    idxTest = idxTest & (Data.(memberVar) == member);
+                    if nGroups > 1
+                        group = groups(iGroup);
+                        idxTest = idxTest & (Data.(groupVar) == group);
+                    end
+                    if nCols > 1
+                        col = cols(iCol);
+                        idxTest = idxTest & (Data.(colVar) == col);
+                    end
+                    yData = Data.(responseVariable)(idxTest);
+                    idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+                end
+            end
+        end
+    elseif outlierLevel == 4 % level 4: 4th dependent variable, if given
+        for iMember = 1:nMembers
+            for iGroup = 1:nGroups
+                for iCol = 1:nCols
+                    for iRow = 1:nRows
+                        idxTest = true(size(Data.(responseVariable), 1), 1);
+                        member = members(iMember);
+                        idxTest = idxTest & (Data.(memberVar) == member);
+                        if nGroups > 1
+                            group = groups(iGroup);
+                            idxTest = idxTest & (Data.(groupVar) == group);
+                        end
+                        if nCols > 1
+                            col = cols(iCol);
+                            idxTest = idxTest & (Data.(colVar) == col);
+                        end
+                        if nRows > 1
+                            row = rows(iRow);
+                            idxTest = idxTest & (Data.(rowVar) == row);
+                        end
+                        yData = Data.(responseVariable)(idxTest);
+                        idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+                    end
+                end
+            end
+        end
+    end
+
+    % remove outliers    
+    nOutliers = sum(idxOut);
+    nObsRaw = size(Data, 1);
+    if nOutliers > 0
+        Data = Data(~idxOut, :);
+        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    end
+end
+
+    
+
 
 % save Data table
 saveTable(Data, 'Data', {'csv'}, outDir);
@@ -973,6 +1052,7 @@ if isPlot
     % rescale plots to achieve the same scale for all panels
     if isRescale
         axs = findobj(fig, 'type', 'axes');
+        axs(1) = [];
         ylimits = NaN(length(axs), 2);
         for iAx = 1:length(axs)
             ylimits(iAx, :) = get(axs(iAx), 'ylim');

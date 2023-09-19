@@ -22,7 +22,7 @@ nPairs = size(pairIdxs, 1);
 hnt = gobjects(nGroups, 1);
 for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
-    violinplot(squeeze(values(iGroup,:,:))');
+    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1]);
     title(groups(iGroup))
     xticklabels(members);
 
