@@ -281,26 +281,7 @@ end
 if isfield(options, 'link') && ~isempty(options.link)
     link = options.link;
 else % no parameter given
-    switch lower(distribution)
-        case 'normal'
-            link = 'identity';
-        case 'lognormal'
-            link = 'identity';
-            responseVariable = sprintf('log%s', y); % re-define response variable to log of y
-            DataConstraint.(responseVariable) = log(DataRaw.(y)); % create new column with log'd data
-            distribution = 'normal'; % re-set distribution to 'normal'
-            fprintf('Using normal-distributed logarithm of y "%s"\n', y); % tell user what's happening
-        case 'binomial'
-            link = 'logit';
-        case 'poisson'
-            link = 'log';
-        case 'gamma'
-            link = 'reciprocal';
-        case 'inversegaussian'
-            link = -2;
-        otherwise
-            error('Unknown distribution "%s"', distribution);
-    end
+    link = '';
 end
 
 % level order
@@ -664,11 +645,19 @@ end
 fprintf('\t%s\n', formula);
 
 try
+    if ~isempty(link) % link function given -> use it
     mdl = fitglme(Data, formula, ...
         'DummyVarCoding', 'effects', ...
         'FitMethod', fitMethod, ...
         'Distribution', distribution, ...
-        'Link', link);
+        'link', link);
+    else % no link function given -> use built-in default
+        mdl = fitglme(Data, formula, ...
+        'DummyVarCoding', 'effects', ...
+        'FitMethod', fitMethod, ...
+        'Distribution', distribution);
+    end
+
 catch ME
     message = sprintf('%s', ME.message);
     fprintf('The linear model fit returned an error:\n\t%s\n', message);
