@@ -466,8 +466,8 @@ end
 for iIV = 1:length(x)
     myIV = x{iIV};
     myLevels = unique(DataConstraint.(myIV));
-    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as ordinal
-        Data.(myIV) = categorical(DataConstraint.(myIV), 'Ordinal', true);
+    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as categorical
+        Data.(myIV) = categorical(string(DataConstraint.(myIV)));
         factors = [factors; myIV]; %#ok<AGROW>
     elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
         Data.(myIV) = DataConstraint.(myIV); % keep continuous values
