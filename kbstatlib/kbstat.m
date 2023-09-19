@@ -106,8 +106,11 @@ function mdl = kbstat(options)
 %                       from the data before analysis
 %
 %       thresholdFactor If "removeOutliers" is set, define the factor to
-%                       multiply the outlier criterion.
-%                       OPTIONAL, default = 3
+%                       multiply the outlier criterion using the quantile 
+%                       method, so that the limits are
+%                       upper = Q75 + thresholdFactor * (Q75-Q25)
+%                       lower = Q25 - thresholdFactor * (Q75-Q25)
+%                       OPTIONAL, default = 1.5
 %
 %       constraint      One or more restrictive constraints on the data before analysis. 
 %						Must be of the form
@@ -189,7 +192,7 @@ end
 
 % store raw data
 options.DataRaw = DataRaw;
-nObservationsRaw = size(DataRaw, 1);
+nObsRaw = size(DataRaw, 1);
 
 DataConstraint = DataRaw;
 
@@ -325,7 +328,7 @@ end
 if isfield(options, 'thresholdFactor')
     thresholdFactor = getValue(options.thresholdFactor);
 else
-    thresholdFactor = 4;
+    thresholdFactor = 1.5;
 end
 
 % output folder
@@ -444,7 +447,7 @@ for iIV = 1:length(x)
         Data.(myIV) = categorical(DataConstraint.(myIV), 'Ordinal', true);
         factors = [factors; myIV]; %#ok<AGROW>
     elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
-        Data.(myIV) = DataConstraint.(myIV); % overtake continuous values
+        Data.(myIV) = DataConstraint.(myIV); % keep continuous values
     else
         Data.(myIV) = categorical(DataConstraint.(myIV)); % else -> consider as categorical
         factors = [factors; myIV]; %#ok<AGROW>
@@ -457,6 +460,22 @@ Data.(responseVariable) = DataConstraint.(responseVariable);
 
 % store Data table in options
 options.Data = Data;
+
+% remove outliers
+if removeOutliers
+    yData = Data.(responseVariable);
+    Q = quantile(yData,  [0.25, 0.75]);
+    IQR = Q(2) - Q(1);
+    up =  Q(2) + thresholdFactor * IQR;
+    lo =  Q(1) - thresholdFactor * IQR;
+    idx = (yData <= up) & (yData >= lo);
+    nOutliers = sum(~idx);
+    nObsRaw = size(Data, 1);
+    if nOutliers > 0
+        Data = Data(idx, :);
+        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    end
+end
 
 % % remove duplicate rows (can be caused by constraints on a redundant higher-level table
 % Data = unique(Data,'rows');
@@ -518,8 +537,8 @@ productTerm = strjoin(interact, ' * ');
 xNoInteract = [{'1'}, setdiff(x, interact, 'stable')];
 sumTerm = strjoin(xNoInteract, ' + ');
 if ~isempty(id) && length(unique(Data.(id))) > 1
-    randomEffect = sprintf('(1|%s)', id);
-    randomSlopes = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+    randomEffect = '';
+    randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
 else
     randomEffect = '';
     randomSlopes = '';
@@ -557,32 +576,6 @@ end
 
 if isFitted
 
-    if removeOutliers
-        mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        mdlOutliers = isoutlier(mdlResiduals, 'ThresholdFactor', thresholdFactor);
-        nOutliers = sum(mdlOutliers);
-        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
-        if nOutliers > 0
-            fprintf('Re-fitting model...\n');
-            Data = Data(~mdlOutliers,:);
-            % re-fit linear model
-            try
-                mdl = fitglme(Data, formula, ...
-                    'DummyVarCoding', 'effects', ...
-                    'FitMethod', fitMethod, ...
-                    'Distribution', distribution, ...
-                    'Link', link);
-            catch ME
-                message = sprintf('%s', ME.message);
-                fprintf('The linear model fit returned an error after removing outliers:\n\t%s\n', message);
-                fprintf('Please try again, using a higher "thresholdFactor" and/or fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-                return
-            end
-        end
-    else
-        nOutliers = 0;
-    end
-
     % get ANOVA table from model fit
     results = anova(mdl);
 
@@ -590,7 +583,7 @@ if isFitted
     mdlOutput = formattedDisplayText(mdl);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObservationsRaw, nOutliers/nObservationsRaw*100);
+    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
     fprintf(fid, '\t%s', mdlOutput);
     fclose(fid);
 
