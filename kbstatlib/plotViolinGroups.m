@@ -1,4 +1,8 @@
-function [barPositions, ylimits] = plotViolinGroups(values, members, groups, memberName, groupName, bar_pCorr,plotTitle,ylabelStr)
+function [barPositions, ylimits] = plotViolinGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, layout)
+
+if nargin < 9
+    layout = [];
+end
 
 members = strcat(memberName, {' = '}, char(members));
 groups = strcat(groupName, {' = '}, char(groups));
@@ -7,13 +11,17 @@ groups = string(groups);
 nMembers = length(members);
 nGroups = length(groups);
 
-htl=tiledlayout(1,2, 'TileSpacing','none');
-barPositions=[1:3; 1:3];
+if ~isempty(layout)
+    htl = tiledlayout(layout, 1,2, 'TileSpacing','none');
+else
+    htl = tiledlayout(1,2, 'TileSpacing','none');
+end
+barPositions = [1:3; 1:3];
 pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairIdxs, 1);
 hnt = gobjects(nGroups, 1);
-for iGroup=1:nGroups
-    hnt(iGroup) = nexttile;
+for iGroup = 1:nGroups
+    hnt(iGroup) = nexttile(htl, iGroup);
     violinplot(squeeze(values(iGroup,:,:))');
     title(groups(iGroup))
     xticklabels(members);

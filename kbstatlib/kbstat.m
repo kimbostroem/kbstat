@@ -56,6 +56,10 @@ function mdl = kbstat(options)
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %
+%       formula         Formula in Wilkinson Notation. If given, it 
+%                       overrides the automatically generated formula
+%                       produced from the provided variables.
+%
 %       fitMethod       Fit method used for the GLM fit.
 %                       OPTIONAL, default = 'MPL'.
 %                       Possible values:
@@ -199,6 +203,14 @@ DataConstraint = DataRaw;
 % all table variables
 tableVars = DataRaw.Properties.VariableNames;
 
+% convert all character cell arrays to string arrays
+for iVar = 1:length(tableVars)
+    tableVar = tableVars{iVar};
+    if iscell(DataConstraint.(tableVar))
+        DataConstraint.(tableVar) = string(DataConstraint.(tableVar));
+    end
+end
+
 % independent variable(s)
 x = strtrim(strsplit(options.x, {',', ';'}));
 
@@ -215,14 +227,14 @@ end
 responseVariable = y; % set response variable to y
 
 % subject variable
-if isfield(options, 'id')
+if isfield(options, 'id') && ~isempty(options.id)
     id = options.id;
 else
     id = '';
 end
 
 % within-subject variables
-if isfield(options, 'within')
+if isfield(options, 'within') && ~isempty(options.within)
     within = strtrim(strsplit(options.within, {',', ';'}));
     x = union(x, within, 'stable'); % add within-subject variables to independent variables
 else
@@ -230,29 +242,36 @@ else
 end
 
 % interaction variables
-if isfield(options, 'interact')
+if isfield(options, 'interact') && ~isempty(options.interact)
     interact = strtrim(strsplit(options.interact, {',', ';'}));
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 else
     interact = {};
 end
 
+% formula
+if isfield(options, 'formula') && ~isempty(options.formula)
+    formula = options.formula;
+else
+    formula = '';
+end
+
 % posthoc method
-if isfield(options, 'posthocMethod')
+if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
     posthocMethod = 'emm';
 end
 
 % fit method
-if isfield(options, 'fitMethod')
+if isfield(options, 'fitMethod') && ~isempty(options.fitMethod)
     fitMethod = options.fitMethod;
 else
     fitMethod = 'MPL';
 end
 
 % distribution (for GLM)
-if isfield(options, 'distribution')
+if isfield(options, 'distribution') && ~isempty(options.distribution)
     distribution = options.distribution;
 else % no parameter given
     distribution = 'normal';
@@ -285,54 +304,54 @@ else % no parameter given
 end
 
 % level order
-if isfield(options, 'levelOrder')
+if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
     levelOrder = 'sorted';
 end
 
 % Flag to plot data
-if isfield(options, 'isPlot')
+if isfield(options, 'isPlot') && ~isempty(options.isPlot)
     isPlot = getValue(options.isPlot);
 else
     isPlot = true;
 end
 
-if isfield(options, 'errorBars')
+if isfield(options, 'errorBars') && ~isempty(options.errorBars)
     errorBars = lower(options.errorBars);
 else
     errorBars = 'std';
 end
 
 % legend location
-if isfield(options, 'legendLocation')
+if isfield(options, 'legendLocation') && ~isempty(options.legendLocation)
     legendLocation = options.legendLocation;
 else
     legendLocation = 'Best';
 end
 
 % flag to rescale all panel plots to the same y-scale
-if isfield(options, 'isRescale')
+if isfield(options, 'isRescale') && ~isempty(options.isRescale)
     isRescale = getValue(options.isRescale);
 else
     isRescale = false;
 end
 
 % flag if outliers should be removed
-if isfield(options, 'removeOutliers')
+if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
     removeOutliers = getValue(options.removeOutliers);
 else
     removeOutliers = false;
 end
 
-if isfield(options, 'thresholdFactor')
+if isfield(options, 'thresholdFactor') && ~isempty(options.thresholdFactor)
     thresholdFactor = getValue(options.thresholdFactor);
 else
     thresholdFactor = 1.5;
 end
 
 % output folder
-if isfield(options, 'outDir')
+if isfield(options, 'outDir') && ~isempty(options.outDir)
     outDir = options.outDir;
 else
     outDir = fullfile(inDir, inName);
@@ -341,7 +360,7 @@ if ~isfolder(outDir)
     mkdir(outDir);
 end
 
-if isfield(options, 'title')
+if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
     plotTitle = '';
@@ -361,6 +380,8 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
+        constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
+        constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
         [num, isNum] = str2num(constraintVal);
         if isNum
             constraintVal = num;
@@ -404,7 +425,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     if any(allIdx)
         DataConstraint = DataConstraint(allIdx, :);
     else
-        warning('Constraint cannot be fulfilled -> leave data unchanged');
+        warning('Constraint ''%s'' cannot be fulfilled -> leave data unchanged', constraint);
     end
     nLevels = length(unique(DataConstraint.(constraintVar)));
     switch nLevels
@@ -558,7 +579,9 @@ if ~isempty(randomSlopes)
     terms = [terms, randomSlopes];
 end
 
-formula = sprintf('%s ~ %s', responseVariable, strjoin(terms, ' + '));
+if isempty(formula)
+    formula = sprintf('%s ~ %s', responseVariable, strjoin(terms, ' + '));
+end
 fprintf('\t%s\n', formula);
 
 try
@@ -634,9 +657,9 @@ if isFitted
     figName = 'Diagnostics';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
     if ~isempty(plotTitle)
-        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none');
+        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     else
-        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none');
+        sgtitle(sprintf('Diagnostics for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     end
     iPanel = 0;
 
@@ -712,11 +735,11 @@ Stats = table;
 bar_values = nan(nRows, nCols, nGroups, nMembers);
 bar_errorTop = nan(nRows, nCols, nGroups, nMembers);
 bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
-bar_p = nan(nRows, nCols, nGroups, nPairs);
+bar_p = nan(nGroups, nPairs, nRows, nCols);
 main_p = nan(nPairs);
 
 maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
-violin_values = nan(nGroups, nMembers, maxNValues);
+violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols);
 
 
 % calc plot data and fill arrays
@@ -776,7 +799,7 @@ for iRow = 1:nRows
                 statsRow.ci95_2 = ci95(2);
                 Stats = [Stats; statsRow]; %#ok<AGROW>
 
-                violin_values(iGroup,iMember,1:length(values)) = values; %%%%%%%
+                violin_values(iGroup, iMember, 1:length(values), iRow, iCol) = values; %%%%%%%
 
                 % plot values
                 switch errorBars
@@ -835,7 +858,7 @@ for iRow = 1:nRows
                         L2 = (Data.(memberVar) == pair(2) & idx);
                         val1 = Data.(responseVariable)(L1);
                         val2 = Data.(responseVariable)(L2);
-                        [~, bar_p(iRow, iCol, iGroup, iPair)] = ttest2(val1, val2);
+                        [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
 
                         % calc main contrasts
                         L1 = (Data.(memberVar) == pair(1));
@@ -875,7 +898,7 @@ for iRow = 1:nRows
                         L2 = idx & (emm.table.(memberVar) == pair(2));
                         L = (L1 - L2)';
                         contrasts = contrasts_wald(mdl, emm, L);
-                        bar_p(iRow, iCol, iGroup, iPair) = contrasts.pVal;
+                        bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
 
                         % calc main contrasts
                         L1 = (emm.table.(memberVar) == pair(1));
@@ -889,47 +912,61 @@ for iRow = 1:nRows
     end
 end
 
-% statistical correction of posthoc p-values
-sizeOrig = size(bar_p); % vstore original dimensions
-bar_p = bar_p(:); % make column vector
-bar_pCorr = bar_p; % create array of corrected p-values
-idx = ~isnan(bar_p); % identify NaN-entries
-[~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
-bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-% statistical correction of main posthoc p-Values
-main_pCorr = main_p; % create array of corrected p-values
-idx = ~isnan(main_pCorr); % identify NaN-entries
-[~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+% If pairwise t-test, the posthoc comparisons must be statistically corrected
+bar_pCorr = bar_p;
+main_pCorr = main_p;
+if strcmp(posthocMethod, 'ttest')
+    sizeOrig = size(bar_p); % vstore original dimensions
+    bar_p = bar_p(:); % make column vector
+    bar_pCorr = bar_p; % create array of corrected p-values
+    idx = ~isnan(bar_p); % identify NaN-entries
+    [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+    bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
+    bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+    % statistical correction of main posthoc p-Values
+    idx = ~isnan(main_pCorr); % identify NaN-entries
+    [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+end
 
 %% Plot data
 
 if isPlot
 
     figWidth = nCols * panelWidth;
-    figHeight = nRows * panelHeight;
+    figHeight = nRows * panelHeight + 50;
     figName = 'ViolinPlot';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);    
+    layout = tiledlayout(nRows, nCols);
+    title(layout, sprintf('Data plots for %s', responseVariable), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     for iRow = 1:nRows
 
         for iCol = 1:nCols
 
-            % start panel subplot
+            % % start panel subplot
             iPanel = sub2ind([nCols, nRows], iCol, iRow);
-            subplot(nRows, nCols, iPanel);
+            % subplot(nRows, nCols, iPanel);
+            panel = tiledlayout(layout, 1, 1);
+            panel.Layout.Tile = iPanel;
+            panel.Layout.TileSpan = [1 1];            
+            ax = nexttile(panel);
+            ax.XAxis.TickValues = [];
+            ax.YAxis.TickValues = [];
 
             % plot panel
-            % myBarValues = reshape(bar_values(iRow, iCol, :, :), nGroups, nMembers);%%%%%%
-            % myBarErrorsBottom = reshape(bar_errorBottom(iRow, iCol, :, :), nGroups, nMembers);
-            % myBarErrorsTop = reshape(bar_errorTop(iRow, iCol, :, :), nGroups, nMembers);
-             if isempty(yUnits)
-                ylabelStr=sprintf('%s', y, yUnits);
+            if isempty(yUnits)
+                ylabelStr = sprintf('%s', y, yUnits);
             else
-                ylabelStr=sprintf('%s [%s]', y, yUnits);
+                ylabelStr = sprintf('%s [%s]', y, yUnits);
              end
             ylabelStr = strrep(ylabelStr,'_', ' ');
-            plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
-            plotViolinGroups(violin_values, members, groups, memberVar, groupVar, squeeze(bar_pCorr(iRow, iCol,:,:)), plotTitle, ylabelStr);            
+            if length(cols) > 1 && length(rows) > 1
+                plotTitle = sprintf('%s = %s, %s = %s', colVar, cols(iCol), rowVar, rows(iRow));
+            elseif length(rows) > 1
+                plotTitle = sprintf('%s = %s', rowVar, rows(iRow));
+            else
+                plotTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+            end
+            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, bar_pCorr(:, :, iRow, iCol), plotTitle, ylabelStr, panel);            
         end
     end
 
@@ -998,8 +1035,8 @@ for iPair = 1:nPairs
                 end
                 tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-                tableRow.p = bar_p(iRow, iCol, iGroup, iPair);
-                tableRow.pCorr = bar_pCorr(iRow, iCol, iGroup, iPair);
+                tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
+                tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
                 tableRow.significance = string(sigprint(tableRow.pCorr));
                 posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
             end
