@@ -168,9 +168,17 @@ function mdl = kbstat(options)
 %                       1 = display variable names and levels
 %                       2 = display capitalized variable names and levels
 %                       3 = do not display variable names but display 
-%                           capitalized levels
+%                           capitalized levels.
 %                       OPTIONAL, default = 1.
 %
+%       yLabel          Label for y axis in data plots.
+%                       OPTIONAL, default = y
+%
+%       xOrder          Ordering of the items on the x axis in data plots. 
+%                       Overrides ordering of the level names of the 1st
+%                       independent variable.
+%                       OPTIONAL, default = [].
+%                       Example: options.xOrder = '[1 3 2]' 
 %
 % OUTPUT
 %       mdl             (Generalized linear mixed-effects model) Result 
@@ -386,6 +394,18 @@ else
     showVarNames = 1;
 end
 
+if isfield(options, 'yLabel') && ~isempty(options.yLabel)
+    yLabel = options.yLabel;
+else
+    yLabel = options.y;
+end
+
+if isfield(options, 'xOrder') && ~isempty(options.xOrder)
+    xOrder = getValue(options.xOrder);
+else
+    xOrder = [];
+end
+
 fprintf('Performing Linear Model analysis for %s...\n', y);
 
 %% Apply constraint, if given
@@ -520,6 +540,10 @@ end
 memberVar = factors{1};
 members = unique(Data.(memberVar), levelOrder);
 nMembers = length(members);
+% apply potential re-ordering
+if ~isempty(xOrder)
+    members = members(xOrder);
+end
 
 % 2nd factor = group variable
 if length(factors) > 1
@@ -1084,9 +1108,9 @@ if isPlot
 
             % plot panel
             if isempty(yUnits)
-                ylabelStr = sprintf('%s', y, yUnits);
+                ylabelStr = sprintf('%s', yLabel, yUnits);
             else
-                ylabelStr = sprintf('%s [%s]', y, yUnits);
+                ylabelStr = sprintf('%s [%s]', yLabel, yUnits);
             end
             ylabelStr = strrep(ylabelStr,'_', ' ');
             
