@@ -162,8 +162,19 @@ function mdl = kbstat(options)
 %                                   the data table
 %       title           Title for plots
 %
+%       showVarNames    Flag how variables and levels are displayed in data
+%                       plots. 
+%                       0 = dispaly only variable levels
+%                       1 = display variable names and levels
+%                       2 = display capitalized variable names and levels
+%                       3 = do not display variable names but display 
+%                           capitalized levels
+%                       OPTIONAL, default = 1.
+%
+%
 % OUTPUT
-%   mdl                 (Generalized linear mixed-effects model) Result from linear model fit
+%       mdl             (Generalized linear mixed-effects model) Result 
+%                       from linear model fit
 %
 % EXAMPLE
 %   options.y = 'jointEfficiency';
@@ -367,6 +378,12 @@ if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
     plotTitle = options.y;
+end
+
+if isfield(options, 'showVarNames') && ~isempty(options.showVarNames)
+    showVarNames = getValue(options.showVarNames);
+else
+    showVarNames = 1;
 end
 
 fprintf('Performing Linear Model analysis for %s...\n', y);
@@ -1029,6 +1046,28 @@ if isPlot
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
     layout = tiledlayout(nRows, nCols);
     title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+
+    % prepare to display variable names and levels
+    switch showVarNames
+        case {2, 3} % capitalize variable names and levels
+            displayMemberVar = string(capitalize(memberVar));
+            displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
+            displayGroupVar = string(capitalize(groupVar));
+            displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', ')), ', '));
+            displayColVar = string(capitalize(colVar));
+            displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', ')), ', '));
+            displayRowVar = string(capitalize(rowVar));
+            displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', ')), ', '));
+        otherwise % use original variable names and levels
+            displayMemberVar = memberVar;
+            displayMembers = members;
+            displayGroupVar = groupVar;
+            displayGroups = groups;
+            displayColVar = colVar;
+            displayCols = cols;
+            displayRowVar = rowVar;
+            displayRows = rows;
+    end
     for iRow = 1:nRows
 
         for iCol = 1:nCols
@@ -1050,16 +1089,30 @@ if isPlot
                 ylabelStr = sprintf('%s [%s]', y, yUnits);
             end
             ylabelStr = strrep(ylabelStr,'_', ' ');
-            if length(cols) > 1 && length(rows) > 1
-                panelTitle = sprintf('%s = %s, %s = %s', colVar, cols(iCol), rowVar, rows(iRow));
-            elseif length(rows) > 1
-                panelTitle = sprintf('%s = %s', rowVar, rows(iRow));
-            elseif length(cols) > 1
-                panelTitle = sprintf('%s = %s', colVar, cols(iCol));
-            else
-                panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+            
+            switch showVarNames
+                case {1, 2} % display variable names and levels
+                    if length(cols) > 1 && length(rows) > 1
+                        panelTitle = sprintf('%s = %s, %s = %s', displayColVar, displayCols(iCol), displayRowVar, displayRows(iRow));
+                    elseif length(rows) > 1
+                        panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
+                    elseif length(cols) > 1
+                        panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
+                    else
+                        panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+                    end
+                otherwise % only display variable levels
+                    if length(cols) > 1 && length(rows) > 1
+                        panelTitle = sprintf('%s, %s', displayCols(iCol), displayRows(iRow));
+                    elseif length(rows) > 1
+                        panelTitle = sprintf('%s', displayRows(iRow));
+                    elseif length(cols) > 1
+                        panelTitle = sprintf('%s', displayCols(iCol));
+                    else
+                        panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+                    end
             end
-            plotViolinGroups(violin_values(:, :, :, iRow, iCol), members, groups, memberVar, groupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel);
+            plotViolinGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel, showVarNames);
         end
     end
 

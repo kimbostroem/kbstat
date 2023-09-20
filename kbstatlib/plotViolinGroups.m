@@ -1,18 +1,25 @@
-function [barPositions, ylimits] = plotViolinGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, layout)
+function [barPositions, ylimits] = plotViolinGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, parent, showVarNames)
 
+if nargin < 10
+    showVarNames = 1;
+end
 if nargin < 9
-    layout = [];
+    parent = [];
 end
 
-members = strcat(memberName, {' = '}, char(members));
-groups = strcat(groupName, {' = '}, char(groups));
+switch showVarNames
+    case {1, 2} % display variable names and levels
+    members = strcat(memberName, {' = '}, cellstr(members));
+    groups = strcat(groupName, {' = '}, cellstr(groups));
+end
+
 members = string(members);
 groups = string(groups);
 nMembers = length(members);
 nGroups = length(groups);
 
-if ~isempty(layout)
-    htl = tiledlayout(layout, 1,2, 'TileSpacing','none');
+if ~isempty(parent)
+    htl = tiledlayout(parent, 1,2, 'TileSpacing','none');
 else
     htl = tiledlayout(1,2, 'TileSpacing','none');
 end
