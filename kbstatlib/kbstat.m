@@ -1143,10 +1143,11 @@ if isPlot
     % rescale plots to achieve the same scale for all panels
     if isRescale
         axs = findobj(fig, 'type', 'axes');
-        axs(1) = [];
         ylimits = NaN(length(axs), 2);
         for iAx = 1:length(axs)
-            ylimits(iAx, :) = get(axs(iAx), 'ylim');
+            if ~isempty(axs(iAx).XAxis.TickValues)
+                ylimits(iAx, :) = get(axs(iAx), 'ylim');
+            end
         end
         maxYlimits(1, 1) = min(ylimits(:, 1));
         maxYlimits(1, 2) = max(ylimits(:, 2));
