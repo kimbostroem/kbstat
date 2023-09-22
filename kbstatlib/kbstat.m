@@ -242,7 +242,8 @@ x = strtrim(strsplit(options.x, {',', ';'}));
 %% dependent variable(s)
 
 y = cellstr(options.y);
-for iY = 1:length(y)
+nY = length(y);
+for iY = 1:nY
     myY = y{iY};
     if ~ismember(myY, tableVars)
         error('Dependent variable "%s" not found in data table', myY);
@@ -254,9 +255,10 @@ else
     yUnits = {''};
 end
 
-if length(y) > 1
-    Data2 = stack(Data1, y, 'NewDataVariableName', 'Y', 'IndexVariableName', 'depValue');
-    Data2.depValue = categorical(string(Data2.depValue));
+yVar = 'yVar';
+if nY > 1
+    Data2 = stack(Data1, y, 'NewDataVariableName', 'Y', 'IndexVariableName', yVar);
+    Data2.multiVar = categorical(string(Data2.multiVar));
     depVar = 'Y'; % set dependent variable to y
 else
     Data2 = Data1;
