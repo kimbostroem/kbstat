@@ -223,7 +223,7 @@ end
 options.DataRaw = DataRaw;
 nObsRaw = size(DataRaw, 1);
 
-DataConstraint = DataRaw;
+Data1 = DataRaw;
 
 % all table variables
 tableVars = DataRaw.Properties.VariableNames;
@@ -231,25 +231,40 @@ tableVars = DataRaw.Properties.VariableNames;
 % convert all character cell arrays to string arrays
 for iVar = 1:length(tableVars)
     tableVar = tableVars{iVar};
-    if iscell(DataConstraint.(tableVar))
-        DataConstraint.(tableVar) = string(DataConstraint.(tableVar));
+    if iscell(Data1.(tableVar))
+        Data1.(tableVar) = string(Data1.(tableVar));
     end
 end
 
 % independent variable(s)
 x = strtrim(strsplit(options.x, {',', ';'}));
 
-% dependent variable
-y = options.y;
-if ~ismember(y, tableVars)
-    error('Dependent variable "%s" not found in data table', y);
+%% dependent variable(s)
+
+y = cellstr(options.y);
+for iY = 1:length(y)
+    myY = y{iY};
+    if ~ismember(myY, tableVars)
+        error('Dependent variable "%s" not found in data table', myY);
+    end
 end
 if isfield(options, 'yUnits')
-    yUnits = options.yUnits;
+    yUnits = cellstr(options.yUnits);
 else
-    yUnits = '1';
+    yUnits = {''};
 end
-depVar = y; % set response variable to y
+
+if length(y) > 1
+    Data2 = stack(Data1, y, 'NewDataVariableName', 'Y', 'IndexVariableName', 'depValue');
+    Data2.depValue = categorical(string(Data2.depValue));
+    depVar = 'Y'; % set dependent variable to y
+else
+    Data2 = Data1;
+    depVar = y{1};
+    depVarUnits = yUnits{1};
+end
+
+%% more variables
 
 % subject variable
 if isfield(options, 'applyAbs') && ~isempty(options.applyAbs)
@@ -413,7 +428,7 @@ fprintf('Performing Linear Model analysis for %s...\n', depVar);
 if isfield(options, 'constraint') && ~isempty(options.constraint)
     constraint = options.constraint;
     [conds, ops] = strsplit(constraint, {'&', '|'});
-    allIdx = true(size(DataConstraint, 1), 1);
+    allIdx = true(size(Data2, 1), 1);
     auxVars = {};
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
@@ -427,15 +442,15 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
             constraintVal = num;
         end
         compVar = strtrim(matches{1});
-        if ~ismember(constraintVar, DataConstraint.Properties.VariableNames)
+        if ~ismember(constraintVar, Data2.Properties.VariableNames)
             auxVar = constraintVar;
-            DataConstraint.(constraintVar) = DataRaw.(constraintVar);
+            Data2.(constraintVar) = DataRaw.(constraintVar);
             auxVars = [auxVars; auxVar]; %#ok<AGROW>
         end
-        constraintVals = DataConstraint.(constraintVar);
-        if isordinal(DataConstraint.(constraintVar))
+        constraintVals = Data2.(constraintVar);
+        if isordinal(Data2.(constraintVar))
             constraintVals = str2double(string(constraintVals));
-        elseif iscell(DataConstraint.(constraintVar))
+        elseif iscell(Data2.(constraintVar))
             constraintVals = string(constraintVals);
         end
         switch compVar
@@ -463,11 +478,11 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         end
     end
     if any(allIdx)
-        DataConstraint = DataConstraint(allIdx, :);
+        Data2 = Data2(allIdx, :);
     else
         warning('Constraint ''%s'' cannot be fulfilled -> leave data unchanged', constraint);
     end
-    nLevels = length(unique(DataConstraint.(constraintVar)));
+    nLevels = length(unique(Data2.(constraintVar)));
     switch nLevels
         case 0
             fprintf('Variable "%s" has no levels left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
@@ -477,7 +492,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
             x = setdiff(x, constraintVar, 'stable');
     end
     for iVar = 1:length(auxVars)
-        DataConstraint = removevars(DataConstraint, auxVars{iVar});
+        Data2 = removevars(Data2, auxVars{iVar});
     end
 end
 
@@ -494,30 +509,30 @@ if ~isempty(id)
     myIV = id;
     myLevels = unique(DataRaw.(id));
     if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0)) % levels all integers or strings -> make categorical
-        Data.(myIV) = categorical(string(DataConstraint.(myIV))); % make categorical
+        Data.(myIV) = categorical(string(Data2.(myIV))); % make categorical
     else
-        Data.(myIV) = DataConstraint.(myIV); % keep continuous values
+        Data.(myIV) = Data2.(myIV); % keep continuous values
     end
 end
 
 % get independent variables
 for iIV = 1:length(x)
     myIV = x{iIV};
-    myLevels = unique(DataConstraint.(myIV));
+    myLevels = unique(Data2.(myIV));
     if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> make categorical
-        Data.(myIV) = categorical(string(DataConstraint.(myIV)));
+        Data.(myIV) = categorical(string(Data2.(myIV)));
         factors = [factors; myIV]; %#ok<AGROW>
     elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
-        Data.(myIV) = DataConstraint.(myIV); % keep continuous values
+        Data.(myIV) = Data2.(myIV); % keep continuous values
     else
-        Data.(myIV) = categorical(DataConstraint.(myIV)); % else -> make categorical
+        Data.(myIV) = categorical(Data2.(myIV)); % else -> make categorical
         factors = [factors; myIV]; %#ok<AGROW>
     end
 end
 
-% get response variable
-Data.(depVar) = DataConstraint.(depVar);
-Data.(depVar) = DataConstraint.(depVar);
+% get dependent variable
+Data.(depVar) = Data2.(depVar);
+Data.(depVar) = Data2.(depVar);
 if applyAbs
     Data.(depVar) = abs(Data.(depVar));
 end
@@ -1107,10 +1122,10 @@ if isPlot
             ax.YAxis.TickValues = [];
 
             % plot panel
-            if isempty(yUnits)
-                ylabelStr = sprintf('%s', yLabel, yUnits);
+            if isempty(depVarUnits)
+                ylabelStr = sprintf('%s', yLabel, depVarUnits);
             else
-                ylabelStr = sprintf('%s [%s]', yLabel, yUnits);
+                ylabelStr = sprintf('%s [%s]', yLabel, depVarUnits);
             end
             ylabelStr = strrep(ylabelStr,'_', ' ');
             
