@@ -249,7 +249,7 @@ if isfield(options, 'yUnits')
 else
     yUnits = '1';
 end
-responseVariable = y; % set response variable to y
+depVar = y; % set response variable to y
 
 % subject variable
 if isfield(options, 'applyAbs') && ~isempty(options.applyAbs)
@@ -385,7 +385,7 @@ end
 if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
-    plotTitle = options.y;
+    plotTitle = depVar;
 end
 
 if isfield(options, 'showVarNames') && ~isempty(options.showVarNames)
@@ -397,7 +397,7 @@ end
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
     yLabel = options.yLabel;
 else
-    yLabel = options.y;
+    yLabel = depVar;
 end
 
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
@@ -406,7 +406,7 @@ else
     xOrder = [];
 end
 
-fprintf('Performing Linear Model analysis for %s...\n', y);
+fprintf('Performing Linear Model analysis for %s...\n', depVar);
 
 %% Apply constraint, if given
 
@@ -516,10 +516,10 @@ for iIV = 1:length(x)
 end
 
 % get response variable
-Data.(y) = DataConstraint.(y);
-Data.(responseVariable) = DataConstraint.(responseVariable);
+Data.(depVar) = DataConstraint.(depVar);
+Data.(depVar) = DataConstraint.(depVar);
 if applyAbs
-    Data.(responseVariable) = abs(Data.(responseVariable));
+    Data.(depVar) = abs(Data.(depVar));
 end
 
 
@@ -580,33 +580,33 @@ end
 
 if removeOutliers
 
-    idxOut = false(size(Data.(responseVariable), 1), 1);
-    idxTest = true(size(Data.(responseVariable), 1), 1);
+    idxOut = false(size(Data.(depVar), 1), 1);
+    idxTest = true(size(Data.(depVar), 1), 1);
 
     if outlierLevel == 0 % level 0: all data
-        yData = Data.(responseVariable)(idxTest);
+        yData = Data.(depVar)(idxTest);
         idxOut = getOutliers(yData, outlierThreshold);
 
     elseif outlierLevel == 1 % level 1: 1st dependent variable
         for iMember = 1:nMembers
-            idxTest = true(size(Data.(responseVariable), 1), 1);
+            idxTest = true(size(Data.(depVar), 1), 1);
             member = members(iMember);
             idxTest = idxTest & (Data.(memberVar) == member);
-            yData = Data.(responseVariable)(idxTest);
+            yData = Data.(depVar)(idxTest);
             idxOut(idxTest) = getOutliers(yData, outlierThreshold);
         end
 
     elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
         for iMember = 1:nMembers
             for iGroup = 1:nGroups
-                idxTest = true(size(Data.(responseVariable), 1), 1);
+                idxTest = true(size(Data.(depVar), 1), 1);
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 if nGroups > 1
                     group = groups(iGroup);
                     idxTest = idxTest & (Data.(groupVar) == group);
                 end
-                yData = Data.(responseVariable)(idxTest);
+                yData = Data.(depVar)(idxTest);
                 idxOut(idxTest) = getOutliers(yData, outlierThreshold);
             end
         end
@@ -615,7 +615,7 @@ if removeOutliers
         for iMember = 1:nMembers
             for iGroup = 1:nGroups
                 for iCol = 1:nCols
-                    idxTest = true(size(Data.(responseVariable), 1), 1);
+                    idxTest = true(size(Data.(depVar), 1), 1);
                     member = members(iMember);
                     idxTest = idxTest & (Data.(memberVar) == member);
                     if nGroups > 1
@@ -626,7 +626,7 @@ if removeOutliers
                         col = cols(iCol);
                         idxTest = idxTest & (Data.(colVar) == col);
                     end
-                    yData = Data.(responseVariable)(idxTest);
+                    yData = Data.(depVar)(idxTest);
                     idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                 end
             end
@@ -636,7 +636,7 @@ if removeOutliers
             for iGroup = 1:nGroups
                 for iCol = 1:nCols
                     for iRow = 1:nRows
-                        idxTest = true(size(Data.(responseVariable), 1), 1);
+                        idxTest = true(size(Data.(depVar), 1), 1);
                         member = members(iMember);
                         idxTest = idxTest & (Data.(memberVar) == member);
                         if nGroups > 1
@@ -651,7 +651,7 @@ if removeOutliers
                             row = rows(iRow);
                             idxTest = idxTest & (Data.(rowVar) == row);
                         end
-                        yData = Data.(responseVariable)(idxTest);
+                        yData = Data.(depVar)(idxTest);
                         idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                     end
                 end
@@ -709,7 +709,7 @@ if ~isempty(randomSlopes)
 end
 
 if isempty(formula)
-    formula = sprintf('%s ~ %s', responseVariable, strjoin(terms, ' + '));
+    formula = sprintf('%s ~ %s', depVar, strjoin(terms, ' + '));
 end
 fprintf('\t%s\n', formula);
 
@@ -912,7 +912,7 @@ for iRow = 1:nRows
                 end
 
                 bar_data = Data(idx, :);
-                values = bar_data.(y);
+                values = bar_data.(depVar);
                 if nGroups > 1
                     statsRow.(groupVar) = string(group);
                 end
@@ -988,15 +988,15 @@ for iRow = 1:nRows
                         % calc contrasts
                         L1 = (Data.(memberVar) == pair(1) & idx);
                         L2 = (Data.(memberVar) == pair(2) & idx);
-                        val1 = Data.(responseVariable)(L1);
-                        val2 = Data.(responseVariable)(L2);
+                        val1 = Data.(depVar)(L1);
+                        val2 = Data.(depVar)(L2);
                         [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
 
                         % calc main contrasts
                         L1 = (Data.(memberVar) == pair(1));
                         L2 = (Data.(memberVar) == pair(2));
-                        val1 = Data.(responseVariable)(L1);
-                        val2 = Data.(responseVariable)(L2);
+                        val1 = Data.(depVar)(L1);
+                        val2 = Data.(depVar)(L2);
                         [~, main_p(iPair)] = ttest2(val1, val2);
 
                     case 'emm'
