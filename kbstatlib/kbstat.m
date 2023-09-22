@@ -493,10 +493,10 @@ factors = {};
 if ~isempty(id)
     myIV = id;
     myLevels = unique(DataRaw.(id));
-    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0))
-        Data.(myIV) = categorical(DataConstraint.(myIV)); % make values categorical
+    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0)) % levels all integers or strings -> make categorical
+        Data.(myIV) = categorical(string(DataConstraint.(myIV))); % make categorical
     else
-        Data.(myIV) = DataConstraint.(myIV); % adopt continuous values
+        Data.(myIV) = DataConstraint.(myIV); % keep continuous values
     end
 end
 
@@ -504,13 +504,13 @@ end
 for iIV = 1:length(x)
     myIV = x{iIV};
     myLevels = unique(DataConstraint.(myIV));
-    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> consider as categorical
+    if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> make categorical
         Data.(myIV) = categorical(string(DataConstraint.(myIV)));
         factors = [factors; myIV]; %#ok<AGROW>
     elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
         Data.(myIV) = DataConstraint.(myIV); % keep continuous values
     else
-        Data.(myIV) = categorical(DataConstraint.(myIV)); % else -> consider as categorical
+        Data.(myIV) = categorical(DataConstraint.(myIV)); % else -> make categorical
         factors = [factors; myIV]; %#ok<AGROW>
     end
 end
