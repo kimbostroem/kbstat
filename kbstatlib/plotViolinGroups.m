@@ -43,8 +43,9 @@ for iGroup = 1:nGroups
 end
 linkaxes(hnt)
 hnt(2).YAxis.TickValues = [];
-title(htl, plotTitle)
-
+if ~isempty(plotTitle)
+    title(htl, plotTitle)
+end
 hold on;
 
 set(gca, 'YGrid', 'on', 'XGrid', 'off')
