@@ -1123,7 +1123,7 @@ if isPlot
                     elseif length(cols) > 1
                         panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
                     else
-                        panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+                        panelTitle = '';
                     end
                 otherwise % only display variable levels
                     if length(cols) > 1 && length(rows) > 1
@@ -1133,7 +1133,7 @@ if isPlot
                     elseif length(cols) > 1
                         panelTitle = sprintf('%s', displayCols(iCol));
                     else
-                        panelTitle = strrep(Data.Properties.VariableNames{4},'_', ' ');
+                        panelTitle = '';
                     end
             end
             plotViolinGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel, showVarNames);
