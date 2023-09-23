@@ -163,25 +163,25 @@ function mdl = kbstat(options)
 %       title           Title for plots
 %
 %       showVarNames    Flag how variables and levels are displayed in data
-%                       plots. 
+%                       plots.
 %                       0 = dispaly only variable levels
 %                       1 = display variable names and levels
 %                       2 = display capitalized variable names and levels
-%                       3 = do not display variable names but display 
+%                       3 = do not display variable names but display
 %                           capitalized levels.
 %                       OPTIONAL, default = 1.
 %
 %       yLabel          Label for y axis in data plots.
 %                       OPTIONAL, default = y
 %
-%       xOrder          Ordering of the items on the x axis in data plots. 
+%       xOrder          Ordering of the items on the x axis in data plots.
 %                       Overrides ordering of the level names of the 1st
 %                       independent variable.
 %                       OPTIONAL, default = [].
-%                       Example: options.xOrder = '[1 3 2]' 
+%                       Example: options.xOrder = '[1 3 2]'
 %
 % OUTPUT
-%       mdl             (Generalized linear mixed-effects model) Result 
+%       mdl             (Generalized linear mixed-effects model) Result
 %                       from linear model fit
 %
 % EXAMPLE
@@ -258,8 +258,9 @@ end
 yVar = 'yVar';
 if nY > 1
     Data2 = stack(Data1, y, 'NewDataVariableName', 'Y', 'IndexVariableName', yVar);
-    Data2.multiVar = categorical(string(Data2.multiVar));
+    Data2.(yVar) = categorical(string(Data2.(yVar)));
     depVar = 'Y'; % set dependent variable to y
+    depVarUnits = '';
 else
     Data2 = Data1;
     depVar = y{1};
@@ -532,6 +533,11 @@ for iIV = 1:length(x)
     end
 end
 
+% multivariate variable
+if nY > 1
+    Data.(yVar) = Data2.(yVar);
+end
+
 % get dependent variable
 Data.(depVar) = Data2.(depVar);
 Data.(depVar) = Data2.(depVar);
@@ -595,65 +601,55 @@ else
     nRows = 1;
 end
 
+%% Remove outliers
+
 if removeOutliers
 
-    idxOut = false(size(Data.(depVar), 1), 1);
-    idxTest = true(size(Data.(depVar), 1), 1);
+    idxOut = false(size(Data, 1), 1);
 
-    if outlierLevel == 0 % level 0: all data
-        yData = Data.(depVar)(idxTest);
-        idxOut = getOutliers(yData, outlierThreshold);
+    for iVar = 1:nY
 
-    elseif outlierLevel == 1 % level 1: 1st dependent variable
-        for iMember = 1:nMembers
-            idxTest = true(size(Data.(depVar), 1), 1);
-            member = members(iMember);
-            idxTest = idxTest & (Data.(memberVar) == member);
-            yData = Data.(depVar)(idxTest);
-            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+        if nY > 1
+            idxDep = (Data.(yVar) == y{iVar});
+        else
+            idxDep = true(size(Data, 1), 1);
         end
 
-    elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
-        for iMember = 1:nMembers
-            for iGroup = 1:nGroups
-                idxTest = true(size(Data.(depVar), 1), 1);
+        idxTest = idxDep;
+
+        if outlierLevel == 0 % level 0: all data
+            yData = Data.(depVar)(idxTest);
+            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+
+        elseif outlierLevel == 1 % level 1: 1st dependent variable
+            for iMember = 1:nMembers
+                idxTest = idxDep;
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
-                if nGroups > 1
-                    group = groups(iGroup);
-                    idxTest = idxTest & (Data.(groupVar) == group);
-                end
                 yData = Data.(depVar)(idxTest);
                 idxOut(idxTest) = getOutliers(yData, outlierThreshold);
             end
-        end
 
-    elseif outlierLevel == 3 % level 3: 3rd dependent variable, if given
-        for iMember = 1:nMembers
-            for iGroup = 1:nGroups
-                for iCol = 1:nCols
-                    idxTest = true(size(Data.(depVar), 1), 1);
+        elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    idxTest = idxDep;
                     member = members(iMember);
                     idxTest = idxTest & (Data.(memberVar) == member);
                     if nGroups > 1
                         group = groups(iGroup);
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
-                    if nCols > 1
-                        col = cols(iCol);
-                        idxTest = idxTest & (Data.(colVar) == col);
-                    end
                     yData = Data.(depVar)(idxTest);
                     idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                 end
             end
-        end
-    elseif outlierLevel == 4 % level 4: 4th dependent variable, if given
-        for iMember = 1:nMembers
-            for iGroup = 1:nGroups
-                for iCol = 1:nCols
-                    for iRow = 1:nRows
-                        idxTest = true(size(Data.(depVar), 1), 1);
+
+        elseif outlierLevel == 3 % level 3: 3rd dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    for iCol = 1:nCols
+                        idxTest = idxDep;
                         member = members(iMember);
                         idxTest = idxTest & (Data.(memberVar) == member);
                         if nGroups > 1
@@ -664,12 +660,34 @@ if removeOutliers
                             col = cols(iCol);
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
-                        if nRows > 1
-                            row = rows(iRow);
-                            idxTest = idxTest & (Data.(rowVar) == row);
-                        end
                         yData = Data.(depVar)(idxTest);
                         idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+                    end
+                end
+            end
+        elseif outlierLevel == 4 % level 4: 4th dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    for iCol = 1:nCols
+                        for iRow = 1:nRows
+                            idxTest = idxDep;
+                            member = members(iMember);
+                            idxTest = idxTest & (Data.(memberVar) == member);
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idxTest = idxTest & (Data.(groupVar) == group);
+                            end
+                            if nCols > 1
+                                col = cols(iCol);
+                                idxTest = idxTest & (Data.(colVar) == col);
+                            end
+                            if nRows > 1
+                                row = rows(iRow);
+                                idxTest = idxTest & (Data.(rowVar) == row);
+                            end
+                            yData = Data.(depVar)(idxTest);
+                            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
+                        end
                     end
                 end
             end
@@ -685,31 +703,44 @@ if removeOutliers
     end
 end
 
+%% Save data table
 
-
-
-% save Data table
 saveTable(Data, 'Data', {'csv'}, outDir);
 
 %% Fit linear model and perform ANOVA
 
 anovaTable = table; % init ANOVA table
 
-productTerm = strjoin(interact, ' * ');
-xNoInteract = [{'1'}, setdiff(x, interact, 'stable')];
+productTerm = strjoin(interact, '*');
+if nY > 1
+    % productTerm = sprintf('%s:(%s)', yVar, productTerm); % <- this does not work with emmeans
+    % xNoInteract = [{yVar}, setdiff(x, interact, 'stable')];
+    productTerm = sprintf('%s*%s -1', yVar, productTerm);    
+end
+xNoInteract = setdiff(x, interact, 'stable');
+
 sumTerm = strjoin(xNoInteract, ' + ');
+
 if ~isempty(id) && length(unique(Data.(id))) > 1
     if randomSlopes
-        randomEffect = '';
+        if nY > 1
+            randomEffect = sprintf('(1|%s)', yVar);
+        else
+            randomEffect = '';
+        end
         randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
     else
         randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+        % if nY > 1
+        %     randomEffect = [randomEffect, ' + ', sprintf('(1|%s)', yVar)];
+        % end
         randomSlopes = '';
     end
 else
     randomEffect = '';
     randomSlopes = '';
 end
+
 
 terms = {};
 if ~isempty(sumTerm)
@@ -869,376 +900,406 @@ print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', s
 
 %% Calc plot data
 
-% figure size
-panelWidth = 600; % width of each panel
-panelHeight = 300; % height of each panel
+for iVar = 1:nY
+    myVar = y{iVar};
 
-% define posthoc comparison pairs
-pairs = nchoosek(members, 2);
-nPairs = size(pairs, 1);
+    % figure size
+    panelWidth = 600; % width of each panel
+    panelHeight = 300; % height of each panel
 
-% init statistics table
-Stats = table;
+    % define posthoc comparison pairs
+    pairs = nchoosek(members, 2);
+    nPairs = size(pairs, 1);
 
-% create (nRows x nCols x nGroups x nMembers) arrays of plot data
-bar_values = nan(nRows, nCols, nGroups, nMembers);
-bar_errorTop = nan(nRows, nCols, nGroups, nMembers);
-bar_errorBottom = nan(nRows, nCols, nGroups, nMembers);
-bar_p = nan(nGroups, nPairs, nRows, nCols);
-main_p = nan(nPairs);
+    % init statistics table
+    Stats = table;
 
-maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
-violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols);
+    % create (nRows x nCols x nGroups x nMembers) arrays of plot data
+    bar_values = nan(nRows, nCols, nGroups, nMembers, nY);
+    bar_errorTop = nan(nRows, nCols, nGroups, nMembers, nY);
+    bar_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
+    bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_p = nan(nPairs);
 
-
-% calc plot data and fill arrays
-for iRow = 1:nRows
-
-    for iCol = 1:nCols
-
-        for iGroup = 1:nGroups
-
-            % loop over 1st x
-            for iMember = 1:nMembers
-
-                % init statistics table row
-                statsRow = table;
-
-                % 1st x
-                member = members(iMember);
-                idx = (Data.(memberVar) == member);
-
-                % 2nd x, if given
-                if nGroups > 1
-                    group = groups(iGroup);
-                    idx = idx & (Data.(groupVar) == group);
-                end
-
-                % 3rd x, if given
-                if nCols > 1
-                    col = cols(iCol);
-                    statsRow.(colVar) = string(col);
-                    idx = idx & Data.(colVar) == col;
-                end
-
-                % 4th x, if given
-                if nRows > 1
-                    row = rows(iRow);
-                    statsRow.(rowVar) = string(row);
-                    idx = idx & Data.(rowVar) == row;
-                end
-
-                bar_data = Data(idx, :);
-                values = bar_data.(depVar);
-                if nGroups > 1
-                    statsRow.(groupVar) = string(group);
-                end
-                statsRow.(memberVar) = string(member);
-                statsRow.N = length(values(~isnan(values)));
-                statsRow.median = median(values, 'omitnan');
-                statsRow.q25 = quantile(values, 0.25);
-                statsRow.q75 = quantile(values, 0.75);
-                statsRow.mean = mean(values, 'omitnan');
-                statsRow.std = std(values, 'omitnan');
-                statsRow.SE = statsRow.std / sqrt(statsRow.N);
-                statsRow.RE = statsRow.SE / statsRow.mean * 100;
-                tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
-                ci95 = statsRow.mean + tci95 * statsRow.SE;
-                statsRow.ci95_1 = ci95(1);
-                statsRow.ci95_2 = ci95(2);
-                Stats = [Stats; statsRow]; %#ok<AGROW>
-
-                violin_values(iGroup, iMember, 1:length(values), iRow, iCol) = values; %%%%%%%
-
-                % plot values
-                switch errorBars
-                    case 'std'
-                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
-                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.std;
-                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.std;
-                    case 'se'
-                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
-                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.SE;
-                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.SE;
-                    case 'q25'
-                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.median;
-                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
-                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
-                    case 'ci95'
-                        bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
-                        bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
-                        bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
-                end
-
-
-            end
-
-            % get post-hoc p-values
-            for iPair = 1:nPairs
-                pair = pairs(iPair, :);
-
-                switch posthocMethod
-
-                    case 'ttest'
-
-                        % init idx
-                        idx = true(size(Data, 1), 1);
-
-                        % 2nd x, if given
-                        if nGroups > 1
-                            group = groups(iGroup);
-                            idx = idx & (Data.(groupVar) == group);
-                        end
-
-                        % 3rd x, if given
-                        if nCols > 1
-                            col = cols(iCol);
-                            idx = idx & (Data.(colVar) == col);
-                        end
-
-                        % 4th x, if given
-                        if nRows > 1
-                            row = rows(iRow);
-                            idx = idx & (Data.(rowVar) == row);
-                        end
-
-                        % calc contrasts
-                        L1 = (Data.(memberVar) == pair(1) & idx);
-                        L2 = (Data.(memberVar) == pair(2) & idx);
-                        val1 = Data.(depVar)(L1);
-                        val2 = Data.(depVar)(L2);
-                        [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
-
-                        % calc main contrasts
-                        L1 = (Data.(memberVar) == pair(1));
-                        L2 = (Data.(memberVar) == pair(2));
-                        val1 = Data.(depVar)(L1);
-                        val2 = Data.(depVar)(L2);
-                        [~, main_p(iPair)] = ttest2(val1, val2);
-
-                    case 'emm'
-
-                        % perform post-hoc analysis using emm
-                        emm = emmeans(mdl, 'effects', 'unbalanced');
-
-                        % init idx
-                        idx = true(size(emm.table, 1), 1);
-
-                        % 2nd x, if given
-                        if nGroups > 1
-                            group = groups(iGroup);
-                            idx = idx & (emm.table.(groupVar) == group);
-                        end
-
-                        % 3rd x, if given
-                        if nCols > 1
-                            col = cols(iCol);
-                            idx = idx & (emm.table.(colVar) == col);
-                        end
-
-                        % 4th x, if given
-                        if nRows > 1
-                            row = rows(iRow);
-                            idx = idx & (emm.table.(rowVar) == row);
-                        end
-
-                        % calc contrasts
-                        L1 = idx & (emm.table.(memberVar) == pair(1));
-                        L2 = idx & (emm.table.(memberVar) == pair(2));
-                        L = (L1 - L2)';
-                        contrasts = contrasts_wald(mdl, emm, L);
-                        bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
-
-                        % calc main contrasts
-                        L1 = (emm.table.(memberVar) == pair(1));
-                        L2 = (emm.table.(memberVar) == pair(2));
-                        L = (L1 - L2)';
-                        contrasts = contrasts_wald(mdl, emm, L);
-                        main_p(iPair) = contrasts.pVal;
-                end
-            end
-        end
+    if nY > 1
+        maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+    else
+        maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
     end
-end
+    violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols);
 
-% If pairwise t-test, the posthoc comparisons must be statistically corrected
-bar_pCorr = bar_p;
-main_pCorr = main_p;
-if strcmp(posthocMethod, 'ttest')
-    sizeOrig = size(bar_p); % vstore original dimensions
-    bar_p = bar_p(:); % make column vector
-    bar_pCorr = bar_p; % create array of corrected p-values
-    idx = ~isnan(bar_p); % identify NaN-entries
-    [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
-    bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-    bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-    % statistical correction of main posthoc p-Values
-    idx = ~isnan(main_pCorr); % identify NaN-entries
-    [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
-end
-
-%% Plot data
-
-if isPlot
-
-    figWidth = nCols * panelWidth;
-    figHeight = nRows * panelHeight + 50;
-    figName = 'ViolinPlot';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
-    layout = tiledlayout(nRows, nCols);
-    title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-
-    % prepare to display variable names and levels
-    switch showVarNames
-        case {2, 3} % capitalize variable names and levels
-            displayMemberVar = string(capitalize(memberVar));
-            displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
-            displayGroupVar = string(capitalize(groupVar));
-            displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', ')), ', '));
-            displayColVar = string(capitalize(colVar));
-            displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', ')), ', '));
-            displayRowVar = string(capitalize(rowVar));
-            displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', ')), ', '));
-        otherwise % use original variable names and levels
-            displayMemberVar = memberVar;
-            displayMembers = members;
-            displayGroupVar = groupVar;
-            displayGroups = groups;
-            displayColVar = colVar;
-            displayCols = cols;
-            displayRowVar = rowVar;
-            displayRows = rows;
-    end
-    for iRow = 1:nRows
-
-        for iCol = 1:nCols
-
-            % % start panel subplot
-            iPanel = sub2ind([nCols, nRows], iCol, iRow);
-            % subplot(nRows, nCols, iPanel);
-            panel = tiledlayout(layout, 1, 1);
-            panel.Layout.Tile = iPanel;
-            panel.Layout.TileSpan = [1 1];
-            ax = nexttile(panel);
-            ax.XAxis.TickValues = [];
-            ax.YAxis.TickValues = [];
-
-            % plot panel
-            if isempty(depVarUnits)
-                ylabelStr = sprintf('%s', yLabel, depVarUnits);
-            else
-                ylabelStr = sprintf('%s [%s]', yLabel, depVarUnits);
-            end
-            ylabelStr = strrep(ylabelStr,'_', ' ');
-            
-            switch showVarNames
-                case {1, 2} % display variable names and levels
-                    if length(cols) > 1 && length(rows) > 1
-                        panelTitle = sprintf('%s = %s, %s = %s', displayColVar, displayCols(iCol), displayRowVar, displayRows(iRow));
-                    elseif length(rows) > 1
-                        panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
-                    elseif length(cols) > 1
-                        panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
-                    else
-                        panelTitle = '';
-                    end
-                otherwise % only display variable levels
-                    if length(cols) > 1 && length(rows) > 1
-                        panelTitle = sprintf('%s, %s', displayCols(iCol), displayRows(iRow));
-                    elseif length(rows) > 1
-                        panelTitle = sprintf('%s', displayRows(iRow));
-                    elseif length(cols) > 1
-                        panelTitle = sprintf('%s', displayCols(iCol));
-                    else
-                        panelTitle = '';
-                    end
-            end
-            plotViolinGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel, showVarNames);
-        end
-    end
-
-    % rescale plots to achieve the same scale for all panels
-    if isRescale
-        axs = findobj(fig, 'type', 'axes');
-        ylimits = NaN(length(axs), 2);
-        for iAx = 1:length(axs)
-            if ~isempty(axs(iAx).XAxis.TickValues)
-                ylimits(iAx, :) = get(axs(iAx), 'ylim');
-            end
-        end
-        maxYlimits(1, 1) = min(ylimits(:, 1));
-        maxYlimits(1, 2) = max(ylimits(:, 2));
-        for iAx = 1:length(axs)
-            set(axs(iAx), 'ylim', maxYlimits);
-        end
-    end
-
-    % save figure
-    set(fig, 'PaperPositionMode', 'auto');
-    set(fig, 'PaperUnits', 'points');
-    set(fig, 'PaperSize', [figWidth figHeight]);
-    print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-    print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
-    saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
-
-end
-
-% save descriptive statistics
-saveTable(Stats, 'Statistics', {'xlsx'}, outDir);
-disp(Stats) % display table
-
-%% Post-hoc table
-
-posthocTable = table;
-for iPair = 1:nPairs
-    tableRow = table;
-    if nRows > 1
-        tableRow.(rowVar) = "any";
-    end
-    if nCols > 1
-        tableRow.(colVar) = "any";
-    end
-    if nGroups > 1
-        tableRow.(groupVar) = "any";
-    end
-    tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
-    tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-    tableRow.p = main_p(iPair);
-    tableRow.pCorr = main_pCorr(iPair);
-    tableRow.significance = string(sigprint(tableRow.pCorr));
-    posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
-end
-for iPair = 1:nPairs
+    % calc plot data and fill arrays
     for iRow = 1:nRows
         for iCol = 1:nCols
             for iGroup = 1:nGroups
-                tableRow = table;
-                if nRows > 1
-                    tableRow.(rowVar) = string(rows(iRow));
+                % loop over 1st x
+                for iMember = 1:nMembers
+
+                    if nY > 1
+                        idxDep = (Data.(yVar) == myVar);
+                    else
+                        idxDep = true(size(Data, 1), 1);
+                    end
+
+                    % init statistics table row
+                    statsRow = table;
+
+                    % 1st x
+                    member = members(iMember);
+                    idx = (Data.(memberVar) == member) & idxDep;
+
+                    % 2nd x, if given
+                    if nGroups > 1
+                        group = groups(iGroup);
+                        idx = idx & (Data.(groupVar) == group);
+                    end
+
+                    % 3rd x, if given
+                    if nCols > 1
+                        col = cols(iCol);
+                        statsRow.(colVar) = string(col);
+                        idx = idx & Data.(colVar) == col;
+                    end
+
+                    % 4th x, if given
+                    if nRows > 1
+                        row = rows(iRow);
+                        statsRow.(rowVar) = string(row);
+                        idx = idx & Data.(rowVar) == row;
+                    end
+
+                    bar_data = Data(idx, :);
+                    values = bar_data.(depVar);
+                    if nGroups > 1
+                        statsRow.(groupVar) = string(group);
+                    end
+                    statsRow.(memberVar) = string(member);
+                    statsRow.N = length(values(~isnan(values)));
+                    statsRow.median = median(values, 'omitnan');
+                    statsRow.q25 = quantile(values, 0.25);
+                    statsRow.q75 = quantile(values, 0.75);
+                    statsRow.mean = mean(values, 'omitnan');
+                    statsRow.std = std(values, 'omitnan');
+                    statsRow.SE = statsRow.std / sqrt(statsRow.N);
+                    statsRow.RE = statsRow.SE / statsRow.mean * 100;
+                    tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
+                    ci95 = statsRow.mean + tci95 * statsRow.SE;
+                    statsRow.ci95_1 = ci95(1);
+                    statsRow.ci95_2 = ci95(2);
+                    Stats = [Stats; statsRow]; %#ok<AGROW>
+
+                    violin_values(iGroup, iMember, 1:length(values), iRow, iCol) = values; %%%%%%%
+
+                    % plot values
+                    switch errorBars
+                        case 'std'
+                            bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.std;
+                            bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.std;
+                        case 'se'
+                            bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.mean - statsRow.SE;
+                            bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.mean + statsRow.SE;
+                        case 'q25'
+                            bar_values(iRow, iCol, iGroup, iMember) = statsRow.median;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
+                            bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
+                        case 'ci95'
+                            bar_values(iRow, iCol, iGroup, iMember) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember) = statsRow.q25;
+                            bar_errorTop(iRow, iCol, iGroup, iMember) = statsRow.q75;
+                    end
+
+
                 end
-                if nCols > 1
-                    tableRow.(colVar) = string(cols(iCol));
+
+                % get post-hoc p-values
+                for iPair = 1:nPairs
+                    pair = pairs(iPair, :);
+
+                    switch posthocMethod
+
+                        case 'ttest' % perform post-hoc analysis using paired t-tests
+
+                            % init idx
+                            idx = true(size(Data, 1), 1) & idxDep;
+
+                            % 2nd x, if given
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idx = idx & (Data.(groupVar) == group);
+                            end
+
+                            % 3rd x, if given
+                            if nCols > 1
+                                col = cols(iCol);
+                                idx = idx & (Data.(colVar) == col);
+                            end
+
+                            % 4th x, if given
+                            if nRows > 1
+                                row = rows(iRow);
+                                idx = idx & (Data.(rowVar) == row);
+                            end
+
+                            % calc contrasts
+                            L1 = (Data.(memberVar) == pair(1) & idx);
+                            L2 = (Data.(memberVar) == pair(2) & idx);
+                            val1 = Data.(depVar)(L1);
+                            val2 = Data.(depVar)(L2);
+                            [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
+
+                            % calc main contrasts
+                            L1 = (Data.(memberVar) == pair(1));
+                            L2 = (Data.(memberVar) == pair(2));
+                            val1 = Data.(depVar)(L1);
+                            val2 = Data.(depVar)(L2);
+                            [~, main_p(iPair)] = ttest2(val1, val2);
+
+                        case 'emm' % perform post-hoc analysis using emmeans    
+
+                            emm = emmeans(mdl, 'effects', 'unbalanced');
+
+                            if nY > 1                                
+                                idxDep = (emm.table.(yVar) == myVar);
+                            else
+                                idxDep = true(size(emm.table, 1), 1);
+                            end
+
+                            % init idx
+                            idx = idxDep;
+
+                            % 2nd x, if given
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idx = idx & (emm.table.(groupVar) == group);
+                            end
+
+                            % 3rd x, if given
+                            if nCols > 1
+                                col = cols(iCol);
+                                idx = idx & (emm.table.(colVar) == col);
+                            end
+
+                            % 4th x, if given
+                            if nRows > 1
+                                row = rows(iRow);
+                                idx = idx & (emm.table.(rowVar) == row);
+                            end
+
+                            % calc contrasts
+                            L1 = idx & (emm.table.(memberVar) == pair(1));
+                            L2 = idx & (emm.table.(memberVar) == pair(2));
+                            L = (L1 - L2)';
+                            contrasts = contrasts_wald(mdl, emm, L);
+                            bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
+
+                            % calc main contrasts
+                            L1 = (emm.table.(memberVar) == pair(1));
+                            L2 = (emm.table.(memberVar) == pair(2));
+                            L = (L1 - L2)';
+                            contrasts = contrasts_wald(mdl, emm, L);
+                            main_p(iPair) = contrasts.pVal;
+                    end
                 end
-                if nGroups > 1
-                    tableRow.(groupVar) = string(groups(iGroup));
-                end
-                tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
-                tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-                tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
-                tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
-                tableRow.significance = string(sigprint(tableRow.pCorr));
-                posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
             end
         end
     end
+
+    % If pairwise t-test, the posthoc comparisons must be statistically corrected
+    bar_pCorr = bar_p;
+    main_pCorr = main_p;
+    if strcmp(posthocMethod, 'ttest')
+        sizeOrig = size(bar_p); % vstore original dimensions
+        bar_p = bar_p(:); % make column vector
+        bar_pCorr = bar_p; % create array of corrected p-values
+        idx = ~isnan(bar_p); % identify NaN-entries
+        [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+        bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
+        bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+        % statistical correction of main posthoc p-Values
+        idx = ~isnan(main_pCorr); % identify NaN-entries
+        [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+    end
+
+
+    %% Plot data
+
+    if isPlot
+
+        figWidth = nCols * panelWidth;
+        figHeight = nRows * panelHeight + 50;
+        figNameBase = 'ViolinPlots';
+        if nY > 1
+            figName = sprintf('%s_%s', figNameBase, myVar);
+        else
+            figName = 'ViolinPlots';
+        end
+        fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+        layout = tiledlayout(nRows, nCols);
+        title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+
+        % prepare to display variable names and levels
+        switch showVarNames
+            case {2, 3} % capitalize variable names and levels
+                displayMemberVar = string(capitalize(memberVar));
+                displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
+                displayGroupVar = string(capitalize(groupVar));
+                displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', ')), ', '));
+                displayColVar = string(capitalize(colVar));
+                displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', ')), ', '));
+                displayRowVar = string(capitalize(rowVar));
+                displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', ')), ', '));
+            otherwise % use original variable names and levels
+                displayMemberVar = memberVar;
+                displayMembers = members;
+                displayGroupVar = groupVar;
+                displayGroups = groups;
+                displayColVar = colVar;
+                displayCols = cols;
+                displayRowVar = rowVar;
+                displayRows = rows;
+        end
+        for iRow = 1:nRows
+
+            for iCol = 1:nCols
+
+                % % start panel subplot
+                iPanel = sub2ind([nCols, nRows], iCol, iRow);
+                % subplot(nRows, nCols, iPanel);
+                panel = tiledlayout(layout, 1, 1);
+                panel.Layout.Tile = iPanel;
+                panel.Layout.TileSpan = [1 1];
+                ax = nexttile(panel);
+                ax.XAxis.TickValues = [];
+                ax.YAxis.TickValues = [];
+
+                % plot panel
+                if isempty(depVarUnits)
+                    ylabelStr = sprintf('%s', yLabel, depVarUnits);
+                else
+                    ylabelStr = sprintf('%s [%s]', yLabel, depVarUnits);
+                end
+                ylabelStr = strrep(ylabelStr,'_', ' ');
+
+                switch showVarNames
+                    case {1, 2} % display variable names and levels
+                        if length(cols) > 1 && length(rows) > 1
+                            panelTitle = sprintf('%s = %s, %s = %s', displayColVar, displayCols(iCol), displayRowVar, displayRows(iRow));
+                        elseif length(rows) > 1
+                            panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
+                        elseif length(cols) > 1
+                            panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
+                        else
+                            panelTitle = '';
+                        end
+                    otherwise % only display variable levels
+                        if length(cols) > 1 && length(rows) > 1
+                            panelTitle = sprintf('%s, %s', displayCols(iCol), displayRows(iRow));
+                        elseif length(rows) > 1
+                            panelTitle = sprintf('%s', displayRows(iRow));
+                        elseif length(cols) > 1
+                            panelTitle = sprintf('%s', displayCols(iCol));
+                        else
+                            panelTitle = '';
+                        end
+                end
+                plotViolinGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel, showVarNames);
+            end
+        end
+
+        % rescale plots to achieve the same scale for all panels
+        if isRescale
+            axs = findobj(fig, 'type', 'axes');
+            ylimits = NaN(length(axs), 2);
+            for iAx = 1:length(axs)
+                if ~isempty(axs(iAx).XAxis.TickValues)
+                    ylimits(iAx, :) = get(axs(iAx), 'ylim');
+                end
+            end
+            maxYlimits(1, 1) = min(ylimits(:, 1));
+            maxYlimits(1, 2) = max(ylimits(:, 2));
+            for iAx = 1:length(axs)
+                set(axs(iAx), 'ylim', maxYlimits);
+            end
+        end
+
+        % save figure
+        set(fig, 'PaperPositionMode', 'auto');
+        set(fig, 'PaperUnits', 'points');
+        set(fig, 'PaperSize', [figWidth figHeight]);
+        print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+        print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
+        saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
+    end
+
+    % save descriptive statistics
+    if nY > 1
+        fileName = sprintf('Statistics_%s', myVar);
+    else
+        fileName = 'Statistics';
+    end
+    saveTable(Stats, fileName, {'xlsx'}, outDir);
+    disp(Stats) % display table
+
+    %% Post-hoc table
+
+    posthocTable = table;
+    for iPair = 1:nPairs
+        tableRow = table;
+        if nRows > 1
+            tableRow.(rowVar) = "any";
+        end
+        if nCols > 1
+            tableRow.(colVar) = "any";
+        end
+        if nGroups > 1
+            tableRow.(groupVar) = "any";
+        end
+        tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
+        tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+        tableRow.p = main_p(iPair);
+        tableRow.pCorr = main_pCorr(iPair);
+        tableRow.significance = string(sigprint(tableRow.pCorr));
+        posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
+    end
+    for iPair = 1:nPairs
+        for iRow = 1:nRows
+            for iCol = 1:nCols
+                for iGroup = 1:nGroups
+                    tableRow = table;
+                    if nRows > 1
+                        tableRow.(rowVar) = string(rows(iRow));
+                    end
+                    if nCols > 1
+                        tableRow.(colVar) = string(cols(iCol));
+                    end
+                    if nGroups > 1
+                        tableRow.(groupVar) = string(groups(iGroup));
+                    end
+                    tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
+                    tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+                    tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
+                    tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
+                    tableRow.significance = string(sigprint(tableRow.pCorr));
+                    posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
+                end
+            end
+        end
+    end
+    disp(posthocTable); % display table
+
+    % save table
+    if nY > 1
+        fileName = sprintf('Posthoc_%s', myVar);
+    else
+        fileName = 'Posthoc';
+    end
+    saveTable(posthocTable, fileName, {'xlsx'}, outDir);
+
+    % close all figures
+    close all
 end
-
-% save table
-saveTable(posthocTable, 'Posthoc', {'xlsx'}, outDir);
-disp(posthocTable); % display table
-
-% close all figures
-close all
 
 end
 
