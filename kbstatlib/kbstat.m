@@ -808,7 +808,7 @@ for iVar = 1:nY
     end
     fprintf('\t%s\n', formula);
 
-    if separateMulti
+    if nY > 1 && separateMulti
         DataOrig = Data;
         Data = Data(Data.(yVar) == myVar, :);
     end
@@ -833,11 +833,41 @@ for iVar = 1:nY
         return
     end
 
+    % detect outliers and refit model
+    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+    mdlOutliers = getOutliers(mdlResiduals, outlierThreshold);
+    % mdlOutliers = isoutlier(mdlResiduals);
+    if ~isempty(mdlOutliers)
+        fprintf('Removed %d outliers from %d observations (%.1f %%) and refit model...\n', length(mdlOutliers), length(mdlResiduals), length(mdlOutliers)/length(mdlResiduals));
+        try
+            if ~isempty(link) % link function given -> use it
+                mdl = fitglme(Data, formula, ...
+                    'DummyVarCoding', 'effects', ...
+                    'FitMethod', fitMethod, ...
+                    'Distribution', distribution, ...
+                    'link', link, ...
+                    'Exclude', mdlOutliers);
+            else % no link function given -> use built-in default
+                mdl = fitglme(Data, formula, ...
+                    'DummyVarCoding', 'effects', ...
+                    'FitMethod', fitMethod, ...
+                    'Distribution', distribution, ...
+                    'Exclude', mdlOutliers);
+            end
+
+        catch ME
+            message = sprintf('%s', ME.message);
+            fprintf('The linear model fit returned an error:\n\t%s\n', message);
+            fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
+            return
+        end
+    end
+
     % get ANOVA table from model fit
     results = anova(mdl);
 
-    % create output folder, if not existing    
-    if separateMulti
+    % create output folder, if not existing
+    if nY > 1 && separateMulti
         outDirOrig = outDir;
         outDir = sprintf('%s/%s', outDir, myVar);
     end
@@ -930,6 +960,8 @@ for iVar = 1:nY
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
+    [isNotNormal, pNormal] = kstest(mdlResiduals);
+    text(gca, 0.05,0.95,sprintf('Normality = %d (p = %f)', ~isNotNormal, pNormal), 'Units', 'normalized');
 
     % symmetry
     iPanel = iPanel+1;
@@ -950,7 +982,8 @@ for iVar = 1:nY
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
-    [isHetero, pHetero] = archtest(mdlResiduals);
+    cleanResiduals = mdlResiduals(~isnan(mdlResiduals));
+    [isHetero, pHetero] = archtest(cleanResiduals);
     text(gca, 0.05,0.95,sprintf('Heteroscedasticity = %d (p = %f)', isHetero, pHetero), 'Units', 'normalized');
 
     % lagged residuals
@@ -969,14 +1002,14 @@ for iVar = 1:nY
     close(fig);
 
     % reset Data and parameters
-    if separateMulti
+    if nY > 1 && separateMulti
         Data = DataOrig;
         formula = formulaOrig;
         outDir = outDirOrig;
     end
 
     % store mdl or break
-    if separateMulti
+    if nY > 1 && separateMulti
         mdls{iVar} = mdl;
     else
         break
@@ -989,7 +1022,7 @@ for iVar = 1:nY
     myVar = y{iVar};
 
     % set output folder
-    if separateMulti
+    if nY > 1 && separateMulti
         outDirOrig = outDir;
         outDir = sprintf('%s/%s', outDir, myVar);
     end
@@ -1149,7 +1182,7 @@ for iVar = 1:nY
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
-                            if separateMulti
+                            if nY > 1 && separateMulti
                                 mdl = mdls{iVar};
                             end
 
@@ -1403,7 +1436,7 @@ for iVar = 1:nY
     saveTable(posthocTable, fileName, {'xlsx'}, outDir);
 
     % reset output folder
-    if separateMulti
+    if nY > 1 && separateMulti
         outDir = outDirOrig;
     end
 end
