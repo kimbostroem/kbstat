@@ -691,12 +691,14 @@ for iVar = 1:nY
         nOutliers = sum(mdlOutliers);
         nObservations = length(mdlResiduals);
         if nOutliers > 0
-            % remove outliers from Data 
+            % remove outliers from Data
             Data(mdlOutliers, :) = [];
             % remove outliers from DataOrig
-            idxTmp = false(size(DataOrig, 1), 1);
-            idxTmp(idxDep) =  mdlOutliers;
-            DataOrig(idxTmp, :) = [];            
+            if nY > 1 && separateMulti
+                idxTmp = false(size(DataOrig, 1), 1);
+                idxTmp(idxDep) =  mdlOutliers;
+                DataOrig(idxTmp, :) = [];
+            end
             fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', nOutliers, nObservations, nOutliers/nObservations*100);
             try
                 if ~isempty(link) % link function given -> use it
@@ -717,7 +719,7 @@ for iVar = 1:nY
                 fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
                 return
             end
-        end        
+        end
     end
 
     % get ANOVA table from model fit
@@ -767,14 +769,14 @@ for iVar = 1:nY
     fclose(fid);
 
     % save Data
-    saveTable(Data, 'Data', {'csv'}, outDir);    
+    saveTable(Data, 'Data', {'csv'}, outDir);
 
     % save raw Data table
     saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
 
     % save ANOVA table
     saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
-    disp(anovaTable) % display table    
+    disp(anovaTable) % display table
 
     %% Plot diagnostics
 
@@ -843,7 +845,7 @@ for iVar = 1:nY
     plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
     cleanResiduals = mdlResiduals(~isnan(mdlResiduals));
     [isHetero, pHetero] = archtest(cleanResiduals);
-    text(gca, 0.05,0.95,sprintf('Heteroscedasticity = %d (p = %f)', isHetero, pHetero), 'Units', 'normalized');
+    text(gca, 0.05,0.95,sprintf('Homoscedasticity = %d (p = %f)', ~isHetero, pHetero), 'Units', 'normalized');
 
     % lagged residuals
     iPanel = iPanel+1;
