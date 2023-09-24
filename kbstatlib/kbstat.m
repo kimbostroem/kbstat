@@ -728,7 +728,7 @@ if removeOutliers
     nObsRaw = size(Data, 1);
     if nOutliers > 0
         Data = Data(~idxOut, :);
-        fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+        fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
     end
 end
 
@@ -838,7 +838,7 @@ for iVar = 1:nY
     mdlOutliers = getOutliers(mdlResiduals, outlierThreshold);
     % mdlOutliers = isoutlier(mdlResiduals);
     if ~isempty(mdlOutliers)
-        fprintf('Removed %d outliers from %d observations (%.1f %%) and refit model...\n', length(mdlOutliers), length(mdlResiduals), length(mdlOutliers)/length(mdlResiduals));
+        fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', sum(mdlOutliers), length(mdlResiduals), sum(mdlOutliers)/length(mdlResiduals));
         try
             if ~isempty(link) % link function given -> use it
                 mdl = fitglme(Data, formula, ...
@@ -876,10 +876,11 @@ for iVar = 1:nY
     end
 
     % print results of model fit into file
-    mdlOutput = formattedDisplayText(mdl);
+    mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model...\n', sum(mdlOutliers), length(mdlResiduals), sum(mdlOutliers)/length(mdlResiduals));
     fprintf(fid, '\t%s', mdlOutput);
     fclose(fid);
 
