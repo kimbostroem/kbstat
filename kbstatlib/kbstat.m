@@ -22,7 +22,14 @@ function mdl = kbstat(options)
 %       Data            (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
-%       y               Name of the dependent variable.
+%       y               Name of the dependent variable or list of names of 
+%                       dependent variables. If there is more than one
+%                       component of y, by default each component is
+%                       treated as a separate dependent variable and as
+%                       many independent univariate analyses are performed.
+%                       If "separateMulti" is set to "false", then y is
+%                       treated as a vector-valued dependent variable and a
+%                       multivariate analysis is performed
 %
 %       yUnits          Physical units of the dependent variable.
 %                       OPTIONAL, default = '1'.
