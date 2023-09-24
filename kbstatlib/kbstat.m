@@ -109,20 +109,9 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       removeOutliers  Flag if outliers should be removed
-%                       from the data before analysis.
+%       removeOutliers  Flag if post-fit outliers should be removed
+%                       from the data.
 %                       OPTIONAL, default = true.
-%
-%       outlierThreshold If "removeOutliers" is set, outliers are detected
-%                       as points lying outside the interquartile range
-%                       (IQR) multiplied by outlierThreshold.
-%                       OPTIONAL, default = 1.5.
-%
-%       outlierLevel    If "removeOutliers" is set, outliers are detected
-%                       by constraining the dataset to values of the the
-%                       n-th independent variable, where n = outlierLevel.
-%                       OPTIONAL, default = length(x), i.e. number of
-%                       independent variables.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -142,11 +131,14 @@ function mdl = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
 %
-%       transform       Function of x to apply to the dependent variable
-%                       data before removing outliers.
-%
-%       posttransform   Function of x to apply to the dependent variable
-%                       data after removing outliers.
+%       transform       Function of x to apply to the dependent variable.
+%                       The linear model is fit on the transformed data,
+%                       but the data are plotted using the original data.
+%                       OPTIONAL, default = 'x'.
+%                       EXAMPLES:
+%                           'log(x)'
+%                           'atanh(x)'
+%                           '(x-mean(x))/std(x)'
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -228,8 +220,8 @@ end
 
 % store raw data
 options.DataRaw = DataRaw;
-nObsRaw = size(DataRaw, 1);
 
+% init 1st Data set
 Data1 = DataRaw;
 
 % all table variables
@@ -282,15 +274,6 @@ if isfield(options, 'transform') && ~isempty(options.transform)
     trnsVar = sprintf('%sTrans', depVar);
 else
     transform = @(x) x;
-    trnsVar = depVar;
-end
-
-% post-transform
-if isfield(options, 'posttransform') && ~isempty(options.posttransform)
-    posttransform = eval(sprintf('@(x) %s', options.posttransform));
-    trnsVar = sprintf('%sTrans', depVar);
-else
-    posttransform = @(x) x;
     trnsVar = depVar;
 end
 
@@ -398,21 +381,6 @@ if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
     removeOutliers = getValue(options.removeOutliers);
 else
     removeOutliers = true;
-end
-nOutliers = 0;
-
-% threshold factor for removing outliers
-if isfield(options, 'outlierThreshold') && ~isempty(options.outlierThreshold)
-    outlierThreshold = getValue(options.outlierThreshold);
-else
-    outlierThreshold = 1.5;
-end
-
-% level for removing outliers
-if isfield(options, 'outlierLevel') && ~isempty(options.outlierLevel)
-    outlierLevel = getValue(options.outlierLevel);
-else
-    outlierLevel = length(x);
 end
 
 % output folder
@@ -617,7 +585,7 @@ else
     nRows = 1;
 end
 
-%% Apply transformation, if given
+%% Apply data transformation, if given
 
 for iVar = 1:nY
     if nY > 1
@@ -628,134 +596,22 @@ for iVar = 1:nY
     Data.(trnsVar)(idxDep) = transform(Data.(depVar)(idxDep));
 end
 
-%% Remove outliers
-
-Data.(trnsVar) = Data.(depVar);
-
-if removeOutliers
-
-    idxOut = false(size(Data, 1), 1);
-
-    for iVar = 1:nY
-
-        if nY > 1
-            idxDep = (Data.(yVar) == y{iVar});
-        else
-            idxDep = true(size(Data, 1), 1);
-        end
-
-        idxTest = idxDep;
-
-        if outlierLevel == 0 % level 0: all data
-            yData = Data.(trnsVar)(idxTest);
-            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
-
-        elseif outlierLevel == 1 % level 1: 1st dependent variable
-            for iMember = 1:nMembers
-                idxTest = idxDep;
-                member = members(iMember);
-                idxTest = idxTest & (Data.(memberVar) == member);
-                yData = Data.(trnsVar)(idxTest);
-                idxOut(idxTest) = getOutliers(yData, outlierThreshold);
-            end
-
-        elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
-            for iMember = 1:nMembers
-                for iGroup = 1:nGroups
-                    idxTest = idxDep;
-                    member = members(iMember);
-                    idxTest = idxTest & (Data.(memberVar) == member);
-                    if nGroups > 1
-                        group = groups(iGroup);
-                        idxTest = idxTest & (Data.(groupVar) == group);
-                    end
-                    yData = Data.(trnsVar)(idxTest);
-                    idxOut(idxTest) = getOutliers(yData, outlierThreshold);
-                end
-            end
-
-        elseif outlierLevel == 3 % level 3: 3rd dependent variable, if given
-            for iMember = 1:nMembers
-                for iGroup = 1:nGroups
-                    for iCol = 1:nCols
-                        idxTest = idxDep;
-                        member = members(iMember);
-                        idxTest = idxTest & (Data.(memberVar) == member);
-                        if nGroups > 1
-                            group = groups(iGroup);
-                            idxTest = idxTest & (Data.(groupVar) == group);
-                        end
-                        if nCols > 1
-                            col = cols(iCol);
-                            idxTest = idxTest & (Data.(colVar) == col);
-                        end
-                        yData = Data.(trnsVar)(idxTest);
-                        idxOut(idxTest) = getOutliers(yData, outlierThreshold);
-                    end
-                end
-            end
-        elseif outlierLevel == 4 % level 4: 4th dependent variable, if given
-            for iMember = 1:nMembers
-                for iGroup = 1:nGroups
-                    for iCol = 1:nCols
-                        for iRow = 1:nRows
-                            idxTest = idxDep;
-                            member = members(iMember);
-                            idxTest = idxTest & (Data.(memberVar) == member);
-                            if nGroups > 1
-                                group = groups(iGroup);
-                                idxTest = idxTest & (Data.(groupVar) == group);
-                            end
-                            if nCols > 1
-                                col = cols(iCol);
-                                idxTest = idxTest & (Data.(colVar) == col);
-                            end
-                            if nRows > 1
-                                row = rows(iRow);
-                                idxTest = idxTest & (Data.(rowVar) == row);
-                            end
-                            yData = Data.(trnsVar)(idxTest);
-                            idxOut(idxTest) = getOutliers(yData, outlierThreshold);
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    % remove outliers
-    nOutliers = sum(idxOut);
-    nObsRaw = size(Data, 1);
-    if nOutliers > 0
-        Data = Data(~idxOut, :);
-        fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-    end
-end
-
-%% Apply post-transformation, if given
-
-for iVar = 1:nY
-    if nY > 1
-        idxDep = (Data.(yVar) == y{iVar});
-    else
-        idxDep = true(size(Data, 1), 1);
-    end
-    Data.(trnsVar)(idxDep) = posttransform(Data.(depVar)(idxDep));
-end
-
 %% Fit linear model and perform ANOVA
 
 mdls = cell(nY, 1);
 for iVar = 1:nY
     myVar = y{iVar};
 
+    if nY > 1
+        idxDep = (Data.(yVar) == myVar);
+    else
+        idxDep = true(size(Data, 1), 1);
+    end
+
     anovaTable = table; % init ANOVA table
 
     productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
-        % productTerm = sprintf('%s:(%s)', yVar, productTerm); % <- this does not work with emmeans
-        % xNoInteract = [{yVar}, setdiff(x, interact, 'stable')];
-        % productTerm = sprintf('%s*%s -1 -%s', yVar, productTerm, yVar);
         productTerm = sprintf('%s*%s -1', yVar, productTerm);
     end
     xNoInteract = setdiff(x, interact, 'stable');
@@ -765,9 +621,6 @@ for iVar = 1:nY
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randomSlopes
             randomEffect = '';
-            % if nY > 1
-            %     randomEffect = sprintf('(%s|%s)', yVar, id);
-            % end
             if nY > 1 && ~separateMulti
                 randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
             else
@@ -775,9 +628,6 @@ for iVar = 1:nY
             end
         else
             randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
-            % if nY > 1
-            %     randomEffect = [randomEffect, ' + ', sprintf('(%s|%s)', yVar, id)];
-            % end
             randomSlopes = '';
         end
     else
@@ -788,16 +638,16 @@ for iVar = 1:nY
 
     terms = {};
     if ~isempty(sumTerm)
-        terms = [terms, sumTerm];
+        terms = [terms, sumTerm]; %#ok<AGROW>
     end
     if ~isempty(productTerm)
-        terms = [terms, productTerm];
+        terms = [terms, productTerm]; %#ok<AGROW>
     end
     if ~isempty(randomEffect)
-        terms = [terms, randomEffect];
+        terms = [terms, randomEffect]; %#ok<AGROW>
     end
     if ~isempty(randomSlopes)
-        terms = [terms, randomSlopes];
+        terms = [terms, randomSlopes]; %#ok<AGROW>
     end
 
     if separateMulti
@@ -810,7 +660,7 @@ for iVar = 1:nY
 
     if nY > 1 && separateMulti
         DataOrig = Data;
-        Data = Data(Data.(yVar) == myVar, :);
+        Data = Data(idxDep, :);
     end
     try
         if ~isempty(link) % link function given -> use it
@@ -834,33 +684,40 @@ for iVar = 1:nY
     end
 
     % detect outliers and refit model
-    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-    mdlOutliers = getOutliers(mdlResiduals, outlierThreshold);
-    % mdlOutliers = isoutlier(mdlResiduals);
-    if ~isempty(mdlOutliers)
-        fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', sum(mdlOutliers), length(mdlResiduals), sum(mdlOutliers)/length(mdlResiduals));
-        try
-            if ~isempty(link) % link function given -> use it
-                mdl = fitglme(Data, formula, ...
-                    'DummyVarCoding', 'effects', ...
-                    'FitMethod', fitMethod, ...
-                    'Distribution', distribution, ...
-                    'link', link, ...
-                    'Exclude', mdlOutliers);
-            else % no link function given -> use built-in default
-                mdl = fitglme(Data, formula, ...
-                    'DummyVarCoding', 'effects', ...
-                    'FitMethod', fitMethod, ...
-                    'Distribution', distribution, ...
-                    'Exclude', mdlOutliers);
+    if removeOutliers
+        mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+        % mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
+        mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
+        nOutliers = sum(mdlOutliers);
+        nObservations = length(mdlResiduals);
+        if nOutliers > 0
+            % remove outliers from Data 
+            Data(mdlOutliers, :) = [];
+            % remove outliers from DataOrig
+            idxTmp = false(size(DataOrig, 1), 1);
+            idxTmp(idxDep) =  mdlOutliers;
+            DataOrig(idxTmp, :) = [];            
+            fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', nOutliers, nObservations, nOutliers/nObservations*100);
+            try
+                if ~isempty(link) % link function given -> use it
+                    mdl = fitglme(Data, formula, ...
+                        'DummyVarCoding', 'effects', ...
+                        'FitMethod', fitMethod, ...
+                        'Distribution', distribution, ...
+                        'link', link);
+                else % no link function given -> use built-in default
+                    mdl = fitglme(Data, formula, ...
+                        'DummyVarCoding', 'effects', ...
+                        'FitMethod', fitMethod, ...
+                        'Distribution', distribution);
+                end
+            catch ME
+                message = sprintf('%s', ME.message);
+                fprintf('The linear model fit returned an error:\n\t%s\n', message);
+                fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
+                return
             end
-
-        catch ME
-            message = sprintf('%s', ME.message);
-            fprintf('The linear model fit returned an error:\n\t%s\n', message);
-            fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-            return
-        end
+        end        
     end
 
     % get ANOVA table from model fit
@@ -879,8 +736,9 @@ for iVar = 1:nY
     mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-    fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model...\n', sum(mdlOutliers), length(mdlResiduals), sum(mdlOutliers)/length(mdlResiduals));
+    if removeOutliers
+        fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model...\n', nOutliers, nObservations, nOutliers/nObservations*100);
+    end
     fprintf(fid, '\t%s', mdlOutput);
     fclose(fid);
 
@@ -961,7 +819,7 @@ for iVar = 1:nY
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
-    [isNotNormal, pNormal] = kstest(mdlResiduals);
+    [isNotNormal, pNormal] = swtest(mdlResiduals);
     text(gca, 0.05,0.95,sprintf('Normality = %d (p = %f)', ~isNotNormal, pNormal), 'Units', 'normalized');
 
     % symmetry
