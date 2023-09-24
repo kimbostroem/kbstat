@@ -100,6 +100,10 @@ function mdl = kbstat(options)
 %                       "none"      Do not perform posthoc analysis
 %                       OPTIONAL, default = 'emm'.
 %
+%       separateMulti   Flag if a multivariate dependent variable should be
+%                       analyzed with each component separately.
+%                       OPTIONAL, default = 'no'
+%
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
 %                       common scale.
@@ -138,10 +142,10 @@ function mdl = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
 %
-%       transform       Function of x to apply to the dependent variable 
+%       transform       Function of x to apply to the dependent variable
 %                       data before removing outliers.
 %
-%       posttransform   Function of x to apply to the dependent variable 
+%       posttransform   Function of x to apply to the dependent variable
 %                       data after removing outliers.
 %
 %       outDir          Output folder for generated files.
@@ -332,6 +336,13 @@ if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
     posthocMethod = 'emm';
+end
+
+% separateMulti
+if isfield(options, 'separateMulti') && ~isempty(options.separateMulti)
+    separateMulti = getValue(options.separateMulti);
+else
+    separateMulti = false;
 end
 
 % fit method
@@ -559,14 +570,6 @@ Data.(depVar) = Data2.(depVar);
 % store Data table in options
 options.Data = Data;
 
-% % remove duplicate rows (can be caused by constraints on a redundant higher-level table
-% Data = unique(Data,'rows');
-
-%% Create output folder, if not existing
-if ~isfolder(outDir)
-    mkdir(outDir);
-end
-
 %% Create variables
 
 % 1st factor = member variable
@@ -737,211 +740,254 @@ for iVar = 1:nY
     Data.(trnsVar)(idxDep) = posttransform(Data.(depVar)(idxDep));
 end
 
-%% Save data table
-
-saveTable(Data, 'Data', {'csv'}, outDir);
-
 %% Fit linear model and perform ANOVA
 
-anovaTable = table; % init ANOVA table
+mdls = cell(nY, 1);
+for iVar = 1:nY
+    myVar = y{iVar};
 
-productTerm = strjoin(interact, '*');
-if nY > 1
-    % productTerm = sprintf('%s:(%s)', yVar, productTerm); % <- this does not work with emmeans
-    % xNoInteract = [{yVar}, setdiff(x, interact, 'stable')];
-    % productTerm = sprintf('%s*%s -1 -%s', yVar, productTerm, yVar); 
-    productTerm = sprintf('%s*%s -1', yVar, productTerm);    
-end
-xNoInteract = setdiff(x, interact, 'stable');
+    anovaTable = table; % init ANOVA table
 
-sumTerm = strjoin(xNoInteract, ' + ');
+    productTerm = strjoin(interact, '*');
+    if nY > 1 && ~separateMulti
+        % productTerm = sprintf('%s:(%s)', yVar, productTerm); % <- this does not work with emmeans
+        % xNoInteract = [{yVar}, setdiff(x, interact, 'stable')];
+        % productTerm = sprintf('%s*%s -1 -%s', yVar, productTerm, yVar);
+        productTerm = sprintf('%s*%s -1', yVar, productTerm);
+    end
+    xNoInteract = setdiff(x, interact, 'stable');
 
-if ~isempty(id) && length(unique(Data.(id))) > 1
-    if randomSlopes
-        if nY > 1 %#ok<IFBDUP>
-            % randomEffect = sprintf('(%s|%s)', yVar, id);
+    sumTerm = strjoin(xNoInteract, ' + ');
+
+    if ~isempty(id) && length(unique(Data.(id))) > 1
+        if randomSlopes
             randomEffect = '';
+            % if nY > 1
+            %     randomEffect = sprintf('(%s|%s)', yVar, id);
+            % end
+            if nY > 1 && ~separateMulti
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
+            else
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+            end
         else
-            randomEffect = '';
+            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+            % if nY > 1
+            %     randomEffect = [randomEffect, ' + ', sprintf('(%s|%s)', yVar, id)];
+            % end
+            randomSlopes = '';
         end
-        if nY > 1
-            randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
-        else
-            randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
-        end        
     else
-        randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
-        if nY > 1
-            % randomEffect = [randomEffect, ' + ', sprintf('(%s|%s)', yVar, id)];
-        end
+        randomEffect = '';
         randomSlopes = '';
     end
-else
-    randomEffect = '';
-    randomSlopes = '';
-end
 
 
-terms = {};
-if ~isempty(sumTerm)
-    terms = [terms, sumTerm];
-end
-if ~isempty(productTerm)
-    terms = [terms, productTerm];
-end
-if ~isempty(randomEffect)
-    terms = [terms, randomEffect];
-end
-if ~isempty(randomSlopes)
-    terms = [terms, randomSlopes];
-end
-
-if isempty(formula)
-    formula = sprintf('%s ~ %s', trnsVar, strjoin(terms, ' + '));
-end
-fprintf('\t%s\n', formula);
-
-try
-    if ~isempty(link) % link function given -> use it
-        mdl = fitglme(Data, formula, ...
-            'DummyVarCoding', 'effects', ...
-            'FitMethod', fitMethod, ...
-            'Distribution', distribution, ...
-            'link', link);
-    else % no link function given -> use built-in default
-        mdl = fitglme(Data, formula, ...
-            'DummyVarCoding', 'effects', ...
-            'FitMethod', fitMethod, ...
-            'Distribution', distribution);
+    terms = {};
+    if ~isempty(sumTerm)
+        terms = [terms, sumTerm];
+    end
+    if ~isempty(productTerm)
+        terms = [terms, productTerm];
+    end
+    if ~isempty(randomEffect)
+        terms = [terms, randomEffect];
+    end
+    if ~isempty(randomSlopes)
+        terms = [terms, randomSlopes];
     end
 
-catch ME
-    message = sprintf('%s', ME.message);
-    fprintf('The linear model fit returned an error:\n\t%s\n', message);
-    fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
-    return
+    if separateMulti
+        formulaOrig = formula;
+    end
+    if isempty(formula)
+        formula = sprintf('%s ~ %s', trnsVar, strjoin(terms, ' + '));
+    end
+    fprintf('\t%s\n', formula);
+
+    if separateMulti
+        DataOrig = Data;
+        Data = Data(Data.(yVar) == myVar, :);
+    end
+    try
+        if ~isempty(link) % link function given -> use it
+            mdl = fitglme(Data, formula, ...
+                'DummyVarCoding', 'effects', ...
+                'FitMethod', fitMethod, ...
+                'Distribution', distribution, ...
+                'link', link);
+        else % no link function given -> use built-in default
+            mdl = fitglme(Data, formula, ...
+                'DummyVarCoding', 'effects', ...
+                'FitMethod', fitMethod, ...
+                'Distribution', distribution);
+        end
+
+    catch ME
+        message = sprintf('%s', ME.message);
+        fprintf('The linear model fit returned an error:\n\t%s\n', message);
+        fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
+        return
+    end
+
+    % get ANOVA table from model fit
+    results = anova(mdl);
+
+    % create output folder, if not existing    
+    if separateMulti
+        outDirOrig = outDir;
+        outDir = sprintf('%s/%s', outDir, myVar);
+    end
+    if ~isfolder(outDir)
+        mkdir(outDir);
+    end
+
+    % print results of model fit into file
+    mdlOutput = formattedDisplayText(mdl);
+    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    fprintf(fid, 'Formula:\n\t%s\n', formula);
+    fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    fprintf(fid, '\t%s', mdlOutput);
+    fclose(fid);
+
+    anovaTable.Term = string(results.Term(2:end));
+    anovaTable.DF1 = results.DF1(2:end);
+    anovaTable.DF2 = results.DF2(2:end);
+    anovaTable.F = results.FStat(2:end);
+    anovaTable.p = results.pValue(2:end);
+    anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
+    anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
+    anovaTable.significance = string(sigprint(anovaTable.p));
+
+    % save options
+    fpath = fullfile(outDir, 'options.mat');
+    save(fpath, 'options');
+    fpath = fullfile(outDir, 'makeOptions.m');
+    fid = fopen(fpath, 'w+');
+    fields = fieldnames(options);
+    fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
+    fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
+    paramFields = sort(fields); % sort fields alphabetically
+    for iField = 1:length(paramFields)
+        field = paramFields{iField};
+        fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+    end
+    fclose(fid);
+
+    % save Data
+    saveTable(Data, 'Data', {'csv'}, outDir);    
+
+    % save raw Data table
+    saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
+
+    % save ANOVA table
+    saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
+    disp(anovaTable) % display table    
+
+    %% Plot diagnostics
+
+    % Since raw residuals for generalized linear mixed-effects models do not
+    % have a constant variance across observations, we use the conditional
+    % Pearson residuals instead.
+
+    panelWidth = 300;
+    panelHeight = 300;
+    nPanels = 6;
+    nPanelRows = 2;
+    nPanelCols = ceil(nPanels/nPanelRows);
+    figWidth = nPanelCols * panelWidth;
+    figHeight = nPanelRows * panelHeight;
+    figName = 'Diagnostics';
+    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+
+    if nY > 1 && separateMulti
+        sgtitle(sprintf('Diagnostics for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+    else
+        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+    end
+    iPanel = 0;
+
+    % histogram
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+    h = histfit(mdlResiduals);
+    h(1).EdgeColor = 'none';
+    h(2).Color = [1 0 0];
+    h(2).LineStyle = ':';
+    hold on
+    resFit = fitdist(mdlResiduals, 'Normal');
+    xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
+    ylims = ylim;
+    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
+    title('Histogram of residuals');
+    xlabel('Residuals');
+
+    % probability
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
+
+    % symmetry
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
+
+    % fitted-response
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    F = fitted(mdl);
+    R = response(mdl);
+    plot(R, F, 'rx');
+    ylabel('Fitted');
+    title('Fitted vs. Response');
+    xlabel('Response');
+
+    % residuals vs fitted
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols, iPanel);
+    plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
+
+    % lagged residuals
+    iPanel = iPanel+1;
+    subplot(nPanelRows, nPanelCols,iPanel);
+    plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
+
+
+    % save figure
+    set(fig, 'PaperPositionMode', 'auto');
+    set(fig, 'PaperUnits', 'points');
+    set(fig, 'PaperSize', [figWidth figHeight]);
+    print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+
+    % close figure
+    close(fig);
+
+    % reset Data and parameters
+    if separateMulti
+        Data = DataOrig;
+        formula = formulaOrig;
+        outDir = outDirOrig;
+    end
+
+    % store mdl or break
+    if separateMulti
+        mdls{iVar} = mdl;
+    else
+        break
+    end
 end
-
-
-% get ANOVA table from model fit
-results = anova(mdl);
-
-% print results of model fit into file
-mdlOutput = formattedDisplayText(mdl);
-fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
-fprintf(fid, 'Formula:\n\t%s\n', formula);
-fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-fprintf(fid, '\t%s', mdlOutput);
-fclose(fid);
-
-anovaTable.Term = string(results.Term(2:end));
-anovaTable.DF1 = results.DF1(2:end);
-anovaTable.DF2 = results.DF2(2:end);
-anovaTable.F = results.FStat(2:end);
-anovaTable.p = results.pValue(2:end);
-anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
-anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
-anovaTable.significance = string(sigprint(anovaTable.p));
-
-% save options
-fpath = fullfile(outDir, 'options.mat');
-save(fpath, 'options');
-fpath = fullfile(outDir, 'makeOptions.m');
-fid = fopen(fpath, 'w+');
-fields = fieldnames(options);
-fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
-fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
-paramFields = sort(fields); % sort fields alphabetically
-for iField = 1:length(paramFields)
-    field = paramFields{iField};
-    fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
-end
-fclose(fid);
-
-% save raw Data table
-saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
-
-% save ANOVA table
-saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
-disp(anovaTable) % display table
-
-%% Plot diagnostics
-
-% Since raw residuals for generalized linear mixed-effects models do not
-% have a constant variance across observations, we use the conditional
-% Pearson residuals instead.
-
-panelWidth = 300;
-panelHeight = 300;
-nPanels = 6;
-nPanelRows = 2;
-nPanelCols = ceil(nPanels/nPanelRows);
-figWidth = nPanelCols * panelWidth;
-figHeight = nPanelRows * panelHeight;
-figName = 'Diagnostics';
-fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
-
-sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-iPanel = 0;
-
-% histogram
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-h = histfit(mdlResiduals);
-h(1).EdgeColor = 'none';
-h(2).Color = [1 0 0];
-h(2).LineStyle = ':';
-hold on
-resFit = fitdist(mdlResiduals, 'Normal');
-xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
-ylims = ylim;
-rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
-title('Histogram of residuals');
-xlabel('Residuals');
-
-% probability
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
-
-% symmetry
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'symmetry', 'ResidualType', 'Pearson');
-
-% fitted-response
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-F = fitted(mdl);
-R = response(mdl);
-plot(R, F, 'rx');
-ylabel('Fitted');
-title('Fitted vs. Response');
-xlabel('Response');
-
-% residuals vs fitted
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols, iPanel);
-plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
-
-% lagged residuals
-iPanel = iPanel+1;
-subplot(nPanelRows, nPanelCols,iPanel);
-plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
-
-
-% save figure
-set(fig, 'PaperPositionMode', 'auto');
-set(fig, 'PaperUnits', 'points');
-set(fig, 'PaperSize', [figWidth figHeight]);
-print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-
 
 %% Calc plot data
 
 for iVar = 1:nY
     myVar = y{iVar};
+
+    % set output folder
+    if separateMulti
+        outDirOrig = outDir;
+        outDir = sprintf('%s/%s', outDir, myVar);
+    end
 
     % figure size
     panelWidth = 600; % width of each panel
@@ -1096,11 +1142,15 @@ for iVar = 1:nY
                             val2 = Data.(trnsVar)(L2);
                             [~, main_p(iPair)] = ttest2(val1, val2);
 
-                        case 'emm' % perform post-hoc analysis using emmeans    
+                        case 'emm' % perform post-hoc analysis using emmeans
+
+                            if separateMulti
+                                mdl = mdls{iVar};
+                            end
 
                             emm = emmeans(mdl, 'effects', 'unbalanced');
 
-                            if nY > 1                                
+                            if nY > 1 && ~separateMulti
                                 idxDep = (emm.table.(yVar) == myVar);
                             else
                                 idxDep = true(size(emm.table, 1), 1);
@@ -1170,19 +1220,21 @@ for iVar = 1:nY
         figWidth = nCols * panelWidth;
         figHeight = nRows * panelHeight + 50;
         figNameBase = 'DataPlots';
-        if nY > 1
+        if nY > 1 && ~separateMulti
             figName = sprintf('%s_%s', figNameBase, myVar);
         else
             figName = figNameBase;
         end
         fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
         layout = tiledlayout(nRows, nCols);
-        if nY > 1 && strcmp(plotTitle, depVar)
+        if nY > 1 && separateMulti
+            title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        elseif nY > 1 && strcmp(plotTitle, depVar)
             title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
             title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         end
-        
+
 
         % prepare to display variable names and levels
         switch showVarNames
@@ -1276,10 +1328,13 @@ for iVar = 1:nY
         print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
         print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
         saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
+
+        % close figure
+        close(fig);
     end
 
     % save descriptive statistics
-    if nY > 1
+    if nY > 1 && ~separateMulti
         fileName = sprintf('Statistics_%s', myVar);
     else
         fileName = 'Statistics';
@@ -1335,15 +1390,17 @@ for iVar = 1:nY
     disp(posthocTable); % display table
 
     % save table
-    if nY > 1
+    if nY > 1 && ~separateMulti
         fileName = sprintf('Posthoc_%s', myVar);
     else
         fileName = 'Posthoc';
     end
     saveTable(posthocTable, fileName, {'xlsx'}, outDir);
 
-    % close all figures
-    close all
+    % reset output folder
+    if separateMulti
+        outDir = outDirOrig;
+    end
 end
 
 end
