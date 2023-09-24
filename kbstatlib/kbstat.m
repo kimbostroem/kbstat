@@ -950,6 +950,8 @@ for iVar = 1:nY
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
+    [isHetero, pHetero] = archtest(mdlResiduals);
+    text(gca, 0.05,0.95,sprintf('Heteroscedasticity = %d (p = %f)', isHetero, pHetero), 'Units', 'normalized');
 
     % lagged residuals
     iPanel = iPanel+1;
