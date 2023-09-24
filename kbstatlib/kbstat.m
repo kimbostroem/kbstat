@@ -102,7 +102,7 @@ function mdl = kbstat(options)
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
 %                       analyzed with each component separately.
-%                       OPTIONAL, default = 'no'
+%                       OPTIONAL, default = 'yes'
 %
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
@@ -342,7 +342,7 @@ end
 if isfield(options, 'separateMulti') && ~isempty(options.separateMulti)
     separateMulti = getValue(options.separateMulti);
 else
-    separateMulti = false;
+    separateMulti = true;
 end
 
 % fit method
