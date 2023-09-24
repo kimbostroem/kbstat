@@ -138,8 +138,8 @@ function mdl = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
 %
-%       applyAbs        Flag if "abs" is to be applied to the values of the
-%                       dependent variable before doing anything else.
+%       transform       Function of x to apply to the dependent variable 
+%                       data before doing anything else.
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -270,10 +270,12 @@ end
 %% more variables
 
 % subject variable
-if isfield(options, 'applyAbs') && ~isempty(options.applyAbs)
-    applyAbs = getValue(options.applyAbs);
+if isfield(options, 'transform') && ~isempty(options.transform)
+    transform = eval(sprintf('@(x) %s', options.transform));
+    trnsVar = sprintf('%sTrans', depVar);
 else
-    applyAbs = false;
+    transform = @(x) x;
+    trnsVar = depVar;
 end
 
 % subject variable
@@ -541,10 +543,6 @@ end
 % get dependent variable
 Data.(depVar) = Data2.(depVar);
 Data.(depVar) = Data2.(depVar);
-if applyAbs
-    Data.(depVar) = abs(Data.(depVar));
-end
-
 
 % store Data table in options
 options.Data = Data;
@@ -601,6 +599,25 @@ else
     nRows = 1;
 end
 
+%% Apply transformation, if given
+
+idxOut = false(size(Data, 1), 1);
+
+for iVar = 1:nY
+
+    if nY > 1
+        idxDep = (Data.(yVar) == y{iVar});
+    else
+        idxDep = true(size(Data, 1), 1);
+    end
+
+    idxTest = idxDep;
+
+    Data.(trnsVar)(idxTest) = transform(Data.(depVar)(idxTest));
+        yData = Data.(trnsVar)(idxTest);
+        idxOut(idxTest) = getOutliers(yData, outlierThreshold);    
+end
+
 %% Remove outliers
 
 if removeOutliers
@@ -618,7 +635,7 @@ if removeOutliers
         idxTest = idxDep;
 
         if outlierLevel == 0 % level 0: all data
-            yData = Data.(depVar)(idxTest);
+            yData = Data.(trnsVar)(idxTest);
             idxOut(idxTest) = getOutliers(yData, outlierThreshold);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
@@ -626,7 +643,7 @@ if removeOutliers
                 idxTest = idxDep;
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
-                yData = Data.(depVar)(idxTest);
+                yData = Data.(trnsVar)(idxTest);
                 idxOut(idxTest) = getOutliers(yData, outlierThreshold);
             end
 
@@ -640,7 +657,7 @@ if removeOutliers
                         group = groups(iGroup);
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
-                    yData = Data.(depVar)(idxTest);
+                    yData = Data.(trnsVar)(idxTest);
                     idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                 end
             end
@@ -660,7 +677,7 @@ if removeOutliers
                             col = cols(iCol);
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
-                        yData = Data.(depVar)(idxTest);
+                        yData = Data.(trnsVar)(idxTest);
                         idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                     end
                 end
@@ -685,7 +702,7 @@ if removeOutliers
                                 row = rows(iRow);
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
-                            yData = Data.(depVar)(idxTest);
+                            yData = Data.(trnsVar)(idxTest);
                             idxOut(idxTest) = getOutliers(yData, outlierThreshold);
                         end
                     end
@@ -715,6 +732,7 @@ productTerm = strjoin(interact, '*');
 if nY > 1
     % productTerm = sprintf('%s:(%s)', yVar, productTerm); % <- this does not work with emmeans
     % xNoInteract = [{yVar}, setdiff(x, interact, 'stable')];
+    % productTerm = sprintf('%s*%s -1 -%s', yVar, productTerm, yVar); 
     productTerm = sprintf('%s*%s -1', yVar, productTerm);    
 end
 xNoInteract = setdiff(x, interact, 'stable');
@@ -723,17 +741,22 @@ sumTerm = strjoin(xNoInteract, ' + ');
 
 if ~isempty(id) && length(unique(Data.(id))) > 1
     if randomSlopes
-        if nY > 1
-            randomEffect = sprintf('(1|%s)', yVar);
+        if nY > 1 %#ok<IFBDUP>
+            % randomEffect = sprintf('(%s|%s)', yVar, id);
+            randomEffect = '';
         else
             randomEffect = '';
         end
-        randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+        if nY > 1
+            randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
+        else
+            randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+        end        
     else
         randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
-        % if nY > 1
-        %     randomEffect = [randomEffect, ' + ', sprintf('(1|%s)', yVar)];
-        % end
+        if nY > 1
+            % randomEffect = [randomEffect, ' + ', sprintf('(%s|%s)', yVar, id)];
+        end
         randomSlopes = '';
     end
 else
@@ -757,7 +780,7 @@ if ~isempty(randomSlopes)
 end
 
 if isempty(formula)
-    formula = sprintf('%s ~ %s', depVar, strjoin(terms, ' + '));
+    formula = sprintf('%s ~ %s', trnsVar, strjoin(terms, ' + '));
 end
 fprintf('\t%s\n', formula);
 
@@ -1045,15 +1068,15 @@ for iVar = 1:nY
                             % calc contrasts
                             L1 = (Data.(memberVar) == pair(1) & idx);
                             L2 = (Data.(memberVar) == pair(2) & idx);
-                            val1 = Data.(depVar)(L1);
-                            val2 = Data.(depVar)(L2);
+                            val1 = Data.(trnsVar)(L1);
+                            val2 = Data.(trnsVar)(L2);
                             [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
 
                             % calc main contrasts
                             L1 = (Data.(memberVar) == pair(1));
                             L2 = (Data.(memberVar) == pair(2));
-                            val1 = Data.(depVar)(L1);
-                            val2 = Data.(depVar)(L2);
+                            val1 = Data.(trnsVar)(L1);
+                            val2 = Data.(trnsVar)(L2);
                             [~, main_p(iPair)] = ttest2(val1, val2);
 
                         case 'emm' % perform post-hoc analysis using emmeans    
@@ -1129,15 +1152,20 @@ for iVar = 1:nY
 
         figWidth = nCols * panelWidth;
         figHeight = nRows * panelHeight + 50;
-        figNameBase = 'ViolinPlots';
+        figNameBase = 'DataPlots';
         if nY > 1
             figName = sprintf('%s_%s', figNameBase, myVar);
         else
-            figName = 'ViolinPlots';
+            figName = figNameBase;
         end
         fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
         layout = tiledlayout(nRows, nCols);
-        title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        if nY > 1 && strcmp(plotTitle, depVar)
+            title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        else
+            title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        end
+        
 
         % prepare to display variable names and levels
         switch showVarNames
