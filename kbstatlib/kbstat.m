@@ -101,13 +101,13 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = 'emm'.
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
-%                       analyzed with each component separately.
+%                       analyzed for each component separately.
 %                       OPTIONAL, default = 'yes'
 %
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
 %                       common scale.
-%                       OPTIONAL, default = false.
+%                       OPTIONAL, default = true.
 %
 %       removeOutliers  Flag if outliers should be removed
 %                       from the data before analysis.
@@ -390,7 +390,7 @@ end
 if isfield(options, 'isRescale') && ~isempty(options.isRescale)
     isRescale = getValue(options.isRescale);
 else
-    isRescale = false;
+    isRescale = true;
 end
 
 % flag if outliers should be removed
@@ -423,6 +423,9 @@ else
 end
 if ~isfolder(outDir)
     mkdir(outDir);
+else
+    % rmdir(outDir, 's');
+    % mkdir(outDir);
 end
 
 if isfield(options, 'title') && ~isempty(options.title)
