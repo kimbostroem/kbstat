@@ -139,7 +139,10 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = unset.
 %
 %       transform       Function of x to apply to the dependent variable 
-%                       data before doing anything else.
+%                       data before removing outliers.
+%
+%       posttransform   Function of x to apply to the dependent variable 
+%                       data after removing outliers.
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -269,12 +272,21 @@ end
 
 %% more variables
 
-% subject variable
+% transform
 if isfield(options, 'transform') && ~isempty(options.transform)
     transform = eval(sprintf('@(x) %s', options.transform));
     trnsVar = sprintf('%sTrans', depVar);
 else
     transform = @(x) x;
+    trnsVar = depVar;
+end
+
+% post-transform
+if isfield(options, 'posttransform') && ~isempty(options.posttransform)
+    posttransform = eval(sprintf('@(x) %s', options.posttransform));
+    trnsVar = sprintf('%sTrans', depVar);
+else
+    posttransform = @(x) x;
     trnsVar = depVar;
 end
 
@@ -601,24 +613,18 @@ end
 
 %% Apply transformation, if given
 
-idxOut = false(size(Data, 1), 1);
-
 for iVar = 1:nY
-
     if nY > 1
         idxDep = (Data.(yVar) == y{iVar});
     else
         idxDep = true(size(Data, 1), 1);
     end
-
-    idxTest = idxDep;
-
-    Data.(trnsVar)(idxTest) = transform(Data.(depVar)(idxTest));
-        yData = Data.(trnsVar)(idxTest);
-        idxOut(idxTest) = getOutliers(yData, outlierThreshold);    
+    Data.(trnsVar)(idxDep) = transform(Data.(depVar)(idxDep));
 end
 
 %% Remove outliers
+
+Data.(trnsVar) = Data.(depVar);
 
 if removeOutliers
 
@@ -718,6 +724,17 @@ if removeOutliers
         Data = Data(~idxOut, :);
         fprintf('Removed %d outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
     end
+end
+
+%% Apply post-transformation, if given
+
+for iVar = 1:nY
+    if nY > 1
+        idxDep = (Data.(yVar) == y{iVar});
+    else
+        idxDep = true(size(Data, 1), 1);
+    end
+    Data.(trnsVar)(idxDep) = posttransform(Data.(depVar)(idxDep));
 end
 
 %% Save data table
