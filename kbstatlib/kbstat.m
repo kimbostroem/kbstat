@@ -756,8 +756,8 @@ for iVar = 1:nY
     anovaTable.DF2 = results.DF2(2:end);
     anovaTable.F = results.FStat(2:end);
     anovaTable.p = results.pValue(2:end);
-    anovaTable.etaPSquare = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
-    anovaTable.effectSize = string(etaprint(anovaTable.etaPSquare));
+    anovaTable.etaSqp = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
+    anovaTable.effectSize = string(etaprint(anovaTable.etaSqp));
     anovaTable.significance = string(sigprint(anovaTable.p));
 
     % save options
@@ -912,6 +912,14 @@ for iVar = 1:nY
     bar_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
     bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
     main_p = nan(nPairs);
+    bar_F = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_F = nan(nPairs);
+    bar_DF1 = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_DF1 = nan(nPairs);
+    bar_DF2 = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_DF2 = nan(nPairs);
+    bar_etaSqp = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_etaSqp = nan(nPairs);
 
     if nY > 1
         maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
@@ -1087,15 +1095,23 @@ for iVar = 1:nY
                             L1 = idx & (emm.table.(memberVar) == pair(1));
                             L2 = idx & (emm.table.(memberVar) == pair(2));
                             L = (L1 - L2)';
-                            contrasts = contrasts_wald(mdl, emm, L);
+                            contrasts = kbcontrasts_wald(mdl, emm, L);
                             bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
+                            bar_F(iGroup, iPair, iRow, iCol) = contrasts.F;
+                            bar_DF1(iGroup, iPair, iRow, iCol) = contrasts.DF1;
+                            bar_DF2(iGroup, iPair, iRow, iCol) = contrasts.DF2;
+                            bar_etaSqp(iGroup, iPair, iRow, iCol) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
 
                             % calc main contrasts
                             L1 = (emm.table.(memberVar) == pair(1));
                             L2 = (emm.table.(memberVar) == pair(2));
                             L = (L1 - L2)';
-                            contrasts = contrasts_wald(mdl, emm, L);
+                            contrasts = kbcontrasts_wald(mdl, emm, L);
                             main_p(iPair) = contrasts.pVal;
+                            main_F(iGroup, iPair, iRow, iCol) = contrasts.F;
+                            main_DF1(iGroup, iPair, iRow, iCol) = contrasts.DF1;
+                            main_DF2(iGroup, iPair, iRow, iCol) = contrasts.DF2;
+                            main_etaSqp(iPair) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                     end
                 end
             end
@@ -1266,6 +1282,11 @@ for iVar = 1:nY
         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
         tableRow.p = main_p(iPair);
         tableRow.pCorr = main_pCorr(iPair);
+        tableRow.F = main_F(iPair);
+        tableRow.DF1 = main_DF1(iPair);
+        tableRow.DF2 = main_DF2(iPair);
+        tableRow.etaSqp = main_etaSqp(iPair);
+        tableRow.effectSize = string(etaprint(tableRow.etaSqp));
         tableRow.significance = string(sigprint(tableRow.pCorr));
         posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
     end
@@ -1287,6 +1308,11 @@ for iVar = 1:nY
                     tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                     tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
                     tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
+                    tableRow.F = bar_F(iGroup, iPair, iRow, iCol);
+                    tableRow.DF1 = bar_DF1(iGroup, iPair, iRow, iCol);
+                    tableRow.DF2 = bar_DF2(iGroup, iPair, iRow, iCol);
+                    tableRow.etaSqp = bar_etaSqp(iGroup, iPair, iRow, iCol);
+                    tableRow.effectSize = string(etaprint(tableRow.etaSqp));
                     tableRow.significance = string(sigprint(tableRow.pCorr));
                     posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
                 end
