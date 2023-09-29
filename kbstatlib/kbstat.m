@@ -120,6 +120,10 @@ function mdl = kbstat(options)
 %                       from the data.
 %                       OPTIONAL, default = true.
 %
+%       preRemoveOutliers   Flag if pre-fit outliers should be removed
+%                           from the data.
+%                           OPTIONAL, default = false.
+%
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
 %						'con1 & con2 & ...'
@@ -383,11 +387,18 @@ else
     isRescale = true;
 end
 
-% flag if outliers should be removed
+% flag if post-fit outliers should be removed
 if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
     removeOutliers = getValue(options.removeOutliers);
 else
     removeOutliers = true;
+end
+
+% flag if pre-fit outliers should be removed
+if isfield(options, 'preRemoveOutliers') && ~isempty(options.preRemoveOutliers)
+    preRemoveOutliers = getValue(options.preRemoveOutliers);
+else
+    preRemoveOutliers = true;
 end
 
 % output folder
@@ -603,6 +614,109 @@ for iVar = 1:nY
     Data.(trnsVar)(idxDep) = transform(Data.(depVar)(idxDep));
 end
 
+%% Remove pre-fit outliers
+
+outlierLevel = length(factors);
+if preRemoveOutliers
+
+    idxOut = false(size(Data, 1), 1);
+
+    for iVar = 1:nY
+
+        if nY > 1
+            idxDep = (Data.(yVar) == y{iVar});
+        else
+            idxDep = true(size(Data, 1), 1);
+        end
+
+        idxTest = idxDep;
+
+        if outlierLevel == 0 % level 0: all data
+            yData = Data.(trnsVar)(idxTest);
+            idxOut(idxTest) = isoutlier(yData, 'quartiles');
+
+        elseif outlierLevel == 1 % level 1: 1st dependent variable
+            for iMember = 1:nMembers
+                idxTest = idxDep;
+                member = members(iMember);
+                idxTest = idxTest & (Data.(memberVar) == member);
+                yData = Data.(trnsVar)(idxTest);
+                idxOut(idxTest) = isoutlier(yData, 'quartiles');
+            end
+
+        elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    idxTest = idxDep;
+                    member = members(iMember);
+                    idxTest = idxTest & (Data.(memberVar) == member);
+                    if nGroups > 1
+                        group = groups(iGroup);
+                        idxTest = idxTest & (Data.(groupVar) == group);
+                    end
+                    yData = Data.(trnsVar)(idxTest);
+                    idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                end
+            end
+
+        elseif outlierLevel == 3 % level 3: 3rd dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    for iCol = 1:nCols
+                        idxTest = idxDep;
+                        member = members(iMember);
+                        idxTest = idxTest & (Data.(memberVar) == member);
+                        if nGroups > 1
+                            group = groups(iGroup);
+                            idxTest = idxTest & (Data.(groupVar) == group);
+                        end
+                        if nCols > 1
+                            col = cols(iCol);
+                            idxTest = idxTest & (Data.(colVar) == col);
+                        end
+                        yData = Data.(trnsVar)(idxTest);
+                        idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                    end
+                end
+            end
+        elseif outlierLevel == 4 % level 4: 4th dependent variable, if given
+            for iMember = 1:nMembers
+                for iGroup = 1:nGroups
+                    for iCol = 1:nCols
+                        for iRow = 1:nRows
+                            idxTest = idxDep;
+                            member = members(iMember);
+                            idxTest = idxTest & (Data.(memberVar) == member);
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idxTest = idxTest & (Data.(groupVar) == group);
+                            end
+                            if nCols > 1
+                                col = cols(iCol);
+                                idxTest = idxTest & (Data.(colVar) == col);
+                            end
+                            if nRows > 1
+                                row = rows(iRow);
+                                idxTest = idxTest & (Data.(rowVar) == row);
+                            end
+                            yData = Data.(trnsVar)(idxTest);
+                            idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    % remove outliers
+    nOutliers = sum(idxOut);
+    nObsRaw = size(Data, 1);
+    fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
+    if nOutliers > 0
+        Data = Data(~idxOut, :);        
+    end
+end
+
 %% Fit linear model and perform ANOVA
 
 mdls = cell(nY, 1);
@@ -690,10 +804,9 @@ for iVar = 1:nY
         return
     end
 
-    % detect outliers and refit model
+    % remove post-fit outliers and refit model
     if removeOutliers
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        % mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
         mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
         nOutliers = sum(mdlOutliers);
         nObservations = length(mdlResiduals);
