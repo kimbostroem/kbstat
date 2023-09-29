@@ -170,6 +170,15 @@ function mdl = kbstat(options)
 %                       'sorted'    sorted alphanumerically (default)
 %                       'stable'    sorted in the order of occurrence in
 %                                   the data table
+%
+%       plotStyle       The style with which the data are plotted.
+%                       Possible values:
+%                       'violin'
+%                       'boxplot'
+%                       'bar'
+%                       'prettybar'
+%                       OPTIONAL, default = 'violin'
+%
 %       title           Title for plots
 %
 %       showVarNames    Flag how variables and levels are displayed in data
@@ -365,6 +374,13 @@ if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
     levelOrder = 'sorted';
+end
+
+% plot style
+if isfield(options, 'plotStyle') && ~isempty(options.plotStyle)
+    plotStyle = options.plotStyle;
+else
+    plotStyle = 'violin';
 end
 
 % Flag to plot data
@@ -1336,7 +1352,7 @@ for iVar = 1:nY
                             panelTitle = '';
                         end
                 end
-                plotViolinGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, panel, showVarNames);
+                plotGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, plotStyle, panel, showVarNames);
             end
         end
 
