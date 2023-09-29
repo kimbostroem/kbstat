@@ -23,7 +23,7 @@ if ~isempty(parent)
 else
     htl = tiledlayout(1,2, 'TileSpacing','none');
 end
-barPositions = [1:3; 1:3];
+barPositions = [1:nGroups; 1:nMembers];
 pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairIdxs, 1);
 hnt = gobjects(nGroups, 1);
