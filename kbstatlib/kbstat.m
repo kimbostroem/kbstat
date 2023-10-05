@@ -1248,9 +1248,9 @@ for iVar = 1:nY
                             val2 = Data.(trnsVar)(L2);
                             switch posthocMethod
                                 case 'ttest'
-                                    [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
+                                    [~, bar_p(iGroup, iPair, iRow, iCol), stats] = ttest2(val1, val2);
                                 case 'utest'
-                                    [bar_p(iGroup, iPair, iRow, iCol), ~] = ranksum(val1, val2);
+                                    [bar_p(iGroup, iPair, iRow, iCol), stats] = ranksum(val1, val2);
                             end                            
 
                             % calc main contrasts
