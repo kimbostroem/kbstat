@@ -2,7 +2,20 @@ function mdl = kbstat(options)
 %% Analyze data using generalized linear mixed-model fit.
 % The result is a fit summary, a diagnostic plot, a data bar plot, a
 % descriptive statistics table, an ANOVA table, and a posthoc pairwise
-% comparison table.
+% comparison table. 
+% 
+% REMARK: This function can do multivariate analysis which can be done in
+% either one of two possible ways: 1) Declare a dependent variable
+% options.y as a cell array with more than 1 entry, or 2) declare
+% options.multiVar as the variable whose levels encode the individual
+% components of the multivariate variable indicated by options.y. By
+% default, the multivariate analysis is split up into several independent
+% univariate analyses, because this works in a more stable fashion. Note,
+% however, that the results are not statistically corrected for multiple
+% testing. To enable true multivariate analysis, set
+% options.separateMulti=false. However, the posthoc test then only works
+% when options.posthocMethod='ttest' instead of 'emm', due to limitations
+% of the external package 'emmeans'.
 %
 % SYNTAX
 % kbstat(in, options)
@@ -32,7 +45,7 @@ function mdl = kbstat(options)
 %                       multivariate analysis is performed
 %
 %       yUnits          Physical units of the dependent variable.
-%                       OPTIONAL, default = '1'.
+%                       OPTIONAL, default = ''.
 %
 %       x               List of the names of the independent variables,
 %                       separated by comma or semicolon. Up to 4
@@ -102,14 +115,19 @@ function mdl = kbstat(options)
 %
 %       posthocMethod   Method for the posthoc pairwise comparison.
 %                       Possible values:
-%                       "ttest"     t-test plus Holm-Bonferroni correction
-%                       "emm"       Extract contrasts from linear model fit
-%                       "none"      Do not perform posthoc analysis
-%                       OPTIONAL, default = 'emm'.
+%                       'ttest'     t-test with Holm-Bonferroni correction
+%                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
+%                       'emm'       Extract contrasts from linear model fit
+%                       'none'      Do not perform posthoc analysis
+%                       OPTIONAL, default = 'utest'.
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
 %                       analyzed for each component separately.
-%                       OPTIONAL, default = 'yes'
+%                       OPTIONAL, default = true.
+%
+%       multiVar        Name of the variable that encodes levels of a 
+%                       multivariate dependent variable.
+%                       OPTIONAL, default = ''.
 %
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
@@ -141,6 +159,10 @@ function mdl = kbstat(options)
 %                       value. In the case of a category, the value must be put in
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
+%
+%       multiTransform  Flag if multivariate data should be transformed per 
+%                       component to achieve comparable ranges.
+%                       OPTIONAL, default = true.
 %
 %       transform       Function of x to apply to the dependent variable.
 %                       The linear model is fit on the transformed data,
@@ -274,15 +296,33 @@ else
     yUnits = {''};
 end
 
-yVar = 'yVar';
+% multiVar
+if isfield(options, 'multiVar') && ~isempty(options.multiVar)
+    multiVar = options.multiVar;
+else
+    multiVar = '';
+end
+
 if nY > 1
-    Data2 = stack(Data1, y, 'NewDataVariableName', 'Y', 'IndexVariableName', yVar);
+    yVar = 'yVar';
+    yVal = 'Y';
+    Data2 = stack(Data1, y, 'NewDataVariableName', yVal, 'IndexVariableName', yVar);
     Data2.(yVar) = categorical(string(Data2.(yVar)));
-    depVar = 'Y'; % set dependent variable to y
+    depVar = yVal; % set dependent variable to y
     depVarUnits = '';
+elseif ~isempty(multiVar)
+    yVar = multiVar;
+    yVal = y{1};
+    Data2 = Data1;
+    depVar = y{1}; % set dependent variable to y    
+    Data2.(yVar) = categorical(string(Data2.(yVar)));
+    y = cellstr(unique(Data2.(yVar)));
+    nY = length(y);
+    depVarUnits = yUnits{1};
 else
     Data2 = Data1;
     depVar = y{1};
+    yVal = y{1};
     depVarUnits = yUnits{1};
 end
 
@@ -290,12 +330,24 @@ end
 
 % transform
 if isfield(options, 'transform') && ~isempty(options.transform)
-    transform = eval(sprintf('@(x) %s', options.transform));
+    transform = getValue(options.transform);
+    transformFcn = eval(sprintf('@(x) %s', options.transform));
     trnsVar = sprintf('%sTrans', depVar);
 else
-    transform = @(x) x;
+    transform = false;
+    transformFcn = @(x) x;
     trnsVar = depVar;
 end
+
+% multiTransform
+if isfield(options, 'multiTransform') && ~isempty(options.multiTransform)
+    multiTransform = getValue(options.multiTransform);    
+    trnsVar = sprintf('%sTrans', depVar);
+else
+    multiTransform = true;
+    trnsVar = depVar;
+end
+
 
 % subject variable
 if isfield(options, 'id') && ~isempty(options.id)
@@ -338,7 +390,7 @@ end
 if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
-    posthocMethod = 'emm';
+    posthocMethod = 'utest';
 end
 
 % separateMulti
@@ -425,9 +477,6 @@ else
 end
 if ~isfolder(outDir)
     mkdir(outDir);
-else
-    % rmdir(outDir, 's');
-    % mkdir(outDir);
 end
 
 if isfield(options, 'title') && ~isempty(options.title)
@@ -627,7 +676,13 @@ for iVar = 1:nY
     else
         idxDep = true(size(Data, 1), 1);
     end
-    Data.(trnsVar)(idxDep) = transform(Data.(depVar)(idxDep));
+    Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
+    if nY > 1 && multiTransform
+        [~, ~, upperThresh, ~] = isoutlier(Data.(trnsVar)(idxDep), 'quartiles');
+        % upperThresh = quantile(Data.(trnsVar)(idxDep), 0.95);
+        multiTransformFcn = @(x) x/upperThresh;
+        Data.(trnsVar)(idxDep) = multiTransformFcn(Data.(trnsVar)(idxDep));
+    end
 end
 
 %% Remove pre-fit outliers
@@ -725,10 +780,10 @@ if preRemoveOutliers
     end
 
     % remove outliers
-    nOutliers = sum(idxOut);
-    nObsRaw = size(Data, 1);
-    fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nOutliers, nObsRaw, nOutliers/nObsRaw*100);
-    if nOutliers > 0
+    nPreOutliers = sum(idxOut);
+    nPreObs = size(Data, 1);
+    fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
+    if nPreOutliers > 0
         Data = Data(~idxOut, :);        
     end
 end
@@ -749,7 +804,7 @@ for iVar = 1:nY
 
     productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
-        productTerm = sprintf('%s*%s -1', yVar, productTerm);
+        productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
     end
     xNoInteract = setdiff(x, interact, 'stable');
 
@@ -825,7 +880,7 @@ for iVar = 1:nY
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
         mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
         nOutliers = sum(mdlOutliers);
-        nObservations = length(mdlResiduals);
+        nObs = length(mdlResiduals);
         if nOutliers > 0
             % remove outliers from Data
             Data(mdlOutliers, :) = [];
@@ -835,7 +890,7 @@ for iVar = 1:nY
                 idxTmp(idxDep) =  mdlOutliers;
                 DataOrig(idxTmp, :) = [];
             end
-            fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', nOutliers, nObservations, nOutliers/nObservations*100);
+            fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', nOutliers, nObs, nOutliers/nObs*100);
             try
                 if ~isempty(link) % link function given -> use it
                     mdl = fitglme(Data, formula, ...
@@ -874,8 +929,11 @@ for iVar = 1:nY
     mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
+    if preRemoveOutliers
+        fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
+    end
     if removeOutliers
-        fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model...\n', nOutliers, nObservations, nOutliers/nObservations*100);
+        fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model\n', nOutliers, nObs, nOutliers/nObs*100);
     end
     fprintf(fid, '\t%s', mdlOutput);
     fclose(fid);
@@ -931,10 +989,17 @@ for iVar = 1:nY
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
 
     if nY > 1 && separateMulti
-        sgtitle(sprintf('Diagnostics for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        if strcmp(depVar, yVal)
+            sgtitle(sprintf('Diagnostics for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        else
+            sgtitle(sprintf('Diagnostics for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        end        
+    elseif nY > 1 && strcmp(plotTitle, yVal)
+        sgtitle(sprintf('Diagnostics for multivariate Analysis'), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     else
         sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     end
+
     iPanel = 0;
 
     % histogram
@@ -1014,14 +1079,13 @@ for iVar = 1:nY
 end
 
 %% Calc plot data
-
+outDirOrig = outDir;
 for iVar = 1:nY
     myVar = y{iVar};
 
     % set output folder
-    if nY > 1 && separateMulti
-        outDirOrig = outDir;
-        outDir = sprintf('%s/%s', outDir, myVar);
+    if nY > 1 && separateMulti        
+        outDir = sprintf('%s/%s', outDirOrig, myVar);
     end
 
     % figure size
@@ -1148,10 +1212,16 @@ for iVar = 1:nY
 
                     switch posthocMethod
 
-                        case 'ttest' % perform post-hoc analysis using paired t-tests
+                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests
+
+                            if nY > 1
+                                idxDep = (Data.(yVar) == myVar);
+                            else
+                                idxDep = true(size(Data, 1), 1);
+                            end
 
                             % init idx
-                            idx = true(size(Data, 1), 1) & idxDep;
+                            idx = idxDep;
 
                             % 2nd x, if given
                             if nGroups > 1
@@ -1176,7 +1246,12 @@ for iVar = 1:nY
                             L2 = (Data.(memberVar) == pair(2) & idx);
                             val1 = Data.(trnsVar)(L1);
                             val2 = Data.(trnsVar)(L2);
-                            [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
+                            switch posthocMethod
+                                case 'ttest'
+                                    [~, bar_p(iGroup, iPair, iRow, iCol)] = ttest2(val1, val2);
+                                case 'utest'
+                                    [bar_p(iGroup, iPair, iRow, iCol), ~] = ranksum(val1, val2);
+                            end                            
 
                             % calc main contrasts
                             L1 = (Data.(memberVar) == pair(1));
@@ -1232,8 +1307,8 @@ for iVar = 1:nY
                             bar_etaSqp(iGroup, iPair, iRow, iCol) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
 
                             % calc main contrasts
-                            L1 = (emm.table.(memberVar) == pair(1));
-                            L2 = (emm.table.(memberVar) == pair(2));
+                            L1 = idxDep & (emm.table.(memberVar) == pair(1));
+                            L2 = idxDep & (emm.table.(memberVar) == pair(2));
                             L = (L1 - L2)';
                             contrasts = kbcontrasts_wald(mdl, emm, L);
                             main_p(iPair) = contrasts.pVal;
@@ -1270,17 +1345,16 @@ for iVar = 1:nY
 
         figWidth = nCols * panelWidth;
         figHeight = nRows * panelHeight + 50;
-        figNameBase = 'DataPlots';
-        if nY > 1 && ~separateMulti
-            figName = sprintf('%s_%s', figNameBase, myVar);
-        else
-            figName = figNameBase;
-        end
+        figName = 'DataPlots';
         fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
         layout = tiledlayout(nRows, nCols);
         if nY > 1 && separateMulti
-            title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-        elseif nY > 1 && strcmp(plotTitle, depVar)
+            if strcmp(depVar, yVal)
+                title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            else
+                title(layout, sprintf('Data plots for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            end
+        elseif nY > 1 && strcmp(plotTitle, yVal)
             title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
             title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
@@ -1323,6 +1397,11 @@ for iVar = 1:nY
                 ax.YAxis.TickValues = [];
 
                 % plot panel
+                if strcmp(depVar, yVal)
+                    yLabel = myVar;
+                else
+                    yLabel = depVar;
+                end
                 if isempty(depVarUnits)
                     ylabelStr = sprintf('%s', yLabel, depVarUnits);
                 else
@@ -1373,24 +1452,35 @@ for iVar = 1:nY
         end
 
         % save figure
+        if nY > 1
+            outDir = sprintf('%s/%s', outDirOrig, myVar);
+            if ~isfolder(outDir)
+                mkdir(outDir);
+            end
+        end
         set(fig, 'PaperPositionMode', 'auto');
         set(fig, 'PaperUnits', 'points');
         set(fig, 'PaperSize', [figWidth figHeight]);
         print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
         print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
         saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
+        outDir = outDirOrig;
 
         % close figure
         close(fig);
     end
 
     % save descriptive statistics
-    if nY > 1 && ~separateMulti
-        fileName = sprintf('Statistics_%s', myVar);
-    else
-        fileName = 'Statistics';
+    if nY > 1
+        outDir = sprintf('%s/%s', outDirOrig, myVar);
+        if ~isfolder(outDir)
+            mkdir(outDir);
+        end
     end
+    fileName = 'Statistics';
     saveTable(Stats, fileName, {'xlsx'}, outDir);
+    outDir = outDirOrig;
+
     disp(Stats) % display table
 
     %% Post-hoc table
@@ -1451,17 +1541,16 @@ for iVar = 1:nY
     disp(posthocTable); % display table
 
     % save table
-    if nY > 1 && ~separateMulti
-        fileName = sprintf('Posthoc_%s', myVar);
-    else
-        fileName = 'Posthoc';
+    if nY > 1
+        outDir = sprintf('%s/%s', outDirOrig, myVar);
+        if ~isfolder(outDir)
+            mkdir(outDir);
+        end
     end
+    fileName = 'Posthoc';
     saveTable(posthocTable, fileName, {'xlsx'}, outDir);
-
-    % reset output folder
-    if nY > 1 && separateMulti
-        outDir = outDirOrig;
-    end
+    outDir = outDirOrig;
+    
 end
 
 end
