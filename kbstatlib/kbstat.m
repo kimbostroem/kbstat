@@ -374,13 +374,6 @@ else
     formula = '';
 end
 
-% posthoc method
-if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
-    posthocMethod = options.posthocMethod;
-else
-    posthocMethod = 'ttest';
-end
-
 % separateMulti
 if isfield(options, 'separateMulti') && ~isempty(options.separateMulti)
     separateMulti = getValue(options.separateMulti);
@@ -603,6 +596,19 @@ end
 % multivariate variable
 if nY > 1
     Data.(yVar) = Data2.(yVar);
+end
+
+% posthoc method
+if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
+    posthocMethod = options.posthocMethod;
+elseif nY > 1 && separateMulti
+    posthocMethod = 'emm';
+elseif nY == 1
+    posthocMethod = 'emm';
+elseif strcmp(distribution, 'normal')
+    posthocMethod = 'ttest';
+else
+    posthocMethod = 'utest';
 end
 
 % get dependent variable
