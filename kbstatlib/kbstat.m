@@ -119,7 +119,7 @@ function mdl = kbstat(options)
 %                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
 %                       'none'      Do not perform posthoc analysis
-%                       OPTIONAL, default = 'utest'.
+%                       OPTIONAL, default = 'ttest'.
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
 %                       analyzed for each component separately.
@@ -160,18 +160,20 @@ function mdl = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = unset.
 %
-%       multiTransform  Flag if multivariate data should be transformed per 
-%                       component to achieve comparable ranges.
-%                       OPTIONAL, default = true.
-%
-%       transform       Function of x to apply to the dependent variable.
+%       transform       Choose how to transform the dependent variable.
 %                       The linear model is fit on the transformed data,
 %                       but the data are plotted using the original data.
-%                       OPTIONAL, default = 'x'.
-%                       EXAMPLES:
-%                           'log(x)'
-%                           'atanh(x)'
-%                           '(x-mean(x))/std(x)'
+%                       OPTIONAL, default = ''. Possible values
+%                              'Z'  Z-transform to zero-centered
+%                                   distribution with unit standard 
+%                                   derivation.
+%                        'IQR' or   Rescale to interval [0,1] using upper 
+%                      'quartiles'  and lower limits of the inter-quartile 
+%                                   range (IQR).
+%                           'f(x)'  Arbitrary function of x, such as
+%                                       'log(x)'
+%                                       'atanh(x)'
+%                                       '(x-mean(x))/std(x)'
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -330,24 +332,10 @@ end
 
 % transform
 if isfield(options, 'transform') && ~isempty(options.transform)
-    transform = getValue(options.transform);
-    transformFcn = eval(sprintf('@(x) %s', options.transform));
-    trnsVar = sprintf('%sTrans', depVar);
+    transform = options.transform;        
 else
-    transform = false;
-    transformFcn = @(x) x;
-    trnsVar = depVar;
+    transform = '';    
 end
-
-% multiTransform
-if isfield(options, 'multiTransform') && ~isempty(options.multiTransform)
-    multiTransform = getValue(options.multiTransform);    
-    trnsVar = sprintf('%sTrans', depVar);
-else
-    multiTransform = true;
-    trnsVar = depVar;
-end
-
 
 % subject variable
 if isfield(options, 'id') && ~isempty(options.id)
@@ -390,7 +378,7 @@ end
 if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
-    posthocMethod = 'utest';
+    posthocMethod = 'ttest';
 end
 
 % separateMulti
@@ -670,19 +658,82 @@ end
 
 %% Apply data transformation, if given
 
-for iVar = 1:nY
-    if nY > 1
-        idxDep = (Data.(yVar) == y{iVar});
-    else
-        idxDep = true(size(Data, 1), 1);
+if ~isempty(transform)
+    trnsVar = sprintf('%sTrans', depVar);
+    for iVar = 1:nY
+        if nY > 1
+            idxDep = (Data.(yVar) == y{iVar});
+        else
+            idxDep = true(size(Data, 1), 1);
+        end        
+        switch transform
+            case 'mean'
+                transformFcn = @(x) x/mean(x, 'omitnan');
+            case 'std'
+                transformFcn = @(x) x/std(x, [], 'omitnan');
+            case 'Z'
+                transformFcn = @(x) (x - mean(x, 'omitnan'))/std(x, [], 'omitnan');
+            case {'q50', 'median'}
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.5);
+                transformFcn = @(x) x/upperThresh;
+            case 'q75'
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.75);
+                transformFcn = @(x) x/upperThresh;
+            case 'q95'
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
+                transformFcn = @(x) x/upperThresh;            
+            case 'q2575'
+                lowerThresh = quantile(Data.(depVar)(idxDep), 0.25);
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.75);
+                transformFcn = @(x) x/(upperThresh - lowerThresh);            
+            case 'q0595'
+                lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
+                transformFcn = @(x) x/(upperThresh - lowerThresh);
+            case 'IQRmax'
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                transformFcn = @(x) x/upperThresh;
+            case 'IQR'
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                transformFcn = @(x) x/(upperThresh - lowerThresh);
+            case 'IQRzero'
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            case 'MAD'
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');                
+                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            case 'MADmax'
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');                
+                transformFcn = @(x) x/upperThresh;
+            case '3sigma'
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');                
+                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            case '3sigmamax'
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');                
+                transformFcn = @(x) x/upperThresh;
+            case 'max'
+                upperThresh = max(Data.(depVar)(idxDep));
+                transformFcn = @(x) x/upperThresh;
+            case 'minmax'
+                lowerThresh = min(Data.(depVar)(idxDep));
+                upperThresh = max(Data.(depVar)(idxDep));
+                transformFcn = @(x) x/(upperThresh - lowerThresh);
+            case 'minmaxzero'
+                lowerThresh = min(Data.(depVar)(idxDep));
+                upperThresh = max(Data.(depVar)(idxDep));
+                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            
+            case 'qminmaxzero'
+                lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
+                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
+                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            otherwise % any other function given in the form 'f(x)'
+                transformFcn = eval(sprintf('@(x) %s', transform));                
+        end
+        Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
     end
-    Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
-    if nY > 1 && multiTransform
-        [~, ~, upperThresh, ~] = isoutlier(Data.(trnsVar)(idxDep), 'quartiles');
-        % upperThresh = quantile(Data.(trnsVar)(idxDep), 0.95);
-        multiTransformFcn = @(x) x/upperThresh;
-        Data.(trnsVar)(idxDep) = multiTransformFcn(Data.(trnsVar)(idxDep));
-    end
+else
+    trnsVar = depVar;
 end
 
 %% Remove pre-fit outliers
@@ -1105,14 +1156,14 @@ for iVar = 1:nY
     bar_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
     bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
     main_p = nan(nPairs);
-    bar_F = nan(nGroups, nPairs, nRows, nCols, nY);
-    main_F = nan(nPairs);
-    bar_DF1 = nan(nGroups, nPairs, nRows, nCols, nY);
-    main_DF1 = nan(nPairs);
-    bar_DF2 = nan(nGroups, nPairs, nRows, nCols, nY);
-    main_DF2 = nan(nPairs);
-    bar_etaSqp = nan(nGroups, nPairs, nRows, nCols, nY);
-    main_etaSqp = nan(nPairs);
+    bar_test = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_test = nan(nPairs);
+    bar_DF = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_DF = nan(nPairs);
+    bar_aux = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_aux = nan(nPairs);
+    bar_eff = nan(nGroups, nPairs, nRows, nCols, nY);
+    main_eff = nan(nPairs);
 
     if nY > 1
         maxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
@@ -1248,17 +1299,50 @@ for iVar = 1:nY
                             val2 = Data.(trnsVar)(L2);
                             switch posthocMethod
                                 case 'ttest'
-                                    [~, bar_p(iGroup, iPair, iRow, iCol), stats] = ttest2(val1, val2);
+                                    [~, bar_p(iGroup, iPair, iRow, iCol), ~, stats] = ttest2(val1, val2);
+                                    tValue = stats.tstat;
+                                    df = stats.df;
+                                    sPool = stats.sd;
+                                    dCohen = (mean(val1) - mean(val2)) / sPool;
+                                    bar_test(iGroup, iPair, iRow, iCol) = tValue;
+                                    bar_DF(iGroup, iPair, iRow, iCol) = df;
+                                    bar_eff(iGroup, iPair, iRow, iCol) =  dCohen;
                                 case 'utest'
-                                    [bar_p(iGroup, iPair, iRow, iCol), stats] = ranksum(val1, val2);
-                            end                            
+                                    [bar_p(iGroup, iPair, iRow, iCol), ~, stats] = ranksum(val1, val2);
+                                    N1 = sum(~isnan(val1));
+                                    N2 = sum(~isnan(val2));
+                                    W = stats.ranksum;
+                                    U = W - N1*(N1+1)/2;
+                                    r = 1 - 2*U/(N1*N2);
+                                    bar_test(iGroup, iPair, iRow, iCol) = U;
+                                    bar_eff(iGroup, iPair, iRow, iCol) =  r;
+                            end
 
                             % calc main contrasts
                             L1 = (Data.(memberVar) == pair(1));
                             L2 = (Data.(memberVar) == pair(2));
                             val1 = Data.(trnsVar)(L1);
                             val2 = Data.(trnsVar)(L2);
-                            [~, main_p(iPair)] = ttest2(val1, val2);
+                            switch posthocMethod
+                                case 'ttest'
+                                    [~, main_p(iPair), ~, stats] = ttest2(val1, val2);
+                                    tValue = stats.tstat;
+                                    df = stats.df;
+                                    sPool = stats.sd;
+                                    dCohen = (mean(val1) - mean(val2)) / sPool;
+                                    main_test(iPair) = tValue;
+                                    main_DF(iPair) = df;
+                                    main_eff(iPair) =  dCohen;
+                                case 'utest'
+                                    [main_p(iPair), ~, stats] = ranksum(val1, val2);
+                                    N1 = sum(~isnan(val1));
+                                    N2 = sum(~isnan(val2));
+                                    W = stats.ranksum;
+                                    U = W - N1*(N1+1)/2;
+                                    r = 1 - 2*U/(N1*N2);
+                                    main_test(iPair) = U;
+                                    main_eff(iPair) =  r;
+                            end                            
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
@@ -1301,10 +1385,10 @@ for iVar = 1:nY
                             L = (L1 - L2)';
                             contrasts = kbcontrasts_wald(mdl, emm, L);
                             bar_p(iGroup, iPair, iRow, iCol) = contrasts.pVal;
-                            bar_F(iGroup, iPair, iRow, iCol) = contrasts.F;
-                            bar_DF1(iGroup, iPair, iRow, iCol) = contrasts.DF1;
-                            bar_DF2(iGroup, iPair, iRow, iCol) = contrasts.DF2;
-                            bar_etaSqp(iGroup, iPair, iRow, iCol) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                            bar_test(iGroup, iPair, iRow, iCol) = contrasts.F;
+                            bar_DF(iGroup, iPair, iRow, iCol) = contrasts.DF1;
+                            bar_aux(iGroup, iPair, iRow, iCol) = contrasts.DF2;
+                            bar_eff(iGroup, iPair, iRow, iCol) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
 
                             % calc main contrasts
                             L1 = idxDep & (emm.table.(memberVar) == pair(1));
@@ -1312,10 +1396,10 @@ for iVar = 1:nY
                             L = (L1 - L2)';
                             contrasts = kbcontrasts_wald(mdl, emm, L);
                             main_p(iPair) = contrasts.pVal;
-                            main_F(iGroup, iPair, iRow, iCol) = contrasts.F;
-                            main_DF1(iGroup, iPair, iRow, iCol) = contrasts.DF1;
-                            main_DF2(iGroup, iPair, iRow, iCol) = contrasts.DF2;
-                            main_etaSqp(iPair) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                            main_test(iGroup, iPair, iRow, iCol) = contrasts.F;
+                            main_DF(iGroup, iPair, iRow, iCol) = contrasts.DF1;
+                            main_aux(iGroup, iPair, iRow, iCol) = contrasts.DF2;
+                            main_eff(iPair) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                     end
                 end
             end
@@ -1325,7 +1409,7 @@ for iVar = 1:nY
     % If pairwise t-test, the posthoc comparisons must be statistically corrected
     bar_pCorr = bar_p;
     main_pCorr = main_p;
-    if strcmp(posthocMethod, 'ttest')
+    if strcmp(posthocMethod, {'ttest', 'utest'})
         sizeOrig = size(bar_p); % vstore original dimensions
         bar_p = bar_p(:); % make column vector
         bar_pCorr = bar_p; % create array of corrected p-values
@@ -1501,11 +1585,23 @@ for iVar = 1:nY
         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
         tableRow.p = main_p(iPair);
         tableRow.pCorr = main_pCorr(iPair);
-        tableRow.F = main_F(iPair);
-        tableRow.DF1 = main_DF1(iPair);
-        tableRow.DF2 = main_DF2(iPair);
-        tableRow.etaSqp = main_etaSqp(iPair);
-        tableRow.effectSize = string(etaprint(tableRow.etaSqp));
+        switch posthocMethod
+            case 'ttest'
+                tableRow.t = main_test(iPair);
+                tableRow.DF = main_DF(iPair);
+                tableRow.d = main_eff(iPair);
+                tableRow.effectSize = string(dprint(main_eff(iPair)));
+            case 'utest'
+                tableRow.U = main_test(iPair);
+                tableRow.r = main_eff(iPair);
+                tableRow.effectSize = string(rprint(main_eff(iPair)));
+            case 'emm'
+                tableRow.F = main_test(iPair);
+                tableRow.DF1 = main_DF(iPair);
+                tableRow.DF2 = main_aux(iPair);
+                tableRow.etaSqp = main_eff(iPair);
+                tableRow.effectSize = string(etaprint(main_eff(iPair)));
+        end
         tableRow.significance = string(sigprint(tableRow.pCorr));
         posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
     end
@@ -1527,11 +1623,23 @@ for iVar = 1:nY
                     tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                     tableRow.p = bar_p(iGroup, iPair, iRow, iCol);
                     tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol);
-                    tableRow.F = bar_F(iGroup, iPair, iRow, iCol);
-                    tableRow.DF1 = bar_DF1(iGroup, iPair, iRow, iCol);
-                    tableRow.DF2 = bar_DF2(iGroup, iPair, iRow, iCol);
-                    tableRow.etaSqp = bar_etaSqp(iGroup, iPair, iRow, iCol);
-                    tableRow.effectSize = string(etaprint(tableRow.etaSqp));
+                    switch posthocMethod
+                        case 'ttest'
+                            tableRow.t = bar_test(iGroup, iPair, iRow, iCol);
+                            tableRow.DF = bar_DF(iGroup, iPair, iRow, iCol);
+                            tableRow.d = bar_eff(iGroup, iPair, iRow, iCol);
+                            tableRow.effectSize = string(dprint(bar_eff(iGroup, iPair, iRow, iCol)));
+                        case 'utest'
+                            tableRow.U = bar_test(iGroup, iPair, iRow, iCol);
+                            tableRow.r = bar_eff(iGroup, iPair, iRow, iCol);
+                            tableRow.effectSize = string(rprint(bar_eff(iGroup, iPair, iRow, iCol)));
+                        case 'emm'
+                            tableRow.F = bar_test(iGroup, iPair, iRow, iCol);
+                            tableRow.DF1 = bar_DF(iGroup, iPair, iRow, iCol);
+                            tableRow.DF2 = bar_aux(iGroup, iPair, iRow, iCol);
+                            tableRow.etaSqp = bar_eff(iGroup, iPair, iRow, iCol);
+                            tableRow.effectSize = string(etaprint(bar_eff(iGroup, iPair, iRow, iCol)));
+                    end
                     tableRow.significance = string(sigprint(tableRow.pCorr));
                     posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
                 end
