@@ -119,7 +119,10 @@ function mdl = kbstat(options)
 %                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
 %                       'none'      Do not perform posthoc analysis
-%                       OPTIONAL, default = 'ttest'.
+%                       OPTIONAL, default is
+%                           'emm'   if univariate or multi-valued y with separateMulti = true
+%                           'ttest' if distribution = 'normal'
+%                           'utest' otherwise
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
 %                       analyzed for each component separately.
