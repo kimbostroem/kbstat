@@ -18,7 +18,7 @@ function mdl = kbstat(options)
 % of the external package 'emmeans'.
 %
 % SYNTAX
-% kbstat(in, options)
+%   kbstat(in, options)
 %
 % INPUT
 %   options     (struct) Structure containing parameters needed for
@@ -998,13 +998,13 @@ for iVar = 1:nY
     fprintf(fid, '\t%s', mdlOutput);
     fclose(fid);
 
-    anovaTable.Term = string(results.Term(2:end));
-    anovaTable.DF1 = results.DF1(2:end);
-    anovaTable.DF2 = results.DF2(2:end);
-    anovaTable.F = results.FStat(2:end);
-    anovaTable.p = results.pValue(2:end);
+    anovaTable.Term = string(results.Term);
+    anovaTable.DF1 = results.DF1;
+    anovaTable.DF2 = results.DF2;
+    anovaTable.F = results.FStat;
+    anovaTable.p = results.pValue;
     anovaTable.etaSqp = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
-    anovaTable.effectSize = string(etaprint(anovaTable.etaSqp));
+    anovaTable.effectSize = string(effprint(anovaTable.etaSqp, 'eta2'));
     anovaTable.significance = string(sigprint(anovaTable.p));
 
     % save options
@@ -1622,17 +1622,17 @@ for iVar = 1:nY
                 tableRow.t = main_test(iPair, iVar);
                 tableRow.DF = main_DF(iPair, iVar);
                 tableRow.d = main_eff(iPair, iVar);
-                tableRow.effectSize = string(dprint(main_eff(iPair, iVar)));
+                tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'd'));
             case 'utest'
                 tableRow.U = main_test(iPair, iVar);
                 tableRow.r = main_eff(iPair, iVar);
-                tableRow.effectSize = string(rprint(main_eff(iPair, iVar)));
+                tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'r'));
             case 'emm'
                 tableRow.F = main_test(iPair, iVar);
                 tableRow.DF1 = main_DF(iPair, iVar);
                 tableRow.DF2 = main_aux(iPair, iVar);
                 tableRow.etaSqp = main_eff(iPair, iVar);
-                tableRow.effectSize = string(etaprint(main_eff(iPair, iVar)));
+                tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'eta2'));
         end
         tableRow.significance = string(sigprint(tableRow.pCorr));
         posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
@@ -1660,17 +1660,17 @@ for iVar = 1:nY
                             tableRow.t = bar_test(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.DF = bar_DF(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.d = bar_eff(iGroup, iPair, iRow, iCol, iVar);
-                            tableRow.effectSize = string(dprint(bar_eff(iGroup, iPair, iRow, iCol, iVar)));
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'd'));
                         case 'utest'
                             tableRow.U = bar_test(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.r = bar_eff(iGroup, iPair, iRow, iCol, iVar);
-                            tableRow.effectSize = string(rprint(bar_eff(iGroup, iPair, iRow, iCol, iVar)));
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'r'));
                         case 'emm'
                             tableRow.F = bar_test(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.DF1 = bar_DF(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.DF2 = bar_aux(iGroup, iPair, iRow, iCol, iVar);
                             tableRow.etaSqp = bar_eff(iGroup, iPair, iRow, iCol, iVar);
-                            tableRow.effectSize = string(etaprint(bar_eff(iGroup, iPair, iRow, iCol, iVar)));
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'eta2'));
                     end
                     tableRow.significance = string(sigprint(tableRow.pCorr));
                     posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
