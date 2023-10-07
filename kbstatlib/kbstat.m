@@ -1481,17 +1481,21 @@ for iVar = 1:nY
                 ax.YAxis.TickValues = [];
 
                 % plot panel
-                if strcmp(depVar, yVal)
-                    yLabel = myVar;
+                if ~isempty(yLabel)
+                    yLabelStr = yLabel;
                 else
-                    yLabel = depVar;
+                    if strcmp(depVar, yVal)
+                        labelStr = myVar;
+                    else
+                        labelStr = depVar;
+                    end
+                    if isempty(depVarUnits)
+                        yLabelStr = sprintf('%s', labelStr, depVarUnits);
+                    else
+                        yLabelStr = sprintf('%s [%s]', labelStr, depVarUnits);
+                    end
+                    yLabelStr = strrep(yLabelStr,'_', ' ');
                 end
-                if isempty(depVarUnits)
-                    ylabelStr = sprintf('%s', yLabel, depVarUnits);
-                else
-                    ylabelStr = sprintf('%s [%s]', yLabel, depVarUnits);
-                end
-                ylabelStr = strrep(ylabelStr,'_', ' ');
 
                 switch showVarNames
                     case {1, 2} % display variable names and levels
@@ -1515,7 +1519,7 @@ for iVar = 1:nY
                             panelTitle = '';
                         end
                 end
-                plotGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, ylabelStr, plotStyle, panel, showVarNames);
+                plotGroups(violin_values(:, :, :, iRow, iCol), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol), panelTitle, yLabelStr, plotStyle, panel, showVarNames);
             end
         end
 
