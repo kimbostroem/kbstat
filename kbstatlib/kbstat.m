@@ -125,7 +125,7 @@ function mdl = kbstat(options)
 %                           'ttest' if distribution = 'normal'
 %                           'utest' otherwise
 %
-%       postHocMain     Flag if also the posthoc main effects should be 
+%       posthocMainEffectsEffects Flag if also the posthoc main effects should be 
 %                       calculated, i.e. the comparison between one 
 %                       variable set to 'any'. 
 %                       OPTIONAL, default = true.
@@ -634,10 +634,10 @@ else
 end
 
 % posthoc main effects
-if isfield(options, 'posthocMain') && ~isempty(options.posthocMain)
-    posthocMain = getValue(options.posthocMain);
+if isfield(options, 'posthocMainEffects') && ~isempty(options.posthocMainEffects)
+    posthocMainEffects = getValue(options.posthocMainEffects);
 else
-    posthocMain = true;
+    posthocMainEffects = true;
 end
 
 % get dependent variable
@@ -774,7 +774,7 @@ end
 %% Remove pre-fit outliers
 
 outlierLevel = length(factors);
-if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
+if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
 
     idxOut = false(size(Data, 1), 1);
 
@@ -885,6 +885,11 @@ if strcmp(fitMethod, 'none')
     nFits = 0;
     mdls = {};
     anovas = {};
+    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
+        fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
+    end
+    fclose(fid);
 elseif separateMulti
     nFits = nY;
 end
@@ -1015,10 +1020,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
+    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
         fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
     end
-    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
+    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
         fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model\n', nOutliers, nObs, nOutliers/nObs*100);
     end
     fprintf(fid, '\t%s', mdlOutput);
@@ -1156,6 +1161,12 @@ end
 
 for iFit = 1:nFits
 
+    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
+        myVar = y{iFit};
+        outDirOrig = outDir;
+        outDir = sprintf('%s/%s', outDir, myVar);
+    end
+
     % retrieve GLM fit
     mdl = mdls{iFit};
 
@@ -1198,7 +1209,10 @@ for iFit = 1:nFits
     % save ANOVA table
     saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
     disp(anovaTable) % display table
-    
+
+    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
+        outDir = outDirOrig;
+    end    
 end
 
 %% Calc plot data
@@ -1389,7 +1403,7 @@ for iFit = 1:nY
                             end
 
                             % calc main contrasts
-                            if posthocMain
+                            if posthocMainEffects
                                 L1 = (Data.(memberVar) == pair(1));
                                 L2 = (Data.(memberVar) == pair(2));
                                 val1 = Data.(trnsVar)(L1);
@@ -1463,7 +1477,7 @@ for iFit = 1:nY
                             bar_eff(iGroup, iPair, iRow, iCol, iFit) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
 
                             % calc main contrasts
-                            if posthocMain
+                            if posthocMainEffects
                                 L1 = idxDep & (emm.table.(memberVar) == pair(1));
                                 L2 = idxDep & (emm.table.(memberVar) == pair(2));
                                 L = (L1 - L2)';
@@ -1496,7 +1510,7 @@ if any(strcmp(posthocMethod, {'ttest', 'utest', 'emm'}))
     bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
     bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     % statistical correction of main posthoc p-Values
-    if posthocMain
+    if posthocMainEffects
         idx = ~isnan(main_pCorr); % identify NaN-entries
         [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
     end
@@ -1504,7 +1518,7 @@ elseif nY > 1 && separateMulti && strcmp(posthocMethod, 'emm')
     % Since 'emm' posthoc analysis evaluates each fit in one go, hence must
     % only be corrected for the number of fits.
     bar_pCorr = sidak_corr(bar_p, nFits);
-    if posthocMain
+    if posthocMainEffects
         main_pCorr = sidak_corr(main_p, nFits);
     end
 end
@@ -1675,7 +1689,7 @@ for iFit = 1:nY
     posthocTable = table;
 
     % posthoc main effects
-    if posthocMain
+    if posthocMainEffects
         for iPair = 1:nPairs
             tableRow = table;
 
@@ -1774,8 +1788,14 @@ end
 end
 
 function value = getValue(in)
+% get numerical or logical value from string, if possible
 if ischar(in) || isstring(in)
-    value = str2num(in); %#ok<ST2NM>
+    [numValue, isNum] = str2num(in);
+    if isNum
+        value = numValue;
+    else
+        value = in;
+    end
 else
     value = in;
 end
