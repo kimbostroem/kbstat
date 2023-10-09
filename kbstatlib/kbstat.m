@@ -2,8 +2,8 @@ function mdl = kbstat(options)
 %% Analyze data using generalized linear mixed-model fit.
 % The result is a fit summary, a diagnostic plot, a data bar plot, a
 % descriptive statistics table, an ANOVA table, and a posthoc pairwise
-% comparison table. 
-% 
+% comparison table.
+%
 % REMARK: This function can do multivariate analysis which can be done in
 % either one of two possible ways: 1) Declare a dependent variable
 % options.y as a cell array with more than 1 entry, or 2) declare
@@ -35,7 +35,7 @@ function mdl = kbstat(options)
 %       Data            (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
-%       y               Name of the dependent variable or list of names of 
+%       y               Name of the dependent variable or list of names of
 %                       dependent variables. If there is more than one
 %                       component of y, by default each component is
 %                       treated as a separate dependent variable and as
@@ -83,14 +83,14 @@ function mdl = kbstat(options)
 %                       overrides the automatically generated formula
 %                       produced from the provided variables.
 %
-%       fitMethod       Fit method used for the GLM fit.
-%                       OPTIONAL, default = 'MPL'.
+%       fitMethod       Fit method used for the GLM fit.%                       
 %                       Possible values:
-%                       'MPL'                   Maximum pseudo likelihood
-%                       'REMPL'                 Restricted maximum pseudo likelihood
-%                       'Laplace'               Maximum likelihood using Laplace approximation
-%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
-%                       'none'                  Skip linear model fit
+%                           'none'                  Skip linear model fit
+%                           'MPL'                   Maximum pseudo likelihood
+%                           'REMPL'                 Restricted maximum pseudo likelihood
+%                           'Laplace'               Maximum likelihood using Laplace approximation
+%                           'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
+%                       OPTIONAL, default = 'REMPL'.
 %
 %       distribution    Distribution used for the GLM fit.
 %                       OPTIONAL, default = 'Normal'.
@@ -102,39 +102,41 @@ function mdl = kbstat(options)
 %                       'gamma'	            Gamma distribution
 %                       'inverseGaussian'	Inverse Gaussian distribution
 %
-%       link            Link function used for the GLM fit.
-%                       OPTIONAL, default depends on chosen distribution.
+%       link            Link function used for the GLM fit.%                       
 %                       Possible values:
-%                       'identity'	    g(mu) = mu.             Default for Normal distribution
-%                       'log'	        g(mu) = log(mu).        Default for Poisson
-%                       'logit'	        g(mu) = log(mu/(1-mu))  Default for Binomial distribution
-%                       'loglog'	    g(mu) = log(-log(mu))
-%                       'probit'	    g(mu) = norminv(mu)
-%                       'comploglog'	g(mu) = log(-log(1-mu))
-%                       'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma
-%                       Scalar p	    g(mu) = mu.^p           Default for InverseGaussian (p= -2)
+%                           'identity'	    g(mu) = mu.             Default for Normal distribution
+%                           'log'	        g(mu) = log(mu).        Default for Poisson
+%                           'logit'	        g(mu) = log(mu/(1-mu))  Default for Binomial distribution
+%                           'loglog'	    g(mu) = log(-log(mu))
+%                           'probit'	    g(mu) = norminv(mu)
+%                           'comploglog'	g(mu) = log(-log(1-mu))
+%                           'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma
+%                           Scalar p	    g(mu) = mu.^p           Default for InverseGaussian (p= -2)
+%                           'auto'          depends on chosen distribution
+%                       OPTIONAL, default = 'auto'.
 %
 %       posthocMethod   Method for the posthoc pairwise comparison.
 %                       Possible values:
+%                       'none'      Do not perform posthoc analysis
 %                       'ttest'     t-test with Holm-Bonferroni correction
 %                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
-%                       'none'      Do not perform posthoc analysis
-%                       OPTIONAL, default is
+%                       'auto'      Perform posthoc analysis using
 %                           'emm'   if univariate or multi-valued y with separateMulti = true
 %                           'ttest' if distribution = 'normal'
 %                           'utest' otherwise
+%                       OPTIONAL, default = 'auto'.
 %
-%       posthocMainEffectsEffects Flag if also the posthoc main effects should be 
-%                       calculated, i.e. the comparison between one 
-%                       variable set to 'any'. 
+%       posthocMainEffectsEffects Flag if also the posthoc main effects should be
+%                       calculated, i.e. the comparison between one
+%                       variable set to 'any'.
 %                       OPTIONAL, default = true.
 %
 %       separateMulti   Flag if a multivariate dependent variable should be
 %                       analyzed for each component separately.
 %                       OPTIONAL, default = true.
 %
-%       multiVar        Name of the variable that encodes levels of a 
+%       multiVar        Name of the variable that encodes levels of a
 %                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
 %
@@ -143,10 +145,10 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       removeOutliers  Indicate which outliers should be removed from the 
+%       removeOutliers  Indicate which outliers should be removed from the
 %                       data. Possible values:
 %                       true        Remove pre-fit and post-fit outliers
-%                       false,  
+%                       false,
 %                       'none'      Do not remove outliers
 %                       'pre'       Remove pre-fit outliers
 %                       'post'      Remove post-fit outliers
@@ -156,11 +158,15 @@ function mdl = kbstat(options)
 %       outlierMethod   Method to remove post-fit outliers from the data.
 %                       Possible values:
 %                       'none'      Do not remove outliers
-%                       'quartiles' Remove values outside 1.5 times the 
+%                       'auto'      Use more liberal method 'quartiles'
+%                                   for pre-fit outliers and more
+%                                   restrictive method 'median' for
+%                                   post-fit outliers
+%                       'quartiles' Remove values outside 1.5 times the
 %                                   interquartile range [.25, .75]
-%                       'median'    Remove values outside more than three 
+%                       'median'    Remove values outside more than three
 %                                   scaled median absolute deviations (MAD)
-%                       'mean'      Remove values outside 3 standard 
+%                       'mean'      Remove values outside 3 standard
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'quartiles'.
 %
@@ -187,10 +193,10 @@ function mdl = kbstat(options)
 %                       but the data are plotted using the original data.
 %                       OPTIONAL, default = ''. Possible values
 %                              'Z'  Z-transform to zero-centered
-%                                   distribution with unit standard 
+%                                   distribution with unit standard
 %                                   derivation.
-%                        'IQR' or   Rescale to interval [0,1] using upper 
-%                      'quartiles'  and lower limits of the inter-quartile 
+%                        'IQR' or   Rescale to interval [0,1] using upper
+%                      'quartiles'  and lower limits of the inter-quartile
 %                                   range (IQR).
 %                           'f(x)'  Arbitrary function of x, such as
 %                                       'log(x)'
@@ -294,8 +300,8 @@ Data1 = DataRaw;
 tableVars = DataRaw.Properties.VariableNames;
 
 % convert all character cell arrays to string arrays
-for iFit = 1:length(tableVars)
-    tableVar = tableVars{iFit};
+for iVar = 1:length(tableVars)
+    tableVar = tableVars{iVar};
     if iscell(Data1.(tableVar))
         Data1.(tableVar) = string(Data1.(tableVar));
     end
@@ -338,7 +344,7 @@ elseif ~isempty(multiVar)
     yVar = multiVar;
     yVal = y{1};
     Data2 = Data1;
-    depVar = y{1}; % set dependent variable to y    
+    depVar = y{1}; % set dependent variable to y
     Data2.(yVar) = categorical(string(Data2.(yVar)));
     y = cellstr(unique(Data2.(yVar)));
     nY = length(y);
@@ -354,9 +360,9 @@ end
 
 % transform
 if isfield(options, 'transform') && ~isempty(options.transform)
-    transform = options.transform;        
+    transform = options.transform;
 else
-    transform = '';    
+    transform = '';
 end
 
 % subject variable
@@ -407,7 +413,21 @@ end
 if isfield(options, 'fitMethod') && ~isempty(options.fitMethod)
     fitMethod = options.fitMethod;
 else
-    fitMethod = 'MPL';
+    fitMethod = 'REMPL';
+end
+
+% posthoc method
+if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
+    posthocMethod = options.posthocMethod;
+else
+    posthocMethod = 'auto';
+end
+
+% posthoc main effects
+if isfield(options, 'posthocMainEffects') && ~isempty(options.posthocMainEffects)
+    posthocMainEffects = getValue(options.posthocMainEffects);
+else
+    posthocMainEffects = true;
 end
 
 % distribution (for GLM)
@@ -421,7 +441,7 @@ end
 if isfield(options, 'link') && ~isempty(options.link)
     link = options.link;
 else % no parameter given
-    link = '';
+    link = 'auto';
 end
 
 % level order
@@ -462,7 +482,7 @@ end
 if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
     outlierMethod = options.outlierMethod;
 else
-    outlierMethod = 'quartiles';
+    outlierMethod = 'auto';
 end
 
 % flag if pre-fit outliers should be removed
@@ -505,8 +525,6 @@ if isfield(options, 'xOrder') && ~isempty(options.xOrder)
 else
     xOrder = [];
 end
-
-fprintf('Performing Linear Model analysis for %s...\n', depVar);
 
 %% Apply constraint, if given
 
@@ -576,10 +594,26 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
             fprintf('Variable "%s" has only 1 level left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
             x = setdiff(x, constraintVar, 'stable');
     end
-    for iFit = 1:length(auxVars)
-        Data2 = removevars(Data2, auxVars{iFit});
+    for iVar = 1:length(auxVars)
+        Data2 = removevars(Data2, auxVars{iVar});
     end
 end
+
+%% Save options to file
+
+% fpath = fullfile(outDir, 'options.mat');
+% save(fpath, 'options');
+fpath = fullfile(outDir, 'Options.txt');
+fid = fopen(fpath, 'w+');
+fields = fieldnames(options);
+fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
+fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
+paramFields = sort(fields); % sort fields alphabetically
+for iField = 1:length(paramFields)
+    field = paramFields{iField};
+    fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+end
+fclose(fid);
 
 %% Make variables that are non-numeric or integer, categorical
 
@@ -621,23 +655,16 @@ if nY > 1
 end
 
 % posthoc method
-if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
-    posthocMethod = options.posthocMethod;
-elseif nY > 1 && separateMulti && ~strcmp(fitMethod, 'none')
-    posthocMethod = 'emm';
-elseif nY == 1 && ~strcmp(fitMethod, 'none')
-    posthocMethod = 'emm';
-elseif strcmp(distribution, 'normal')
-    posthocMethod = 'ttest';
-else
-    posthocMethod = 'utest';
-end
-
-% posthoc main effects
-if isfield(options, 'posthocMainEffects') && ~isempty(options.posthocMainEffects)
-    posthocMainEffects = getValue(options.posthocMainEffects);
-else
-    posthocMainEffects = true;
+if strcmp(posthocMethod, 'auto')
+    if nY > 1 && separateMulti && ~strcmp(fitMethod, 'none')
+        posthocMethod = 'emm';
+    elseif nY == 1 && ~strcmp(fitMethod, 'none')
+        posthocMethod = 'emm';
+    elseif strcmp(distribution, 'normal')
+        posthocMethod = 'ttest';
+    else
+        posthocMethod = 'utest';
+    end
 end
 
 % get dependent variable
@@ -695,12 +722,12 @@ end
 
 if ~isempty(transform)
     trnsVar = sprintf('%sTrans', depVar);
-    for iFit = 1:nY
+    for iVar = 1:nY
         if nY > 1
-            idxDep = (Data.(yVar) == y{iFit});
+            idxDep = (Data.(yVar) == y{iVar});
         else
             idxDep = true(size(Data, 1), 1);
-        end        
+        end
         switch transform
             case 'mean'
                 transformFcn = @(x) x/mean(x, 'omitnan');
@@ -716,35 +743,35 @@ if ~isempty(transform)
                 transformFcn = @(x) x/upperThresh;
             case 'q95'
                 upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
-                transformFcn = @(x) x/upperThresh;            
+                transformFcn = @(x) x/upperThresh;
             case 'q2575'
                 lowerThresh = quantile(Data.(depVar)(idxDep), 0.25);
                 upperThresh = quantile(Data.(depVar)(idxDep), 0.75);
-                transformFcn = @(x) x/(upperThresh - lowerThresh);            
+                transformFcn = @(x) x/(upperThresh - lowerThresh);
             case 'q0595'
                 lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
                 upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
             case 'IQRmax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
                 transformFcn = @(x) x/upperThresh;
             case 'IQR'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
             case 'IQRzero'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');                
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case 'MAD'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');                
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case 'MADmax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');                
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
                 transformFcn = @(x) x/upperThresh;
             case '3sigma'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');                
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case '3sigmamax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');                
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');
                 transformFcn = @(x) x/upperThresh;
             case 'max'
                 upperThresh = max(Data.(depVar)(idxDep));
@@ -757,13 +784,13 @@ if ~isempty(transform)
                 lowerThresh = min(Data.(depVar)(idxDep));
                 upperThresh = max(Data.(depVar)(idxDep));
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
-            
+
             case 'qminmaxzero'
                 lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
                 upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             otherwise % any other function given in the form 'f(x)'
-                transformFcn = eval(sprintf('@(x) %s', transform));                
+                transformFcn = eval(sprintf('@(x) %s', transform));
         end
         Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
     end
@@ -775,13 +802,23 @@ end
 
 outlierLevel = length(factors);
 if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
+    
+    % open outlier file for writing
+    fid = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
+
+    switch outlierMethod
+        case 'auto'
+            outMethod = 'quartiles';
+        otherwise
+            outMethod = outlierMethod;
+    end
 
     idxOut = false(size(Data, 1), 1);
 
-    for iFit = 1:nY
+    for iVar = 1:nY
 
         if nY > 1
-            idxDep = (Data.(yVar) == y{iFit});
+            idxDep = (Data.(yVar) == y{iVar});
         else
             idxDep = true(size(Data, 1), 1);
         end
@@ -790,7 +827,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
 
         if outlierLevel == 0 % level 0: all data
             yData = Data.(trnsVar)(idxTest);
-            idxOut(idxTest) = isoutlier(yData, outlierMethod);
+            idxOut(idxTest) = isoutlier(yData, outMethod);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
             for iMember = 1:nMembers
@@ -798,7 +835,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(trnsVar)(idxTest);
-                idxOut(idxTest) = isoutlier(yData, outlierMethod);
+                idxOut(idxTest) = isoutlier(yData, outMethod);
             end
 
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
@@ -812,7 +849,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
                     yData = Data.(trnsVar)(idxTest);
-                    idxOut(idxTest) = isoutlier(yData, outlierMethod);
+                    idxOut(idxTest) = isoutlier(yData, outMethod);
                 end
             end
 
@@ -832,7 +869,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
                         yData = Data.(trnsVar)(idxTest);
-                        idxOut(idxTest) = isoutlier(yData, outlierMethod);
+                        idxOut(idxTest) = isoutlier(yData, outMethod);
                     end
                 end
             end
@@ -857,7 +894,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
                             yData = Data.(trnsVar)(idxTest);
-                            idxOut(idxTest) = isoutlier(yData, outlierMethod);
+                            idxOut(idxTest) = isoutlier(yData, outMethod);
                         end
                     end
                 end
@@ -865,13 +902,20 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
         end
     end
 
-    % remove outliers
+    % remove pre-fit outliers
     nPreOutliers = sum(idxOut);
-    nPreObs = size(Data, 1);
-    fprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
+    nPreObs = size(Data, 1);    
     if nPreOutliers > 0
-        Data = Data(~idxOut, :);        
+        Data = Data(~idxOut, :);
     end
+
+    % report to file
+    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, outMethod);
+    fprintf(msg);
+    fprintf(fid, msg);
+
+    % close outlier file
+    fclose(fid);
 end
 
 %% Fit linear model and perform ANOVA
@@ -884,12 +928,7 @@ nFits = 1;
 if strcmp(fitMethod, 'none')
     nFits = 0;
     mdls = {};
-    anovas = {};
-    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
-    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
-        fprintf(fid, 'Removed %d outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
-    end
-    fclose(fid);
+    anovas = {};    
 elseif separateMulti
     nFits = nY;
 end
@@ -903,12 +942,18 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         Data = Data(idxDep, :);
         outDirOrig = outDir;
         outDir = sprintf('%s/%s', outDir, myVar);
+        fprintf('Performing GLMM analysis for %s...\n', myVar);
+    else
+        fprintf('Performing multivariate GLMM analysis...\n');
     end
 
     % create output folder, if not existing
     if ~isfolder(outDir)
         mkdir(outDir);
     end
+
+    % open summary file for writing
+    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
 
     productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
@@ -956,15 +1001,15 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         formula = sprintf('%s ~ %s', trnsVar, strjoin(terms, ' + '));
     end
     fprintf('\t%s\n', formula);
-   
+
     try
-        if ~isempty(link) % link function given -> use it
+        if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
             mdl = fitglme(Data, formula, ...
                 'DummyVarCoding', 'effects', ...
                 'FitMethod', fitMethod, ...
                 'Distribution', distribution, ...
                 'link', link);
-        else % no link function given -> use built-in default
+        else % no link function given or set to 'auto' -> use built-in default
             mdl = fitglme(Data, formula, ...
                 'DummyVarCoding', 'effects', ...
                 'FitMethod', fitMethod, ...
@@ -976,12 +1021,18 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         fprintf('The linear model fit returned an error:\n\t%s\n', message);
         fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
         return
-    end    
+    end
 
     % remove post-fit outliers and refit model
-    if outlierMethod
+    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
+        switch outlierMethod
+            case 'auto'
+                outMethod = 'median';
+            otherwise
+                outMethod = outlierMethod;
+        end
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
+        mdlOutliers = isoutlier(mdlResiduals, outMethod);
         nOutliers = sum(mdlOutliers);
         nObs = length(mdlResiduals);
         if nOutliers > 0
@@ -993,15 +1044,17 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
                 idxTmp(idxDep) =  mdlOutliers;
                 DataOrig(idxTmp, :) = [];
             end
-            fprintf('Removed %d post-fit outliers from %d observations (%.1f %%) and refit model...\n', nOutliers, nObs, nOutliers/nObs*100);
+            msg = sprintf('Removed %d post-fit outliers from %d observations (%.1f %%%%) using ''%s'' and refit model...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
+            fprintf(msg);
+            fprintf(fid, msg);
             try
-                if ~isempty(link) % link function given -> use it
+                if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
                     mdl = fitglme(Data, formula, ...
                         'DummyVarCoding', 'effects', ...
                         'FitMethod', fitMethod, ...
                         'Distribution', distribution, ...
                         'link', link);
-                else % no link function given -> use built-in default
+                else % no link function given or set to 'auto' -> use built-in default
                     mdl = fitglme(Data, formula, ...
                         'DummyVarCoding', 'effects', ...
                         'FitMethod', fitMethod, ...
@@ -1017,16 +1070,12 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
 
     % print results of model fit into file
-    mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
-    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);    
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
-        fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
-    end
-    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
-        fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model\n', nOutliers, nObs, nOutliers/nObs*100);
-    end
     fprintf(fid, '\t%s', mdlOutput);
+    if ~strcmp(posthocMethod, 'none')
+        fprintf(fid, 'Performing post-hoc comparison using method ''%s''\n', posthocMethod);
+    end
     fclose(fid);
 
     %% Plot diagnostics
@@ -1050,7 +1099,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             sgtitle(sprintf('Diagnostics for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
             sgtitle(sprintf('Diagnostics for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
-        end        
+        end
     elseif nY > 1 && strcmp(plotTitle, yVal)
         sgtitle(sprintf('Diagnostics for multivariate Analysis'), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     else
@@ -1174,7 +1223,7 @@ for iFit = 1:nFits
     anovaResult = anovas{iFit};
 
     % init ANOVA table
-    anovaTable = table;    
+    anovaTable = table;
 
     anovaTable.Term = string(anovaResult.Term);
     anovaTable.DF1 = anovaResult.DF1;
@@ -1184,21 +1233,6 @@ for iFit = 1:nFits
     anovaTable.etaSqp = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
     anovaTable.effectSize = string(effprint(anovaTable.etaSqp, 'eta2'));
     anovaTable.significance = string(sigprint(anovaTable.p));
-
-    % save options
-    fpath = fullfile(outDir, 'options.mat');
-    save(fpath, 'options');
-    fpath = fullfile(outDir, 'makeOptions.m');
-    fid = fopen(fpath, 'w+');
-    fields = fieldnames(options);
-    fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
-    fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
-    paramFields = sort(fields); % sort fields alphabetically
-    for iField = 1:length(paramFields)
-        field = paramFields{iField};
-        fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
-    end
-    fclose(fid);
 
     % save Data
     saveTable(Data, 'Data', {'csv'}, outDir);
@@ -1212,7 +1246,7 @@ for iFit = 1:nFits
 
     if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
         outDir = outDirOrig;
-    end    
+    end
 end
 
 %% Calc plot data
@@ -1239,8 +1273,8 @@ main_aux    = nan(nPairs, nY);
 main_eff    = nan(nPairs, nY);
 
 maxNValues = 0;
-for iFit = 1:nY
-    myVar = y{iFit};
+for iVar = 1:nY
+    myVar = y{iVar};
     if nY > 1
         myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
     else
@@ -1250,11 +1284,11 @@ for iFit = 1:nY
 end
 violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
-for iFit = 1:nY
-    myVar = y{iFit};
+for iVar = 1:nY
+    myVar = y{iVar};
 
     % init statistics table
-    Stats = table;    
+    Stats = table;
 
     % calc plot data and fill arrays
     for iRow = 1:nRows
@@ -1316,26 +1350,26 @@ for iFit = 1:nY
                     statsRow.ci95_2 = ci95(2);
                     Stats = [Stats; statsRow]; %#ok<AGROW>
 
-                    violin_values(iGroup, iMember, 1:length(values), iRow, iCol, iFit) = values; %%%%%%%
+                    violin_values(iGroup, iMember, 1:length(values), iRow, iCol, iVar) = values; %%%%%%%
 
                     % plot values
                     switch errorBars
                         case 'std'
-                            bar_values(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean;
-                            bar_errorBottom(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean - statsRow.std;
-                            bar_errorTop(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean + statsRow.std;
+                            bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean - statsRow.std;
+                            bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean + statsRow.std;
                         case 'se'
-                            bar_values(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean;
-                            bar_errorBottom(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean - statsRow.SE;
-                            bar_errorTop(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean + statsRow.SE;
+                            bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean - statsRow.SE;
+                            bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean + statsRow.SE;
                         case 'q25'
-                            bar_values(iRow, iCol, iGroup, iMember, iFit) = statsRow.median;
-                            bar_errorBottom(iRow, iCol, iGroup, iMember, iFit) = statsRow.q25;
-                            bar_errorTop(iRow, iCol, iGroup, iMember, iFit) = statsRow.q75;
+                            bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.median;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.q25;
+                            bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.q75;
                         case 'ci95'
-                            bar_values(iRow, iCol, iGroup, iMember, iFit) = statsRow.mean;
-                            bar_errorBottom(iRow, iCol, iGroup, iMember, iFit) = statsRow.q25;
-                            bar_errorTop(iRow, iCol, iGroup, iMember, iFit) = statsRow.q75;
+                            bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
+                            bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.q25;
+                            bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.q75;
                     end
 
 
@@ -1383,23 +1417,23 @@ for iFit = 1:nY
                             val2 = Data.(trnsVar)(L2);
                             switch posthocMethod
                                 case 'ttest'
-                                    [~, bar_p(iGroup, iPair, iRow, iCol, iFit), ~, stats] = ttest2(val1, val2);
+                                    [~, bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ttest2(val1, val2);
                                     tValue = stats.tstat;
                                     df = stats.df;
                                     sPool = stats.sd;
                                     dCohen = (mean(val1, 'omitnan') - mean(val2, 'omitnan')) / sPool;
-                                    bar_test(iGroup, iPair, iRow, iCol, iFit) = tValue;
-                                    bar_DF(iGroup, iPair, iRow, iCol, iFit) = df;
-                                    bar_eff(iGroup, iPair, iRow, iCol, iFit) =  dCohen;
+                                    bar_test(iGroup, iPair, iRow, iCol, iVar) = tValue;
+                                    bar_DF(iGroup, iPair, iRow, iCol, iVar) = df;
+                                    bar_eff(iGroup, iPair, iRow, iCol, iVar) =  dCohen;
                                 case 'utest'
-                                    [bar_p(iGroup, iPair, iRow, iCol, iFit), ~, stats] = ranksum(val1, val2);
+                                    [bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                     N1 = sum(~isnan(val1));
                                     N2 = sum(~isnan(val2));
                                     W = stats.ranksum;
                                     U = W - N1*(N1+1)/2;
                                     r = 1 - 2*U/(N1*N2);
-                                    bar_test(iGroup, iPair, iRow, iCol, iFit) = U;
-                                    bar_eff(iGroup, iPair, iRow, iCol, iFit) =  r;
+                                    bar_test(iGroup, iPair, iRow, iCol, iVar) = U;
+                                    bar_eff(iGroup, iPair, iRow, iCol, iVar) =  r;
                             end
 
                             % calc main contrasts
@@ -1415,25 +1449,25 @@ for iFit = 1:nY
                                         df = stats.df;
                                         sPool = stats.sd;
                                         dCohen = (mean(val1, 'omitnan') - mean(val2, 'omitnan')) / sPool;
-                                        main_test(iPair, iFit) = tValue;
-                                        main_DF(iPair, iFit) = df;
-                                        main_eff(iPair, iFit) =  dCohen;
+                                        main_test(iPair, iVar) = tValue;
+                                        main_DF(iPair, iVar) = df;
+                                        main_eff(iPair, iVar) =  dCohen;
                                     case 'utest'
-                                        [main_p(iPair, iFit), ~, stats] = ranksum(val1, val2);
+                                        [main_p(iPair, iVar), ~, stats] = ranksum(val1, val2);
                                         N1 = sum(~isnan(val1));
                                         N2 = sum(~isnan(val2));
                                         W = stats.ranksum;
                                         U = W - N1*(N1+1)/2;
                                         r = 1 - 2*U/(N1*N2);
-                                        main_test(iPair, iFit) = U;
-                                        main_eff(iPair, iFit) =  r;
+                                        main_test(iPair, iVar) = U;
+                                        main_eff(iPair, iVar) =  r;
                                 end
                             end
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
                             if nY > 1 && separateMulti
-                                mdl = mdls{iFit};
+                                mdl = mdls{iVar};
                             end
 
                             emm = emmeans(mdl, 'effects', 'unbalanced');
@@ -1470,11 +1504,11 @@ for iFit = 1:nY
                             L2 = idx & (emm.table.(memberVar) == pair(2));
                             L = (L1 - L2)';
                             contrasts = kbcontrasts_wald(mdl, emm, L);
-                            bar_p(iGroup, iPair, iRow, iCol, iFit) = contrasts.pVal;
-                            bar_test(iGroup, iPair, iRow, iCol, iFit) = contrasts.F;
-                            bar_DF(iGroup, iPair, iRow, iCol, iFit) = contrasts.DF1;
-                            bar_aux(iGroup, iPair, iRow, iCol, iFit) = contrasts.DF2;
-                            bar_eff(iGroup, iPair, iRow, iCol, iFit) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                            bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
+                            bar_test(iGroup, iPair, iRow, iCol, iVar) = contrasts.F;
+                            bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
+                            bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
+                            bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
 
                             % calc main contrasts
                             if posthocMainEffects
@@ -1482,61 +1516,55 @@ for iFit = 1:nY
                                 L2 = idxDep & (emm.table.(memberVar) == pair(2));
                                 L = (L1 - L2)';
                                 contrasts = kbcontrasts_wald(mdl, emm, L);
-                                main_p(iPair, iFit) = contrasts.pVal;
-                                main_test(iPair, iFit) = contrasts.F;
-                                main_DF(iPair, iFit) = contrasts.DF1;
-                                main_aux(iPair, iFit) = contrasts.DF2;
-                                main_eff(iPair, iFit) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                                main_p(iPair, iVar) = contrasts.pVal;
+                                main_test(iPair, iVar) = contrasts.F;
+                                main_DF(iPair, iVar) = contrasts.DF1;
+                                main_aux(iPair, iVar) = contrasts.DF2;
+                                main_eff(iPair, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                             end
                     end
                 end
             end
         end
-    end    
-end
-
-%% Statistical correction for multiple tests
-
-% If pairwise t-test, the posthoc comparisons must be statistically corrected
-bar_pCorr = bar_p;
-main_pCorr = main_p;
-if any(strcmp(posthocMethod, {'ttest', 'utest', 'emm'}))
-    % Holm-Bonferroni correction of all p-values so far
-    sizeOrig = size(bar_p); % store original dimensions
-    bar_p = bar_p(:); % make column vector
-    bar_pCorr = bar_p; % create array of corrected p-values
-    idx = ~isnan(bar_p); % identify NaN-entries
-    [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
-    bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-    bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-    % statistical correction of main posthoc p-Values
-    if posthocMainEffects
-        idx = ~isnan(main_pCorr); % identify NaN-entries
-        [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
-    end
-elseif nY > 1 && separateMulti && strcmp(posthocMethod, 'emm')
-    % Since 'emm' posthoc analysis evaluates each fit in one go, hence must
-    % only be corrected for the number of fits.
-    bar_pCorr = sidak_corr(bar_p, nFits);
-    if posthocMainEffects
-        main_pCorr = sidak_corr(main_p, nFits);
     end
 end
 
-%% Plot data
+%% Statistical correction of posthoc comparison
+% Holm-Bonferroni correction of all p-values
+
+sizeOrig = size(bar_p); % store original array shape
+bar_p = bar_p(:); % make column vector
+bar_pCorr = bar_p; % create array of corrected p-values
+idx = ~isnan(bar_p); % identify NaN-entries
+[~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
+bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+% statistical correction of main posthoc p-Values
+if posthocMainEffects
+    sizeOrig = size(main_p); % store original array shape
+    main_pCorr = main_p(:);  % make column vector
+    idx = ~isnan(main_pCorr); % identify NaN-entries
+    [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+    main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
+    main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+end
+
+%% Loop over dependent variables
 
 outDirOrig = outDir;
-for iFit = 1:nY
-    myVar = y{iFit};
+for iVar = 1:nY
+    myVar = y{iVar};
 
     % set output folder
-    if nY > 1 && separateMulti        
+    if nY > 1 && separateMulti
         outDir = sprintf('%s/%s', outDirOrig, myVar);
     end
 
     % figure size
     panelWidth = 600; % width of each panel
     panelHeight = 300; % height of each panel
+
+    %% Plot data
 
     if isPlot
 
@@ -1556,7 +1584,6 @@ for iFit = 1:nY
         else
             title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         end
-
 
         % prepare to display variable names and levels
         switch showVarNames
@@ -1632,7 +1659,7 @@ for iFit = 1:nY
                             panelTitle = '';
                         end
                 end
-                plotGroups(violin_values(:, :, :, iRow, iCol, iFit), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iFit), panelTitle, yLabelStr, plotStyle, panel, showVarNames);
+                plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames);
             end
         end
 
@@ -1671,7 +1698,8 @@ for iFit = 1:nY
         close(fig);
     end
 
-    % save descriptive statistics
+    %% Save descriptive statistics
+
     if nY > 1
         outDir = sprintf('%s/%s', outDirOrig, myVar);
         if ~isfolder(outDir)
@@ -1682,7 +1710,8 @@ for iFit = 1:nY
     saveTable(Stats, fileName, {'xlsx'}, outDir);
     outDir = outDirOrig;
 
-    disp(Stats) % display table
+    % display statistics
+    disp(Stats);
 
     %% Post-hoc table
 
@@ -1704,24 +1733,24 @@ for iFit = 1:nY
             end
             tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
             tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-            tableRow.p = main_p(iPair, iFit);
-            tableRow.pCorr = main_pCorr(iPair, iFit);
+            tableRow.p = main_p(iPair, iVar);
+            tableRow.pCorr = main_pCorr(iPair, iVar);
             switch posthocMethod
                 case 'ttest'
-                    tableRow.t = main_test(iPair, iFit);
-                    tableRow.DF = main_DF(iPair, iFit);
-                    tableRow.d = main_eff(iPair, iFit);
-                    tableRow.effectSize = string(effprint(main_eff(iPair, iFit), 'd'));
+                    tableRow.t = main_test(iPair, iVar);
+                    tableRow.DF = main_DF(iPair, iVar);
+                    tableRow.d = main_eff(iPair, iVar);
+                    tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'd'));
                 case 'utest'
-                    tableRow.U = main_test(iPair, iFit);
-                    tableRow.r = main_eff(iPair, iFit);
-                    tableRow.effectSize = string(effprint(main_eff(iPair, iFit), 'r'));
+                    tableRow.U = main_test(iPair, iVar);
+                    tableRow.r = main_eff(iPair, iVar);
+                    tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'r'));
                 case 'emm'
-                    tableRow.F = main_test(iPair, iFit);
-                    tableRow.DF1 = main_DF(iPair, iFit);
-                    tableRow.DF2 = main_aux(iPair, iFit);
-                    tableRow.etaSqp = main_eff(iPair, iFit);
-                    tableRow.effectSize = string(effprint(main_eff(iPair, iFit), 'eta2'));
+                    tableRow.F = main_test(iPair, iVar);
+                    tableRow.DF1 = main_DF(iPair, iVar);
+                    tableRow.DF2 = main_aux(iPair, iVar);
+                    tableRow.etaSqp = main_eff(iPair, iVar);
+                    tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'eta2'));
             end
             tableRow.significance = string(sigprint(tableRow.pCorr));
             posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
@@ -1745,24 +1774,24 @@ for iFit = 1:nY
                     end
                     tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                     tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-                    tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iFit);
-                    tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol, iFit);
+                    tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iVar);
+                    tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol, iVar);
                     switch posthocMethod
                         case 'ttest'
-                            tableRow.t = bar_test(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.DF = bar_DF(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.d = bar_eff(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iFit), 'd'));
+                            tableRow.t = bar_test(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.DF = bar_DF(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.d = bar_eff(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'd'));
                         case 'utest'
-                            tableRow.U = bar_test(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.r = bar_eff(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iFit), 'r'));
+                            tableRow.U = bar_test(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.r = bar_eff(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'r'));
                         case 'emm'
-                            tableRow.F = bar_test(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.DF1 = bar_DF(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.DF2 = bar_aux(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.etaSqp = bar_eff(iGroup, iPair, iRow, iCol, iFit);
-                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iFit), 'eta2'));
+                            tableRow.F = bar_test(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.DF1 = bar_DF(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.DF2 = bar_aux(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.etaSqp = bar_eff(iGroup, iPair, iRow, iCol, iVar);
+                            tableRow.effectSize = string(effprint(bar_eff(iGroup, iPair, iRow, iCol, iVar), 'eta2'));
                     end
                     tableRow.significance = string(sigprint(tableRow.pCorr));
                     posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
@@ -1770,7 +1799,9 @@ for iFit = 1:nY
             end
         end
     end
-    disp(posthocTable); % display table
+
+    % display table
+    disp(posthocTable);
 
     % save table
     if nY > 1
@@ -1782,10 +1813,10 @@ for iFit = 1:nY
     fileName = 'Posthoc';
     saveTable(posthocTable, fileName, {'xlsx'}, outDir);
     outDir = outDirOrig;
-    
+end
 end
 
-end
+%% Helper functions %%%%%%%%%%%%%%%%%%%%%%
 
 function value = getValue(in)
 % get numerical or logical value from string, if possible
