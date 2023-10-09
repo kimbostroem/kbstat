@@ -143,13 +143,26 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       removeOutliers  Flag if post-fit outliers should be removed
-%                       from the data.
-%                       OPTIONAL, default = true.
+%       removeOutliers  Indicate which outliers should be removed from the 
+%                       data. Possible values:
+%                       true        Remove pre-fit and post-fit outliers
+%                       false,  
+%                       'none'      Do not remove outliers
+%                       'pre'       Remove pre-fit outliers
+%                       'post'      Remove post-fit outliers
+%                       'prepost'   Remove pre-fit and post-fit outliers.
+%                       OPTIONAL, default = 'prepost'.
 %
-%       preRemoveOutliers   Flag if pre-fit outliers should be removed
-%                           from the data.
-%                           OPTIONAL, default = false.
+%       outlierMethod   Method to remove post-fit outliers from the data.
+%                       Possible values:
+%                       'none'      Do not remove outliers
+%                       'quartiles' Remove values outside 1.5 times the 
+%                                   interquartile range [.25, .75]
+%                       'median'    Remove values outside more than three 
+%                                   scaled median absolute deviations (MAD)
+%                       'mean'      Remove values outside 3 standard 
+%                                   deviations from the mean.
+%                       OPTIONAL, default = 'quartiles'.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -446,17 +459,17 @@ else
 end
 
 % flag if post-fit outliers should be removed
-if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
-    removeOutliers = getValue(options.removeOutliers);
+if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
+    outlierMethod = options.outlierMethod;
 else
-    removeOutliers = true;
+    outlierMethod = 'quartiles';
 end
 
 % flag if pre-fit outliers should be removed
-if isfield(options, 'preRemoveOutliers') && ~isempty(options.preRemoveOutliers)
-    preRemoveOutliers = getValue(options.preRemoveOutliers);
+if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
+    removeOutliers = getValue(options.removeOutliers);
 else
-    preRemoveOutliers = true;
+    removeOutliers = 'prepost';
 end
 
 % output folder
@@ -761,7 +774,7 @@ end
 %% Remove pre-fit outliers
 
 outlierLevel = length(factors);
-if preRemoveOutliers
+if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
 
     idxOut = false(size(Data, 1), 1);
 
@@ -777,7 +790,7 @@ if preRemoveOutliers
 
         if outlierLevel == 0 % level 0: all data
             yData = Data.(trnsVar)(idxTest);
-            idxOut(idxTest) = isoutlier(yData, 'quartiles');
+            idxOut(idxTest) = isoutlier(yData, outlierMethod);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
             for iMember = 1:nMembers
@@ -785,7 +798,7 @@ if preRemoveOutliers
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(trnsVar)(idxTest);
-                idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                idxOut(idxTest) = isoutlier(yData, outlierMethod);
             end
 
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
@@ -799,7 +812,7 @@ if preRemoveOutliers
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
                     yData = Data.(trnsVar)(idxTest);
-                    idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                    idxOut(idxTest) = isoutlier(yData, outlierMethod);
                 end
             end
 
@@ -819,7 +832,7 @@ if preRemoveOutliers
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
                         yData = Data.(trnsVar)(idxTest);
-                        idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                        idxOut(idxTest) = isoutlier(yData, outlierMethod);
                     end
                 end
             end
@@ -844,7 +857,7 @@ if preRemoveOutliers
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
                             yData = Data.(trnsVar)(idxTest);
-                            idxOut(idxTest) = isoutlier(yData, 'quartiles');
+                            idxOut(idxTest) = isoutlier(yData, outlierMethod);
                         end
                     end
                 end
@@ -961,7 +974,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end    
 
     % remove post-fit outliers and refit model
-    if removeOutliers
+    if outlierMethod
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
         mdlOutliers = isoutlier(mdlResiduals, 'quartiles');
         nOutliers = sum(mdlOutliers);
@@ -1002,10 +1015,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);
     fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
     fprintf(fid, 'Formula:\n\t%s\n', formula);
-    if preRemoveOutliers
+    if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
         fprintf(fid, 'Removed %d pre-fit outliers from %d observations (%.1f %%)\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100);
     end
-    if removeOutliers
+    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || removeOutliers) && ~strcmp(outlierMethod, 'none')
         fprintf(fid, 'Removed %d post-fit outliers from %d observations (%.1f %%) and refitted model\n', nOutliers, nObs, nOutliers/nObs*100);
     end
     fprintf(fid, '\t%s', mdlOutput);
