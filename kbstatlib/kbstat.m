@@ -1035,7 +1035,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         mdlOutliers = isoutlier(mdlResiduals, outMethod);
         nOutliers = sum(mdlOutliers);
         nObs = length(mdlResiduals);
-        msg = sprintf('Removed %d post-fit outliers from %d observations (%.1f %%%%) using ''%s'' and refit model...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
+        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
         fprintf(msg);
         fprintf(fid, msg);
         if nOutliers > 0
@@ -1046,7 +1046,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
                 idxTmp = false(size(DataOrig, 1), 1);
                 idxTmp(idxDep) =  mdlOutliers;
                 DataOrig(idxTmp, :) = [];
-            end            
+            end
+            msg = sprintf('Re-fitting model...\n');
+            fprintf(msg);
+            fprintf(fid, msg);
             try
                 if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
                     mdl = fitglme(Data, formula, ...
@@ -1063,7 +1066,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             catch ME
                 message = sprintf('%s', ME.message);
                 fprintf('The linear model fit returned an error:\n\t%s\n', message);
-                fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
+                fprintf('Please try again, probably using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
                 return
             end
         end
