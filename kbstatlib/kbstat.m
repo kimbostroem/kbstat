@@ -1035,6 +1035,9 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         mdlOutliers = isoutlier(mdlResiduals, outMethod);
         nOutliers = sum(mdlOutliers);
         nObs = length(mdlResiduals);
+        msg = sprintf('Removed %d post-fit outliers from %d observations (%.1f %%%%) using ''%s'' and refit model...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
+        fprintf(msg);
+        fprintf(fid, msg);
         if nOutliers > 0
             % remove outliers from Data
             Data(mdlOutliers, :) = [];
@@ -1043,10 +1046,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
                 idxTmp = false(size(DataOrig, 1), 1);
                 idxTmp(idxDep) =  mdlOutliers;
                 DataOrig(idxTmp, :) = [];
-            end
-            msg = sprintf('Removed %d post-fit outliers from %d observations (%.1f %%%%) using ''%s'' and refit model...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
-            fprintf(msg);
-            fprintf(fid, msg);
+            end            
             try
                 if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
                     mdl = fitglme(Data, formula, ...
