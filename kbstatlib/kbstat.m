@@ -132,13 +132,21 @@ function mdl = kbstat(options)
 %                       variable set to 'any'.
 %                       OPTIONAL, default = true.
 %
-%       separateMulti   Flag if a multivariate dependent variable should be
-%                       analyzed for each component separately.
+%       separateMulti   Flag if, when the dependent variable has multiple
+%                       components, these components should be analyzed
+%                       separately. In the latter case, the results are
+%                       statistically corrected for these multiple tests. 
 %                       OPTIONAL, default = true.
 %
 %       multiVar        Name of the variable that encodes levels of a
 %                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
+%
+%       correctForN     Number of test to be statistically corrected 
+%                       for in addition to the correction already performed
+%                       within the current analysis. Most probably, this
+%                       number corresponds to the number of calls of
+%                       'kbstat' for one dataset.
 %
 %       isRescale       Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
@@ -357,6 +365,13 @@ else
 end
 
 %% more variables
+
+% correctForN
+if isfield(options, 'correctForN') && ~isempty(options.correctForN)
+    correctForN = getValue(options.correctForN);
+else
+    correctForN = 1;
+end
 
 % transform
 if isfield(options, 'transform') && ~isempty(options.transform)
@@ -1206,6 +1221,7 @@ if ~isempty(anovas)
     % Sidak correction
     for iFit = 1:nFits
         anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, nFits);
+        anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, correctForN); % additionally correct for multiple tests like this one
     end
 end
 
@@ -1540,6 +1556,7 @@ bar_p = bar_p(:); % make column vector
 bar_pCorr = bar_p; % create array of corrected p-values
 idx = ~isnan(bar_p); % identify NaN-entries
 [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
 bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
 bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
 % statistical correction of main posthoc p-Values
@@ -1548,6 +1565,7 @@ if posthocMainEffects
     main_pCorr = main_p(:);  % make column vector
     idx = ~isnan(main_pCorr); % identify NaN-entries
     [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+    main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
     main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
     main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
 end
