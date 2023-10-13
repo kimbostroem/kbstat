@@ -42,9 +42,20 @@ function mdl = kbstat(options)
 %                       many independent univariate analyses are performed.
 %                       If "separateMulti" is set to "false", then y is
 %                       treated as a vector-valued dependent variable and a
-%                       multivariate analysis is performed
+%                       multivariate analysis is performed.
 %
-%       yUnits          Physical units of the dependent variable.
+%       yLabel          Label for y axis in data plots. 
+%                       If y has more than one component, then this
+%                       parameter can have either one component, in which
+%                       case all units are equal to this component, or it
+%                       must have the same number of components as y.
+%                       OPTIONAL, default = y
+%
+%       yUnits          Physical units of the dependent variable. 
+%                       If y has more than one component, then this
+%                       parameter can have either one component, in which
+%                       case all units are equal to this component, or it
+%                       must have the same number of components as y.
 %                       OPTIONAL, default = ''.
 %
 %       x               List of the names of the independent variables,
@@ -93,6 +104,10 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = 'REMPL'.
 %
 %       distribution    Distribution used for the GLM fit.
+%                       If y has more than one component, then this
+%                       parameter can have either one component, in which
+%                       case all units are equal to this component, or it
+%                       must have the same number of components as y.
 %                       OPTIONAL, default = 'Normal'.
 %                       Possible values:
 %                       'normal'	        Normal distribution
@@ -102,7 +117,11 @@ function mdl = kbstat(options)
 %                       'gamma'	            Gamma distribution
 %                       'inverseGaussian'	Inverse Gaussian distribution
 %
-%       link            Link function used for the GLM fit.%                       
+%       link            Link function used for the GLM fit.
+%                       If y has more than one component, then link can
+%                       have either one component, in which case all units
+%                       are equal to this component, or it must have the
+%                       same number of components as y. 
 %                       Possible values:
 %                           'identity'	    g(mu) = mu.             Default for Normal distribution
 %                           'log'	        g(mu) = log(mu).        Default for Poisson
@@ -127,7 +146,7 @@ function mdl = kbstat(options)
 %                           'utest' otherwise
 %                       OPTIONAL, default = 'auto'.
 %
-%       posthocMainEffectsEffects Flag if also the posthoc main effects should be
+%       posthocMainEffects  Flag if also the posthoc main effects should be
 %                       calculated, i.e. the comparison between one
 %                       variable set to 'any'.
 %                       OPTIONAL, default = true.
@@ -145,23 +164,9 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       removeOutliers  Indicate which outliers should be removed from the
-%                       data. Possible values:
-%                       true        Remove pre-fit and post-fit outliers
-%                       false,
-%                       'none'      Do not remove outliers
-%                       'pre'       Remove pre-fit outliers
-%                       'post'      Remove post-fit outliers
-%                       'prepost'   Remove pre-fit and post-fit outliers.
-%                       OPTIONAL, default = 'prepost'.
-%
 %       outlierMethod   Method to remove post-fit outliers from the data.
 %                       Possible values:
 %                       'none'      Do not remove outliers
-%                       'auto'      Use more liberal method 'quartiles'
-%                                   for pre-fit outliers and more
-%                                   restrictive method 'median' for
-%                                   post-fit outliers
 %                       'quartiles' Remove values outside 1.5 times the
 %                                   interquartile range [.25, .75]
 %                       'median'    Remove values outside more than three
@@ -169,6 +174,17 @@ function mdl = kbstat(options)
 %                       'mean'      Remove values outside 3 standard
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'quartiles'.
+%
+%       preOutlierMethod   Method to remove pre-fit outliers from the data.
+%                       Possible values:
+%                       'none'      Do not remove pre-fit outliers
+%                       'quartiles' Remove values outside 1.5 times the
+%                                   interquartile range [.25, .75]
+%                       'median'    Remove values outside more than three
+%                                   scaled median absolute deviations (MAD)
+%                       'mean'      Remove values outside 3 standard
+%                                   deviations from the mean.
+%                       OPTIONAL, default = 'none'.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -241,9 +257,6 @@ function mdl = kbstat(options)
 %                       3 = do not display variable names but display
 %                           capitalized levels.
 %                       OPTIONAL, default = 1.
-%
-%       yLabel          Label for y axis in data plots.
-%                       OPTIONAL, default = y
 %
 %       xOrder          Ordering of the items on the x axis in data plots.
 %                       Overrides ordering of the level names of the 1st
@@ -320,11 +333,6 @@ for iY = 1:nY
         error('Dependent variable "%s" not found in data table', myY);
     end
 end
-if isfield(options, 'yUnits')
-    yUnits = cellstr(options.yUnits);
-else
-    yUnits = {''};
-end
 
 % multiVar
 if isfield(options, 'multiVar') && ~isempty(options.multiVar)
@@ -339,7 +347,6 @@ if nY > 1
     Data2 = stack(Data1, y, 'NewDataVariableName', yVal, 'IndexVariableName', yVar);
     Data2.(yVar) = categorical(string(Data2.(yVar)));
     depVar = yVal; % set dependent variable to y
-    depVarUnits = '';
 elseif ~isempty(multiVar)
     yVar = multiVar;
     yVal = y{1};
@@ -348,12 +355,10 @@ elseif ~isempty(multiVar)
     Data2.(yVar) = categorical(string(Data2.(yVar)));
     y = cellstr(unique(Data2.(yVar)));
     nY = length(y);
-    depVarUnits = yUnits{1};
 else
     Data2 = Data1;
     depVar = y{1};
     yVal = y{1};
-    depVarUnits = yUnits{1};
 end
 
 %% more variables
@@ -432,16 +437,16 @@ end
 
 % distribution (for GLM)
 if isfield(options, 'distribution') && ~isempty(options.distribution)
-    distribution = options.distribution;
+    distribution = cellstr(options.distribution);
 else % no parameter given
-    distribution = 'normal';
+    distribution = {'normal'};
 end
 
 % link (for GLM)
 if isfield(options, 'link') && ~isempty(options.link)
-    link = options.link;
+    link = cellstr(options.link);
 else % no parameter given
-    link = 'auto';
+    link = {'auto'};
 end
 
 % level order
@@ -482,14 +487,14 @@ end
 if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
     outlierMethod = options.outlierMethod;
 else
-    outlierMethod = 'auto';
+    outlierMethod = 'quartiles';
 end
 
 % flag if pre-fit outliers should be removed
-if isfield(options, 'removeOutliers') && ~isempty(options.removeOutliers)
-    removeOutliers = getValue(options.removeOutliers);
+if isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
+    preOutlierMethod = options.preOutlierMethod;
 else
-    removeOutliers = 'prepost';
+    preOutlierMethod = 'none';
 end
 
 % output folder
@@ -515,9 +520,15 @@ else
 end
 
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
-    yLabel = options.yLabel;
+    yLabel = cellstr(options.yLabel);
 else
-    yLabel = depVar;
+    yLabel = cellstr(y);
+end
+
+if isfield(options, 'yUnits')
+    yUnits = cellstr(options.yUnits);
+else
+    yUnits = {''};
 end
 
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
@@ -604,16 +615,16 @@ end
 % fpath = fullfile(outDir, 'options.mat');
 % save(fpath, 'options');
 fpath = fullfile(outDir, 'Options.txt');
-fid = fopen(fpath, 'w+');
+fidOptions = fopen(fpath, 'w+');
 fields = fieldnames(options);
 fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
 fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
 paramFields = sort(fields); % sort fields alphabetically
 for iField = 1:length(paramFields)
     field = paramFields{iField};
-    fprintf(fid, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+    fprintf(fidOptions, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
 end
-fclose(fid);
+fclose(fidOptions);
 
 %% Make variables that are non-numeric or integer, categorical
 
@@ -652,19 +663,6 @@ end
 % multivariate variable
 if nY > 1
     Data.(yVar) = Data2.(yVar);
-end
-
-% posthoc method
-if strcmp(posthocMethod, 'auto')
-    if nY > 1 && separateMulti && ~strcmp(fitMethod, 'none')
-        posthocMethod = 'emm';
-    elseif nY == 1 && ~strcmp(fitMethod, 'none')
-        posthocMethod = 'emm';
-    elseif strcmp(distribution, 'normal')
-        posthocMethod = 'ttest';
-    else
-        posthocMethod = 'utest';
-    end
 end
 
 % get dependent variable
@@ -800,18 +798,13 @@ end
 
 %% Remove pre-fit outliers
 
-outlierLevel = length(factors);
-if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
-    
-    % open outlier file for writing
-    fid = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
+% open outlier file for writing
+fidOutliers = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
+nPreOutliers = 0;
+nPreObs = size(Data, 1);
 
-    switch outlierMethod
-        case 'auto'
-            outMethod = 'quartiles';
-        otherwise
-            outMethod = outlierMethod;
-    end
+outlierLevel = length(factors);
+if ~strcmp(preOutlierMethod, 'none')
 
     idxOut = false(size(Data, 1), 1);
 
@@ -827,7 +820,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
 
         if outlierLevel == 0 % level 0: all data
             yData = Data.(trnsVar)(idxTest);
-            idxOut(idxTest) = isoutlier(yData, outMethod);
+            idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
             for iMember = 1:nMembers
@@ -835,7 +828,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(trnsVar)(idxTest);
-                idxOut(idxTest) = isoutlier(yData, outMethod);
+                idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
             end
 
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
@@ -849,7 +842,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
                     yData = Data.(trnsVar)(idxTest);
-                    idxOut(idxTest) = isoutlier(yData, outMethod);
+                    idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                 end
             end
 
@@ -869,7 +862,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
                         yData = Data.(trnsVar)(idxTest);
-                        idxOut(idxTest) = isoutlier(yData, outMethod);
+                        idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                     end
                 end
             end
@@ -894,7 +887,7 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
                             yData = Data.(trnsVar)(idxTest);
-                            idxOut(idxTest) = isoutlier(yData, outMethod);
+                            idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                         end
                     end
                 end
@@ -904,19 +897,18 @@ if (any(strcmp(removeOutliers, {'pre', 'prepost'})) || (islogical(removeOutliers
 
     % remove pre-fit outliers
     nPreOutliers = sum(idxOut);
-    nPreObs = size(Data, 1);    
     if nPreOutliers > 0
         Data = Data(~idxOut, :);
-    end
-
-    % report to file
-    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, outMethod);
-    fprintf(msg);
-    fprintf(fid, msg);
-
-    % close outlier file
-    fclose(fid);
+    end    
 end
+
+% report to file
+msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
+fprintf(msg);
+fprintf(fidOutliers, msg);
+
+% close outlier file
+fclose(fidOutliers);
 
 %% Fit linear model and perform ANOVA
 
@@ -935,8 +927,20 @@ end
 
 for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st iteration
 
+    if length(distribution) >= nFits
+        myDistribution = distribution{iFit};
+    else
+        myDistribution = distribution{1};
+    end
+
+    if length(link) >= nFits
+        myLink = link{iFit};
+    else
+        myLink = link{1};
+    end
+
     if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
-        myVar = y{iFit};
+        myVar = y{iFit};        
         idxDep = (Data.(yVar) == myVar);
         DataOrig = Data;
         Data = Data(idxDep, :);
@@ -953,7 +957,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
 
     % open summary file for writing
-    fid = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    fidSummary = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
 
     productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
@@ -1003,17 +1007,17 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     fprintf('\t%s\n', formula);
 
     try
-        if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
+        if ~isempty(myLink) && ~strcmp(myLink, 'auto') % link function given -> use it
             mdl = fitglme(Data, formula, ...
                 'DummyVarCoding', 'effects', ...
                 'FitMethod', fitMethod, ...
-                'Distribution', distribution, ...
-                'link', link);
+                'Distribution', myDistribution, ...
+                'link', myLink);
         else % no link function given or set to 'auto' -> use built-in default
             mdl = fitglme(Data, formula, ...
                 'DummyVarCoding', 'effects', ...
                 'FitMethod', fitMethod, ...
-                'Distribution', distribution);
+                'Distribution', myDistribution);
         end
 
     catch ME
@@ -1024,20 +1028,14 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
 
     % remove post-fit outliers and refit model
-    if (any(strcmp(removeOutliers, {'post', 'prepost'})) || (islogical(removeOutliers) && removeOutliers)) && ~strcmp(outlierMethod, 'none')
-        switch outlierMethod
-            case 'auto'
-                outMethod = 'median';
-            otherwise
-                outMethod = outlierMethod;
-        end
+    if ~strcmp(outlierMethod, 'none')
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        mdlOutliers = isoutlier(mdlResiduals, outMethod);
+        mdlOutliers = isoutlier(mdlResiduals, outlierMethod);
         nOutliers = sum(mdlOutliers);
         nObs = length(mdlResiduals);
-        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, outMethod);
+        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, outlierMethod);
         fprintf(msg);
-        fprintf(fid, msg);
+        fprintf(fidSummary, msg);
         if nOutliers > 0
             % remove outliers from Data
             Data(mdlOutliers, :) = [];
@@ -1049,19 +1047,19 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             end
             msg = sprintf('Re-fitting model...\n');
             fprintf(msg);
-            fprintf(fid, msg);
+            fprintf(fidSummary, msg);
             try
-                if ~isempty(link) && ~strcmp(link, 'auto') % link function given -> use it
+                if ~isempty(myLink) && ~strcmp(myLink, 'auto') % link function given -> use it
                     mdl = fitglme(Data, formula, ...
                         'DummyVarCoding', 'effects', ...
                         'FitMethod', fitMethod, ...
-                        'Distribution', distribution, ...
-                        'link', link);
+                        'Distribution', myDistribution, ...
+                        'link', myLink);
                 else % no link function given or set to 'auto' -> use built-in default
                     mdl = fitglme(Data, formula, ...
                         'DummyVarCoding', 'effects', ...
                         'FitMethod', fitMethod, ...
-                        'Distribution', distribution);
+                        'Distribution', myDistribution);
                 end
             catch ME
                 message = sprintf('%s', ME.message);
@@ -1074,12 +1072,12 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
 
     % print results of model fit into file
     mdlOutput = formattedDisplayText(mdl, 'SuppressMarkup', true);    
-    fprintf(fid, 'Formula:\n\t%s\n', formula);
-    fprintf(fid, '\t%s', mdlOutput);
+    fprintf(fidSummary, 'Formula:\n\t%s\n', formula);
+    fprintf(fidSummary, '\t%s', mdlOutput);
     if ~strcmp(posthocMethod, 'none')
-        fprintf(fid, 'Performing post-hoc comparison using method ''%s''\n', posthocMethod);
+        fprintf(fidSummary, 'Performing post-hoc comparison using method ''%s''\n', posthocMethod);
     end
-    fclose(fid);
+    fclose(fidSummary);
 
     %% Plot diagnostics
 
@@ -1289,6 +1287,19 @@ violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
 for iVar = 1:nY
     myVar = y{iVar};
+
+    % posthoc method
+    if strcmp(posthocMethod, 'auto')
+        if nY > 1 && separateMulti && ~strcmp(fitMethod, 'none')
+            posthocMethod = 'emm';
+        elseif nY == 1 && ~strcmp(fitMethod, 'none')
+            posthocMethod = 'emm';
+        elseif strcmp(distribution, 'normal')
+            posthocMethod = 'ttest';
+        else
+            posthocMethod = 'utest';
+        end
+    end
 
     % init statistics table
     Stats = table;
@@ -1530,6 +1541,21 @@ for iVar = 1:nY
             end
         end
     end
+
+    %% Save descriptive statistics
+
+    if nY > 1
+        outDir = sprintf('%s/%s', outDirOrig, myVar);
+        if ~isfolder(outDir)
+            mkdir(outDir);
+        end
+    end
+    fileName = 'Statistics';
+    saveTable(Stats, fileName, {'xlsx'}, outDir);
+    outDir = outDirOrig;
+
+    % display statistics
+    disp(Stats);
 end
 
 %% Statistical correction of posthoc comparison
@@ -1556,7 +1582,24 @@ end
 
 outDirOrig = outDir;
 for iVar = 1:nY
+
+    % dependent variable
     myVar = y{iVar};
+
+    % yLabel
+    if length(yLabel) == nY
+        myLabel = yLabel{iVar};
+    elseif length(yLabel) == 1
+        myLabel = yLabel{1};
+    end
+
+    % yUnits
+    if length(yUnits) == nY
+        myUnits = yUnits{iVar};
+    elseif length(yUnits) == 1
+        myUnits = yUnits{1};
+    end
+
 
     % set output folder
     if nY > 1 && separateMulti
@@ -1624,20 +1667,10 @@ for iVar = 1:nY
                 ax.YAxis.TickValues = [];
 
                 % plot panel
-                if ~isempty(yLabel)
-                    yLabelStr = yLabel;
+                if isempty(myUnits)
+                    yLabelStr = sprintf('%s', myLabel);
                 else
-                    if strcmp(depVar, yVal)
-                        labelStr = myVar;
-                    else
-                        labelStr = depVar;
-                    end
-                    if isempty(depVarUnits)
-                        yLabelStr = sprintf('%s', labelStr, depVarUnits);
-                    else
-                        yLabelStr = sprintf('%s [%s]', labelStr, depVarUnits);
-                    end
-                    yLabelStr = strrep(yLabelStr,'_', ' ');
+                    yLabelStr = sprintf('%s [%s]', myLabel, myUnits);
                 end
 
                 switch showVarNames
@@ -1700,21 +1733,6 @@ for iVar = 1:nY
         % close figure
         close(fig);
     end
-
-    %% Save descriptive statistics
-
-    if nY > 1
-        outDir = sprintf('%s/%s', outDirOrig, myVar);
-        if ~isfolder(outDir)
-            mkdir(outDir);
-        end
-    end
-    fileName = 'Statistics';
-    saveTable(Stats, fileName, {'xlsx'}, outDir);
-    outDir = outDirOrig;
-
-    % display statistics
-    disp(Stats);
 
     %% Post-hoc table
 
