@@ -184,15 +184,8 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = 'quartiles'.
 %
 %       preOutlierMethod   Method to remove pre-fit outliers from the data.
-%                       Possible values:
-%                       'none'      Do not remove pre-fit outliers
-%                       'quartiles' Remove values outside 1.5 times the
-%                                   interquartile range [.25, .75]
-%                       'median'    Remove values outside more than three
-%                                   scaled median absolute deviations (MAD)
-%                       'mean'      Remove values outside 3 standard
-%                                   deviations from the mean.
-%                       OPTIONAL, default = 'none'.
+%                       Possible values: see outlierMethod.
+%                       OPTIONAL, default = 'quartiles'.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -216,16 +209,28 @@ function mdl = kbstat(options)
 %                       The linear model is fit on the transformed data,
 %                       but the data are plotted using the original data.
 %                       OPTIONAL, default = ''. Possible values
-%                              'Z'  Z-transform to zero-centered
+%                       'mean'      Divide by mean
+%                       'std'       Divide by standard deviation
+%                       'Z'         Z-transform to zero-centered
 %                                   distribution with unit standard
 %                                   derivation.
-%                        'IQR' or   Rescale to interval [0,1] using upper
-%                      'quartiles'  and lower limits of the inter-quartile
+%                       'q50' or
+%                       'median'
+%                       'q%d' or 
+%                       'p%d'
+%                       'q%dq%d' or 
+%                       'p%dp%d'
+%                       'IQR', or   Rescale to interval [0,1] using upper
+%                       'quartiles' and lower limits of the inter-quartile
 %                                   range (IQR).
-%                           'f(x)'  Arbitrary function of x, such as
-%                                       'log(x)'
-%                                       'atanh(x)'
-%                                       '(x-mean(x, "omitnan"))/std(x, "omitnan")'
+%                       'IQRmax'
+%                       'MAD'
+%                       'MADmax'
+%                       'max'
+%                       'minmax'
+%                       'f(x)'      Arbitrary function of x. Examples:
+%                                   'log(x)'
+%                                   'atanh(x)'
 %
 %       outDir          Output folder for generated files.
 %                       OPTIONAL, defaults to the parent folder of the
@@ -509,7 +514,7 @@ end
 if isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
     preOutlierMethod = options.preOutlierMethod;
 else
-    preOutlierMethod = 'none';
+    preOutlierMethod = 'quartiles';
 end
 
 % output folder
@@ -748,43 +753,20 @@ if ~isempty(transform)
                 transformFcn = @(x) x/std(x, 'omitnan');
             case 'Z'
                 transformFcn = @(x) (x - mean(x, 'omitnan'))/std(x, 'omitnan');
-            case {'q50', 'median'}
+            case {'median'}
                 upperThresh = quantile(Data.(depVar)(idxDep), 0.5);
-                transformFcn = @(x) x/upperThresh;
-            case 'q75'
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.75);
-                transformFcn = @(x) x/upperThresh;
-            case 'q95'
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
-                transformFcn = @(x) x/upperThresh;
-            case 'q2575'
-                lowerThresh = quantile(Data.(depVar)(idxDep), 0.25);
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.75);
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
-            case 'q0595'
-                lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
-            case 'IQRmax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
                 transformFcn = @(x) x/upperThresh;
             case 'IQR'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
-            case 'IQRzero'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+            case 'IQRmax'
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
+                transformFcn = @(x) x/upperThresh;
             case 'MAD'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case 'MADmax'
                 [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
-                transformFcn = @(x) x/upperThresh;
-            case '3sigma'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
-            case '3sigmamax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'mean');
                 transformFcn = @(x) x/upperThresh;
             case 'max'
                 upperThresh = max(Data.(depVar)(idxDep));
@@ -793,17 +775,19 @@ if ~isempty(transform)
                 lowerThresh = min(Data.(depVar)(idxDep));
                 upperThresh = max(Data.(depVar)(idxDep));
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
-            case 'minmaxzero'
-                lowerThresh = min(Data.(depVar)(idxDep));
-                upperThresh = max(Data.(depVar)(idxDep));
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
-
-            case 'qminmaxzero'
-                lowerThresh = quantile(Data.(depVar)(idxDep), 0.05);
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.95);
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
-            otherwise % any other function given in the form 'f(x)'
-                transformFcn = eval(sprintf('@(x) %s', transform));
+            otherwise % any other expression
+                tokens = regexp(transform, '[q,p](\d+)(?:[q,p]?)(\d+)?', 'tokens', 'once');
+                tokens(cellfun(@isempty, tokens)) = [];
+                if length(tokens) == 1 % upper percentile given in the form 'q%d' or 'p%d'
+                    upperThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{1}));
+                    transformFcn = @(x) x/upperThresh;
+                elseif length(tokens) == 2 % lower and upper percentile given in the form 'q%dq%d' or 'p%dp%d'
+                    lowerThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{1}));
+                    upperThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{2}));
+                    transformFcn = @(x) x/(upperThresh - lowerThresh);
+                else % any other function given in the form 'f(x)'                    
+                    transformFcn = eval(sprintf('@(x) %s', transform));
+                end
         end
         Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
     end
