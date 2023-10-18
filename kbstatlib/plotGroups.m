@@ -1,4 +1,8 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames)
+function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize)
+
+if nargin < 12 || isnan(markerSize)
+    markerSize = 24;
+end
 
 if nargin < 11
     showVarNames = 1;
@@ -27,15 +31,20 @@ if ~isempty(parent)
 else
     htl = tiledlayout(1,2, 'TileSpacing','none');
 end
-barPositions = [1:nGroups; 1:nMembers];
 pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairIdxs, 1);
+barPositions = nan(nGroups, nPairs);
+for iGroup = 1:nGroups
+    for iPair = 1:nPairs
+        barPositions(iGroup, iPair) = iPair;
+    end
+end
 hnt = gobjects(nGroups, 1);
 for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
     switch lower(plotStyle)
         case 'violin'
-            violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', 24);
+            violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
         case 'boxplot'
             boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
         case 'bar'
