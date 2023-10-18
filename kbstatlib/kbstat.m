@@ -87,6 +87,16 @@ function mdl = kbstat(options)
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %
+%       multiVar        Name of the variable that encodes levels of a
+%                       multivariate dependent variable.
+%                       OPTIONAL, default = ''.
+%
+%       separateMulti   Flag if, when the dependent variable has multiple
+%                       components, these components should be analyzed
+%                       separately. In the latter case, the results are
+%                       statistically corrected for these multiple tests. 
+%                       OPTIONAL, default = true.
+%
 %       randomSlopes    Flag if random slopes should be estimated.
 %                       OPTIONAL, default = true.
 %
@@ -150,16 +160,6 @@ function mdl = kbstat(options)
 %                       calculated, i.e. the comparison between one
 %                       variable set to 'any'.
 %                       OPTIONAL, default = true.
-%
-%       separateMulti   Flag if, when the dependent variable has multiple
-%                       components, these components should be analyzed
-%                       separately. In the latter case, the results are
-%                       statistically corrected for these multiple tests. 
-%                       OPTIONAL, default = true.
-%
-%       multiVar        Name of the variable that encodes levels of a
-%                       multivariate dependent variable.
-%                       OPTIONAL, default = ''.
 %
 %       correctForN     Number of test to be statistically corrected 
 %                       for in addition to the correction already performed
@@ -259,6 +259,9 @@ function mdl = kbstat(options)
 %                       'bar'
 %                       'prettybar'
 %                       OPTIONAL, default = 'violin'
+%
+%       markerSize      Size of the data dots in violin plots.
+%                       OPTIONAL, default = NaN (use default marker size).
 %
 %       title           Title for plots
 %
@@ -481,6 +484,13 @@ if isfield(options, 'plotStyle') && ~isempty(options.plotStyle)
     plotStyle = options.plotStyle;
 else
     plotStyle = 'violin';
+end
+
+% plot style
+if isfield(options, 'markerSize') && ~isempty(options.markerSize)
+    markerSize = options.markerSize;
+else
+    markerSize = NaN;
 end
 
 % Flag to plot data
@@ -911,19 +921,16 @@ fclose(fidOutliers);
 
 %% Fit linear model and perform ANOVA
 
-mdls = cell(1, nY);
-anovas = cell(1, nY);
-
 % perform nY fits only if separateMulti=true
 nFits = 1;
 if strcmp(fitMethod, 'none')
-    nFits = 0;
-    mdls = {};
-    anovas = {};    
+    nFits = 1;
 elseif separateMulti
     nFits = nY;
 end
-
+mdls = cell(1, nFits);
+anovas = cell(1, nFits);
+Datasets = cell(1, nFits);
 for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st iteration
 
     if length(distribution) >= nFits
@@ -1075,6 +1082,9 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     fprintf(fidSummary, '\t%s', mdlOutput);
     if ~strcmp(posthocMethod, 'none')
         fprintf(fidSummary, 'Performing post-hoc comparison using method ''%s''\n', posthocMethod);
+    end    
+    if ~isempty(transform)
+        fprintf(fidSummary, 'Data have been transformed using f(x) = %s\n', transform);
     end
     fclose(fidSummary);
 
@@ -1189,6 +1199,8 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     anovaResult = anova(mdl);
     anovas{iFit} = anovaResult;
 
+    Datasets{iFit} = Data;
+
     % if separate multi, restore Data and formula
     if nY > 1 && separateMulti
         Data = DataOrig; % set Data to original Data minus post-fit outliers
@@ -1236,7 +1248,7 @@ for iFit = 1:nFits
     anovaTable.significance = string(sigprint(anovaTable.p));
 
     % save Data
-    saveTable(Data, 'Data', {'csv'}, outDir);
+    saveTable(Datasets{iFit}, 'Data', {'csv'}, outDir);
 
     % save raw Data table
     saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
@@ -1285,6 +1297,7 @@ for iVar = 1:nY
 end
 violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
+outDirOrig = outDir;
 for iVar = 1:nY
     myVar = y{iVar};
 
@@ -1678,7 +1691,7 @@ for iVar = 1:nY
                 switch showVarNames
                     case {1, 2} % display variable names and levels
                         if length(cols) > 1 && length(rows) > 1
-                            panelTitle = sprintf('%s = %s, %s = %s', displayColVar, displayCols(iCol), displayRowVar, displayRows(iRow));
+                            panelTitle = sprintf('%s = %s, %s = %s', displayRowVar, displayRows(iRow), displayColVar, displayCols(iCol));
                         elseif length(rows) > 1
                             panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
                         elseif length(cols) > 1
@@ -1688,7 +1701,7 @@ for iVar = 1:nY
                         end
                     otherwise % only display variable levels
                         if length(cols) > 1 && length(rows) > 1
-                            panelTitle = sprintf('%s, %s', displayCols(iCol), displayRows(iRow));
+                            panelTitle = sprintf('%s, %s', displayRows(iRow), displayCols(iCol));
                         elseif length(rows) > 1
                             panelTitle = sprintf('%s', displayRows(iRow));
                         elseif length(cols) > 1
@@ -1697,7 +1710,7 @@ for iVar = 1:nY
                             panelTitle = '';
                         end
                 end
-                plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames);
+                plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize);
             end
         end
 
