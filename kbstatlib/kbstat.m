@@ -641,8 +641,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     else
         warning('Constraint ''%s'' cannot be fulfilled -> leave data unchanged', constraint);
     end
-    nLevels = length(unique(Data2.(constraintVar)));
-    switch nLevels
+    switch length(unique(Data2.(constraintVar)))
         case 0
             fprintf('Variable "%s" has no levels left on constraint "%s" -> remove variable\n', constraintVar, constraintVal);
             x = setdiff(x, constraintVar, 'stable');
@@ -704,6 +703,7 @@ for iIV = 1:length(x)
         factors = [factors; myIV]; %#ok<AGROW>
     end
 end
+nFactors = length(factors);
 
 % multivariate variable
 if nY > 1
@@ -729,7 +729,7 @@ if ~isempty(xOrder)
 end
 
 % 2nd factor = group variable
-if length(factors) > 1
+if nFactors > 1
     groupVar = factors{2};
     groups = unique(Data.(groupVar), levelOrder);
     nGroups = length(groups);
@@ -740,7 +740,7 @@ else
 end
 
 % 3rd factor = column variable
-if length(factors) > 2
+if nFactors > 2
     colVar = factors{3};
     cols = unique(Data.(colVar), levelOrder);
     nCols = length(cols);
@@ -751,7 +751,7 @@ else
 end
 
 % 4th factors = row variable
-if length(factors) > 3
+if nFactors > 3
     rowVar = factors{4};
     rows = unique(Data.(rowVar), levelOrder);
     nRows = length(rows);
@@ -764,7 +764,7 @@ end
 %% Apply data transformation, if given
 
 if ~isempty(transform)
-    trnsVar = sprintf('%sTrans', depVar);
+    transVar = sprintf('%sTrans', depVar);
     for iVar = 1:nY
         if nY > 1
             idxDep = (Data.(yVar) == y{iVar});
@@ -814,10 +814,10 @@ if ~isempty(transform)
                     transformFcn = eval(sprintf('@(x) %s', transform));
                 end
         end
-        Data.(trnsVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
+        Data.(transVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
     end
 else
-    trnsVar = depVar;
+    transVar = depVar;
 end
 
 %% Remove pre-fit outliers
@@ -827,7 +827,7 @@ fidOutliers = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
 nPreOutliers = 0;
 nPreObs = size(Data, 1);
 
-outlierLevel = length(factors);
+outlierLevel = nFactors;
 if ~strcmp(preOutlierMethod, 'none')
 
     idxOut = false(size(Data, 1), 1);
@@ -843,7 +843,7 @@ if ~strcmp(preOutlierMethod, 'none')
         idxTest = idxDep;
 
         if outlierLevel == 0 % level 0: all data
-            yData = Data.(trnsVar)(idxTest);
+            yData = Data.(transVar)(idxTest);
             idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
@@ -851,7 +851,7 @@ if ~strcmp(preOutlierMethod, 'none')
                 idxTest = idxDep;
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
-                yData = Data.(trnsVar)(idxTest);
+                yData = Data.(transVar)(idxTest);
                 idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
             end
 
@@ -865,7 +865,7 @@ if ~strcmp(preOutlierMethod, 'none')
                         group = groups(iGroup);
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
-                    yData = Data.(trnsVar)(idxTest);
+                    yData = Data.(transVar)(idxTest);
                     idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                 end
             end
@@ -885,7 +885,7 @@ if ~strcmp(preOutlierMethod, 'none')
                             col = cols(iCol);
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
-                        yData = Data.(trnsVar)(idxTest);
+                        yData = Data.(transVar)(idxTest);
                         idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                     end
                 end
@@ -910,7 +910,7 @@ if ~strcmp(preOutlierMethod, 'none')
                                 row = rows(iRow);
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
-                            yData = Data.(trnsVar)(idxTest);
+                            yData = Data.(transVar)(idxTest);
                             idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
                         end
                     end
@@ -968,8 +968,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         outDirOrig = outDir;
         outDir = sprintf('%s/%s', outDir, myVar);
         fprintf('Performing GLMM analysis for %s...\n', myVar);
-    else
+    elseif nY > 1
         fprintf('Performing multivariate GLMM analysis...\n');
+    else
+        fprintf('Performing GLMM analysis for %s...\n', depVar);
     end
 
     % create output folder, if not existing
@@ -1023,7 +1025,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         formulaOrig = formula;
     end
     if isempty(formula)
-        formula = sprintf('%s ~ %s', trnsVar, strjoin(terms, ' + '));
+        formula = sprintf('%s ~ %s', transVar, strjoin(terms, ' + '));
     end
     fprintf('\t%s\n', formula);
 
@@ -1280,20 +1282,27 @@ end
 %% Plot data and make posthoc comparisons
 
 outDirOrig = outDir;
-memberVars = {memberVar, groupVar};
-memberLevels = {members, groups};
-groupVars = {groupVar, memberVar};
-groupLevels = {groups, members};
+allVars = {memberVar, groupVar, colVar, rowVar};
+allVarLevels = {members, groups, cols, rows};
+nPosthocLevels = min(posthocLevel, nFactors);
 
-for iLevel = 1:posthocLevel
+for iLevel = 1:nPosthocLevels
 
-    % define what is member and what is group
-    memberVar = memberVars{iLevel};
-    groupVar = groupVars{iLevel};
-    members = memberLevels{iLevel};
-    groups = groupLevels{iLevel};
+    % define what is member and what are the others    
+    memberVar = allVars{iLevel};
+    members = allVarLevels{iLevel};
+    newIdx = 1:4;
+    newIdx([1, iLevel]) = newIdx([iLevel, 1]);
+    groupVar = allVars{newIdx(2)};    
+    groups = allVarLevels{newIdx(2)};
+    colVar = allVars{newIdx(3)};    
+    cols = allVarLevels{newIdx(3)};
+    rowVar = allVars{newIdx(4)};    
+    rows = allVarLevels{newIdx(4)};
     nMembers = length(members);
     nGroups = length(groups);
+    nCols = length(cols);
+    nRows = length(rows);
 
     % define posthoc comparison pairs
     pairs = nchoosek(members, 2);
@@ -1478,8 +1487,8 @@ for iLevel = 1:posthocLevel
                                 % calc contrasts
                                 L1 = (Data.(memberVar) == pair(1) & idx);
                                 L2 = (Data.(memberVar) == pair(2) & idx);
-                                val1 = Data.(trnsVar)(L1);
-                                val2 = Data.(trnsVar)(L2);
+                                val1 = Data.(transVar)(L1);
+                                val2 = Data.(transVar)(L2);
                                 switch posthocMethod
                                     case 'ttest'
                                         [~, bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ttest2(val1, val2);
@@ -1505,8 +1514,8 @@ for iLevel = 1:posthocLevel
                                 if posthocMainEffects
                                     L1 = (Data.(memberVar) == pair(1));
                                     L2 = (Data.(memberVar) == pair(2));
-                                    val1 = Data.(trnsVar)(L1);
-                                    val2 = Data.(trnsVar)(L2);
+                                    val1 = Data.(transVar)(L1);
+                                    val2 = Data.(transVar)(L2);
                                     switch posthocMethod
                                         case 'ttest'
                                             [~, main_p(iPair), ~, stats] = ttest2(val1, val2);
@@ -1612,7 +1621,7 @@ for iLevel = 1:posthocLevel
         outDir = outDirOrig;
     end
 
-    %% Statistical correction of posthoc comparison
+    %% Statistical correction of posthoc comparisons
     % Holm-Bonferroni correction of all p-values
 
     sizeOrig = size(bar_p); % store original array shape
@@ -1620,6 +1629,7 @@ for iLevel = 1:posthocLevel
     bar_pCorr = bar_p; % create array of corrected p-values
     idx = ~isnan(bar_p); % identify NaN-entries
     [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+    bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
     bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
     bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
     bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
@@ -1629,6 +1639,7 @@ for iLevel = 1:posthocLevel
         main_pCorr = main_p(:);  % make column vector
         idx = ~isnan(main_pCorr); % identify NaN-entries
         [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+        main_pCorr(idx) = sidak_corr(main_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
         main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
         main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
         main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
@@ -1672,8 +1683,8 @@ for iLevel = 1:posthocLevel
 
             figWidth = nCols * panelWidth;
             figHeight = nRows * panelHeight + 50;            
-            if posthocLevel > 1
-                figName = sprintf('DataPlots_Level%d', iLevel);
+            if nPosthocLevels > 1
+                figName = sprintf('DataPlots_%d', iLevel);
             else
                 figName = 'DataPlots';
             end
@@ -1891,8 +1902,8 @@ for iLevel = 1:posthocLevel
                 mkdir(outDir);
             end
         end
-        if posthocLevel > 1
-            fileName = sprintf('Posthoc_Level%d', iLevel);
+        if nPosthocLevels > 1
+            fileName = sprintf('Posthoc_%d', iLevel);
         else
             fileName = 'Posthoc';
         end
