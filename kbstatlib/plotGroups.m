@@ -71,19 +71,17 @@ for iGroup = 1:nGroups
     end
     if iGroup == 1
         ylabel(ylabelStr); 
+    end    
+    linkaxes(hnt);
+    if iGroup > 1
+        hnt(iGroup).YAxis.TickValues = [];
     end
+    set(gca,'TickLabelInterpreter','none');
 end
-linkaxes(hnt)
-if length(hnt) > 1
-    hnt(2).YAxis.TickValues = [];
-end
+
 if ~isempty(plotTitle)
     title(htl, plotTitle)
 end
-hold on;
-
-set(gca, 'YGrid', 'on', 'XGrid', 'off')
-set(gca,'TickLabelInterpreter','none');
 
 ylimits = ylim;
 
