@@ -924,7 +924,7 @@ fclose(fidOutliers);
 % perform nY fits only if separateMulti=true
 nFits = 1;
 if strcmp(fitMethod, 'none')
-    nFits = 1;
+    nFits = 0;
 elseif separateMulti
     nFits = nY;
 end
