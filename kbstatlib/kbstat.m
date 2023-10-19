@@ -746,7 +746,7 @@ if nFactors > 2
     nCols = length(cols);
 else
     colVar = 'none';
-    cols = "none";
+    cols = "";
     nCols = 1;
 end
 
@@ -757,7 +757,7 @@ if nFactors > 3
     nRows = length(rows);
 else
     rowVar = 'none';
-    rows = "none";
+    rows = "";
     nRows = 1;
 end
 
@@ -1628,21 +1628,25 @@ for iLevel = 1:nPosthocLevels
     bar_p = bar_p(:); % make column vector
     bar_pCorr = bar_p; % create array of corrected p-values
     idx = ~isnan(bar_p); % identify NaN-entries
-    [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
-    bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-    bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
-    bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-    bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+    if ~isempty(idx)
+        [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+        bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
+        bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
+        bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
+        bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+    end
     % statistical correction of main posthoc p-Values
     if posthocMainEffects
         sizeOrig = size(main_p); % store original array shape
         main_pCorr = main_p(:);  % make column vector
         idx = ~isnan(main_pCorr); % identify NaN-entries
-        [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
-        main_pCorr(idx) = sidak_corr(main_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-        main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
-        main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
-        main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+        if ~isempty(idx)
+            [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
+            main_pCorr(idx) = sidak_corr(main_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
+            main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
+            main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
+            main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+        end
     end
 
     %% Loop over dependent variables
