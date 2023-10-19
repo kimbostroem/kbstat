@@ -1289,9 +1289,17 @@ maxNValues = 0;
 for iVar = 1:nY
     myVar = y{iVar};
     if nY > 1
-        myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        if nGroups > 1
+            myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        else
+            myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(yVar)==myVar), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        end
     else
-        myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        if nGroups > 1
+            myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1 & Data.(groupVar)==s2), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        else
+            myMaxNValues = max(cell2mat(arrayfun(@(s1,s2) sum(Data.(memberVar)==s1), repmat(members(:)',nGroups,1), repmat(groups(:),1,nMembers), 'UniformOutput', false)),[],'all');
+        end
     end
     maxNValues = max([maxNValues, myMaxNValues]);
 end
@@ -1622,7 +1630,7 @@ for iVar = 1:nY
     end
 
     % figure size
-    panelWidth = 600; % width of each panel
+    panelWidth = nGroups * 300; % width of each panel
     panelHeight = 300; % height of each panel
 
     %% Plot data
