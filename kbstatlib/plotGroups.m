@@ -60,7 +60,9 @@ for iGroup = 1:nGroups
             end
     end   
 
-    title(groups(iGroup))
+    if ~isempty(groupName)
+        title(groups(iGroup))
+    end
     xticklabels(members);
 
     for iPair = 1:nPairs
