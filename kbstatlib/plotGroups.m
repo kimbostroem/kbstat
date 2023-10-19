@@ -27,16 +27,16 @@ nMembers = length(members);
 nGroups = length(groups);
 
 if ~isempty(parent)
-    htl = tiledlayout(parent, 1,2, 'TileSpacing','none');
+    htl = tiledlayout(parent, 1,nGroups, 'TileSpacing','none');
 else
-    htl = tiledlayout(1,2, 'TileSpacing','none');
+    htl = tiledlayout(1,nGroups, 'TileSpacing','none');
 end
 pairIdxs = nchoosek(1:nMembers, 2);
 nPairs = size(pairIdxs, 1);
-barPositions = nan(nGroups, nPairs);
+barPositions = nan(nGroups, nMembers);
 for iGroup = 1:nGroups
-    for iPair = 1:nPairs
-        barPositions(iGroup, iPair) = iPair;
+    for iMember = 1:nMembers
+        barPositions(iGroup, iMember) = iMember;
     end
 end
 hnt = gobjects(nGroups, 1);
@@ -69,10 +69,14 @@ for iGroup = 1:nGroups
             sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iGroup, iPair));
         end
     end
-    if iGroup==1; ylabel(ylabelStr); end
+    if iGroup == 1
+        ylabel(ylabelStr); 
+    end
 end
 linkaxes(hnt)
-hnt(2).YAxis.TickValues = [];
+if length(hnt) > 1
+    hnt(2).YAxis.TickValues = [];
+end
 if ~isempty(plotTitle)
     title(htl, plotTitle)
 end
