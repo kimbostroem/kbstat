@@ -91,6 +91,11 @@ function mdl = kbstat(options)
 %                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
 %
+%       multiVarLevels  List of the levels of multiVar that will be taken 
+%                       into account. If empty or undefined, all levels are
+%                       taken. 
+%                       OPTIONAL, default = ''.
+%
 %       separateMulti   Flag if, when the dependent variable has multiple
 %                       components, these components should be analyzed
 %                       separately. In the latter case, the results are
@@ -175,7 +180,7 @@ function mdl = kbstat(options)
 %                       number corresponds to the number of calls of
 %                       'kbstat' for one dataset.
 %
-%       isRescale       Flag if the y-axis of each
+%       rescale         Flag if the y-axis of each
 %                       panel of the data plot is to be resized to a
 %                       common scale.
 %                       OPTIONAL, default = true.
@@ -365,6 +370,13 @@ else
     multiVar = '';
 end
 
+% multiVarLevels
+if isfield(options, 'multiVarLevels') && ~isempty(options.multiVarLevels)
+    multiVarLevels = strtrim(strsplit(options.multiVarLevels, ','));
+else
+    multiVarLevels = '';
+end
+
 if nY > 1
     yVar = 'yVar';
     yVal = 'Y';
@@ -374,7 +386,12 @@ if nY > 1
 elseif ~isempty(multiVar)
     yVar = multiVar;
     yVal = y{1};
-    Data2 = Data1;
+    if isempty(multiVarLevels)
+        Data2 = Data1;
+    else
+        idx = ismember(string(Data1.(yVar)), string(multiVarLevels));
+        Data2 = Data1(idx, :);
+    end
     depVar = y{1}; % set dependent variable to y
     Data2.(yVar) = categorical(string(Data2.(yVar)));
     y = cellstr(unique(Data2.(yVar)));
@@ -522,10 +539,10 @@ else
 end
 
 % flag to rescale all panel plots to the same y-scale
-if isfield(options, 'isRescale') && ~isempty(options.isRescale)
-    isRescale = getValue(options.isRescale);
+if isfield(options, 'rescale') && ~isempty(options.rescale)
+    rescale = getValue(options.rescale);
 else
-    isRescale = true;
+    rescale = true;
 end
 
 % flag if post-fit outliers should be removed
@@ -1775,7 +1792,7 @@ for iLevel = 1:nPosthocLevels
             end
 
             % rescale plots to achieve the same scale for all panels
-            if isRescale
+            if rescale
                 axs = findobj(fig, 'type', 'axes');
                 ylimits = NaN(length(axs), 2);
                 for iAx = 1:length(axs)
