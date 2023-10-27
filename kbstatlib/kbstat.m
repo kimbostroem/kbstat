@@ -76,16 +76,20 @@ function mdl = kbstat(options)
 %                       i.e. they vary only between, not within, subjects.
 %                       "within" can be a subset of "x", or else its
 %                       members are added to "x". Example:
-%                       options.id = 'subject'
-%                       options.x = 'time, age, sex'
-%                       options.within = 'dose'.
+%                           options.id = 'subject'
+%                           options.x = 'time, age, sex'
+%                           options.within = 'dose'.
+%                       OPTIONAL, default = ''.
 %
 %       interact        List of variables whose interaction with each other
 %                       is to be analyzed. Can be a subset of "x", or else
-%                       its members are added to "x". Example:
-%                       options.id = 'subject'
-%                       options.x = 'time, dose'
-%                       options.interact = 'dose, age'.
+%                       its members are added to "x". When not set, all
+%                       members of x are assumed to mutually interact. 
+%                       Example:
+%                           options.id = 'subject'
+%                           options.x = 'time, dose'
+%                           options.interact = 'dose, age'.
+%                       OPTIONAL, default = options.x
 %
 %       multiVar        Name of the variable that encodes levels of a
 %                       multivariate dependent variable.
@@ -303,7 +307,7 @@ function mdl = kbstat(options)
 %   options.x = 'shoe, speed, sex, joint';
 %   options.id = 'subject';
 %   options.within = 'shoe, speed, joint';
-%   options.interact = 'shoe, speed, joint';
+%   options.interact = 'shoe, speed';
 %   options.distribution = 'gamma';
 %	options.constraint = 'speed < 2 & joint == "ankle_joint"'
 %   kbstat('path/to/Data.xlsx', options);
@@ -426,19 +430,21 @@ else
 end
 
 % within-subject variables
-if isfield(options, 'within') && ~isempty(options.within)
+if isfield(options, 'within') && ~isempty(options.within) % option provided and not empty
     within = strtrim(strsplit(options.within, {',', ';'}));
     x = union(x, within, 'stable'); % add within-subject variables to independent variables
-else
+else % option not provided or empty
     within = {};
 end
 
 % interaction variables
-if isfield(options, 'interact') && ~isempty(options.interact)
+if isfield(options, 'interact') && ~isempty(options.interact) % option provided and not empty
     interact = strtrim(strsplit(options.interact, {',', ';'}));
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
-else
+elseif isfield(options, 'interact') && isempty(options.interact) % option provided as empty
     interact = {};
+else % option not provided
+    interact = x;
 end
 
 % random slopes
@@ -1336,11 +1342,11 @@ for iLevel = 1:nPosthocLevels
     bar_eff         = nan(nGroups, nPairs, nRows, nCols, nY);
 
     % create (nPairs x nY) arrays of main effects data
-    main_p      = nan(nPairs, nY);
-    main_test   = nan(nPairs, nY);
-    main_DF     = nan(nPairs, nY);
-    main_aux    = nan(nPairs, nY);
-    main_eff    = nan(nPairs, nY);
+    main_p      = nan(nPairs, nRows, nCols, nY);
+    main_test   = nan(nPairs, nRows, nCols, nY);
+    main_DF     = nan(nPairs, nRows, nCols, nY);
+    main_aux    = nan(nPairs, nRows, nCols, nY);
+    main_eff    = nan(nPairs, nRows, nCols, nY);
 
     maxNValues = 0;
     for iVar = 1:nY
@@ -1382,11 +1388,10 @@ for iLevel = 1:nPosthocLevels
         Stats = table;
 
         % calc plot data and fill arrays
-        for iRow = 1:nRows
-            for iCol = 1:nCols
-                for iGroup = 1:nGroups
-                    % loop over 1st x
-                    for iMember = 1:nMembers
+        for iRow = 1:nRows % loop over 4th x
+            for iCol = 1:nCols % loop over 3rd x
+                for iGroup = 1:nGroups % loop over 2nd x                    
+                    for iMember = 1:nMembers % loop over 1st x
 
                         if nY > 1
                             idxDep = (Data.(yVar) == myVar);
@@ -1535,23 +1540,23 @@ for iLevel = 1:nPosthocLevels
                                     val2 = Data.(transVar)(L2);
                                     switch posthocMethod
                                         case 'ttest'
-                                            [~, main_p(iPair), ~, stats] = ttest2(val1, val2);
+                                            [~, main_p(iPair, iRow, iCol, iVar), ~, stats] = ttest2(val1, val2);
                                             tValue = stats.tstat;
                                             df = stats.df;
                                             sPool = stats.sd;
                                             dCohen = (mean(val1, 'omitnan') - mean(val2, 'omitnan')) / sPool;
-                                            main_test(iPair, iVar) = tValue;
-                                            main_DF(iPair, iVar) = df;
-                                            main_eff(iPair, iVar) =  dCohen;
+                                            main_test(iPair, iRow, iCol, iVar) = tValue;
+                                            main_DF(iPair, iRow, iCol, iVar) = df;
+                                            main_eff(iPair, iRow, iCol, iVar) =  dCohen;
                                         case 'utest'
-                                            [main_p(iPair, iVar), ~, stats] = ranksum(val1, val2);
+                                            [main_p(iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                             N1 = sum(~isnan(val1));
                                             N2 = sum(~isnan(val2));
                                             W = stats.ranksum;
                                             U = W - N1*(N1+1)/2;
                                             r = 1 - 2*U/(N1*N2);
-                                            main_test(iPair, iVar) = U;
-                                            main_eff(iPair, iVar) =  r;
+                                            main_test(iPair, iRow, iCol, iVar) = U;
+                                            main_eff(iPair, iRow, iCol, iVar) =  r;
                                     end
                                 end
 
@@ -1607,11 +1612,11 @@ for iLevel = 1:nPosthocLevels
                                     L2 = idxDep & (emm.table.(memberVar) == pair(2));
                                     L = (L1 - L2)';
                                     contrasts = kbcontrasts_wald(mdl, emm, L);
-                                    main_p(iPair, iVar) = contrasts.pVal;
-                                    main_test(iPair, iVar) = contrasts.F;
-                                    main_DF(iPair, iVar) = contrasts.DF1;
-                                    main_aux(iPair, iVar) = contrasts.DF2;
-                                    main_eff(iPair, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                                    main_p(iPair, iRow, iCol, iVar) = contrasts.pVal;
+                                    main_test(iPair, iRow, iCol, iVar) = contrasts.F;
+                                    main_DF(iPair, iRow, iCol, iVar) = contrasts.DF1;
+                                    main_aux(iPair, iRow, iCol, iVar) = contrasts.DF2;
+                                    main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 end
                         end
                     end
@@ -1641,11 +1646,12 @@ for iLevel = 1:nPosthocLevels
     %% Statistical correction of posthoc comparisons
     % Holm-Bonferroni correction of all p-values
 
-    sizeOrig = size(bar_p); % store original array shape
-    bar_p = bar_p(:); % make column vector
     bar_pCorr = bar_p; % create array of corrected p-values
-    idx = ~isnan(bar_p); % identify NaN-entries
+    idx = ~isnan(bar_p(:)); % identify NaN-entries
     if ~isempty(idx)
+        sizeOrig = size(bar_p); % store original array shape
+        bar_p = bar_p(:); % make column vector
+        bar_pCorr = bar_pCorr(:); % make column vector
         [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
         bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
         bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
@@ -1654,10 +1660,12 @@ for iLevel = 1:nPosthocLevels
     end
     % statistical correction of main posthoc p-Values
     if posthocMainEffects
-        sizeOrig = size(main_p); % store original array shape
-        main_pCorr = main_p(:);  % make column vector
-        idx = ~isnan(main_pCorr); % identify NaN-entries
+        main_pCorr = main_p;
+        idx = ~isnan(main_p(:)); % identify NaN-entries
         if ~isempty(idx)
+            sizeOrig = size(main_p); % store original array shape
+            main_p = main_p(:); % make column vector
+            main_pCorr = main_pCorr(:); % make column vector
             [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
             main_pCorr(idx) = sidak_corr(main_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
             main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
@@ -1846,24 +1854,24 @@ for iLevel = 1:nPosthocLevels
                 end
                 tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
-                tableRow.p = main_p(iPair, iVar);
-                tableRow.pCorr = main_pCorr(iPair, iVar);
+                tableRow.p = main_p(iPair, iRow, iCol, iVar);
+                tableRow.pCorr = main_pCorr(iPair, iRow, iCol, iVar);
                 switch posthocMethod
                     case 'ttest'
-                        tableRow.t = main_test(iPair, iVar);
-                        tableRow.DF = main_DF(iPair, iVar);
-                        tableRow.d = main_eff(iPair, iVar);
-                        tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'd'));
+                        tableRow.t = main_test(iPair, iRow, iCol, iVar);
+                        tableRow.DF = main_DF(iPair, iRow, iCol, iVar);
+                        tableRow.d = main_eff(iPair, iRow, iCol, iVar);
+                        tableRow.effectSize = string(effprint(main_eff(iPair, iRow, iCol, iVar), 'd'));
                     case 'utest'
-                        tableRow.U = main_test(iPair, iVar);
-                        tableRow.r = main_eff(iPair, iVar);
-                        tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'r'));
+                        tableRow.U = main_test(iPair, iRow, iCol, iVar);
+                        tableRow.r = main_eff(iPair, iRow, iCol, iVar);
+                        tableRow.effectSize = string(effprint(main_eff(iPair, iRow, iCol, iVar), 'r'));
                     case 'emm'
-                        tableRow.F = main_test(iPair, iVar);
-                        tableRow.DF1 = main_DF(iPair, iVar);
-                        tableRow.DF2 = main_aux(iPair, iVar);
-                        tableRow.etaSqp = main_eff(iPair, iVar);
-                        tableRow.effectSize = string(effprint(main_eff(iPair, iVar), 'eta2'));
+                        tableRow.F = main_test(iPair, iRow, iCol, iVar);
+                        tableRow.DF1 = main_DF(iPair, iRow, iCol, iVar);
+                        tableRow.DF2 = main_aux(iPair, iRow, iCol, iVar);
+                        tableRow.etaSqp = main_eff(iPair, iRow, iCol, iVar);
+                        tableRow.effectSize = string(effprint(main_eff(iPair, iRow, iCol, iVar), 'eta2'));
                 end
                 tableRow.significance = string(sigprint(tableRow.pCorr));
                 posthocTable = [posthocTable; tableRow]; %#ok<AGROW>
