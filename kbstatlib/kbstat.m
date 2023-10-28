@@ -91,6 +91,10 @@ function mdl = kbstat(options)
 %                           options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
+%       covariates       List of (continuous or categorical) variables 
+%                       that are added to improve the model fit without
+%                       being analyzed.
+%
 %       multiVar        Name of the variable that encodes levels of a
 %                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
@@ -447,6 +451,13 @@ else % option not provided
     interact = x;
 end
 
+% covariates
+if isfield(options, 'covariates') && ~isempty(options.covariates) % option provided and not empty
+    covariates = strtrim(strsplit(options.covariates, {',', ';'}));
+else % option not provided
+    covariates = {};
+end
+
 % random slopes
 if isfield(options, 'randomSlopes') && ~isempty(options.randomSlopes)
     randomSlopes = getValue(options.randomSlopes);
@@ -622,6 +633,8 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [num, isNum] = str2num(constraintVal);
         if isNum
             constraintVal = num;
+        else
+            constraintVal = string(constraintVal);
         end
         compVar = strtrim(matches{1});
         if ~ismember(constraintVar, Data2.Properties.VariableNames)
@@ -634,6 +647,9 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
             constraintVals = str2double(string(constraintVals));
         elseif iscell(Data2.(constraintVar))
             constraintVals = string(constraintVals);
+        end
+        if ~strcmp(class(constraintVals), class(constraintVal))
+            error('Comparison of ''%s'' is a comparison between ''%s'' and ''%s'', which is not possible', cond, class(constraintVals), class(constraintVal));
         end
         switch compVar
             case {'=', '=='}
@@ -713,8 +729,9 @@ if ~isempty(id)
 end
 
 % get independent variables
-for iIV = 1:length(x)
-    myIV = x{iIV};
+IVs = union(x, covariates, 'stable');
+for iIV = 1:length(IVs)
+    myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
     if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> make categorical
         Data.(myIV) = categorical(string(Data2.(myIV)));
@@ -1005,24 +1022,24 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     % open summary file for writing
     fidSummary = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
 
-    productTerm = strjoin(interact, '*');
+    productTerm = strjoin(interact, '*');    
     if nY > 1 && ~separateMulti
         productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
     end
     xNoInteract = setdiff(x, interact, 'stable');
 
-    sumTerm = strjoin(xNoInteract, ' + ');
-
+    sumTerm = strjoin(union(xNoInteract, covariates, 'stable'), ' + ');
+    
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randomSlopes
             randomEffect = '';
             if nY > 1 && ~separateMulti
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariates, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), within, 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, covariates, 'stable'), 'UniformOutput', false), ' + ');
             end
         else
-            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, covariates, 'stable'), 'UniformOutput', false), ' + ');
             randomSlopes = '';
         end
     else
@@ -1566,7 +1583,11 @@ for iLevel = 1:nPosthocLevels
                                     mdl = mdls{iVar};
                                 end
 
-                                emm = emmeans(mdl, 'effects', 'unbalanced');
+                                % Calc estimated marginal means of all
+                                % factors. Continuous variables cannot be
+                                % included, because then emmeans gives an
+                                % error
+                                emm = emmeans(mdl, reshape(factors, 1, []), 'effects', 'unbalanced');
 
                                 if nY > 1 && ~separateMulti
                                     idxDep = (emm.table.(yVar) == myVar);
