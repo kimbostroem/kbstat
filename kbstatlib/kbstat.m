@@ -35,9 +35,9 @@ function mdl = kbstat(options)
 %       Data            (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
-%       y               Name of the dependent variable or list of names of
-%                       dependent variables. If there is more than one
-%                       component of y, by default each component is
+%       y               Name of the dependent variable or comma-separated 
+%                       list of names of multiple dependent variables. In
+%                       the latter case, by default each component is
 %                       treated as a separate dependent variable and as
 %                       many independent univariate analyses are performed.
 %                       If "separateMulti" is set to "false", then y is
@@ -58,50 +58,51 @@ function mdl = kbstat(options)
 %                       must have the same number of components as y.
 %                       OPTIONAL, default = ''.
 %
-%       x               List of the names of the independent variables,
-%                       separated by comma or semicolon. Up to 4
-%                       independent variables are supported. Variables that
-%                       are integer or non-numeric, are interpreted as
-%                       categorical, i.e. as factors. Only factors
-%                       are included in the barplot chart.
+%       x               Comma-separated list of the names of the
+%                       independent variables. Up to 4 independent
+%                       variables are supported. Variables that are integer
+%                       or non-numeric, are interpreted as categorical,
+%                       i.e. as factors. Only factors are included in the
+%                       barplot chart.
 %
 %       id              Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
-%       within          List of within-subject variables, separated by
-%                       comma or semicolon.  Within-subject variables are
-%                       nested within the subject variable, i.e. they vary
-%                       for each subject. Variables that are not declared
-%                       as within-subject, are considered between-subject,
-%                       i.e. they vary only between, not within, subjects.
-%                       "within" can be a subset of "x", or else its
-%                       members are added to "x". Example:
+%       within          Comma-separated list of within-subject variables.  
+%                       Within-subject variables are nested within the
+%                       subject variable, i.e. they vary for each subject.
+%                       Variables that are not declared as within-subject,
+%                       are considered between-subject, i.e. they vary only
+%                       between, not within, subjects. "within" can be a
+%                       subset of "x", or else its members are added to
+%                       "x". Example:
 %                           options.id = 'subject'
 %                           options.x = 'time, age, sex'
 %                           options.within = 'dose'.
 %                       OPTIONAL, default = ''.
 %
-%       interact        List of variables whose interaction with each other
-%                       is to be analyzed. Can be a subset of "x", or else
-%                       its members are added to "x". When not set, all
-%                       members of x are assumed to mutually interact. 
-%                       Example:
+%       interact        Comma-separated list of variables whose interaction
+%                       with each other is to be analyzed. Can be a subset
+%                       of "x", or else its members are added to "x". When
+%                       not set, all members of x are assumed to mutually
+%                       interact. Example:
 %                           options.id = 'subject'
 %                           options.x = 'time, dose'
 %                           options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
-%       covariates       List of (continuous or categorical) variables 
-%                       that are added to improve the model fit without
-%                       being analyzed.
+%       covariates      Comma-separated list of (continuous or categorical) 
+%                       variables that are added to improve the model
+%                       without being represented in the plots or included
+%                       in the posthoc comparisons.
 %
 %       multiVar        Name of the variable that encodes levels of a
 %                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
 %
-%       multiVarLevels  List of the levels of multiVar that will be taken 
-%                       into account. If empty or undefined, all levels are
-%                       taken. 
+%       multiVarLevels  Comma-separated list of the levels of multiVar that
+%                       will be taken into account. If empty or undefined,
+%                       all levels are taken. 
 %                       OPTIONAL, default = ''.
 %
 %       separateMulti   Flag if, when the dependent variable has multiple
