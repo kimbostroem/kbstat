@@ -731,17 +731,24 @@ end
 
 % get independent variables
 IVs = union(x, covariates, 'stable');
+catVars = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
     if all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0) % levels all integer -> make categorical
         Data.(myIV) = categorical(string(Data2.(myIV)));
-        factors = [factors; myIV]; %#ok<AGROW>
+        catVars = union(catVars, myIV, 'stable');
+        if ismember(myIV, x)
+            factors = union(factors, myIV, 'stable');
+        end
     elseif all(isnumeric(myLevels)) % levels all numerical (but not integer) -> leave as is
         Data.(myIV) = Data2.(myIV); % keep continuous values
     else
         Data.(myIV) = categorical(Data2.(myIV)); % else -> make categorical
-        factors = [factors; myIV]; %#ok<AGROW>
+        catVars = union(catVars, myIV, 'stable');
+        if ismember(myIV, x)
+            factors = union(factors, myIV, 'stable');
+        end
     end
 end
 nFactors = length(factors);
@@ -1588,7 +1595,7 @@ for iLevel = 1:nPosthocLevels
                                 % factors. Continuous variables cannot be
                                 % included, because then emmeans gives an
                                 % error
-                                emm = emmeans(mdl, reshape(factors, 1, []), 'effects', 'unbalanced');
+                                emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
 
                                 if nY > 1 && ~separateMulti
                                     idxDep = (emm.table.(yVar) == myVar);
