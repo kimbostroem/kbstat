@@ -67,8 +67,8 @@ function mdl = kbstat(options)
 %                       included in the "catVar" list, see below.
 %
 %       catVar          Comma-separated list of (dependent or independent)
-%                       variables that are taken as categorical, i.e. as
-%                       factors, even if they have numerical values.
+%                       variables that are taken as categorical, even if
+%                       they have numerical values. 
 %                       OPTIONAL, default = '';
 %
 %       id              Name of the subject variable.
@@ -734,20 +734,20 @@ if ~isempty(id)
     Data.(id) = categorical(string(Data2.(id))); % make categorical
 end
 
-% make catVar variables categorical
+% make catVar variables string
 for iVar = 1:length(catVar)
     myVar = catVar{iVar};
-    Data.(myVar) = categorical(string(Data2.(myVar))); % make categorical
+    Data2.(myVar) = string(Data2.(myVar));
 end
 
 % get independent variables
 IVs = union(x, coVar, 'stable');
-catVars = catVar;
+catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
-    if ismember(myIV, catVars) || ~all(isnumeric(myLevels))
+    if ismember(myIV, catVar) || ~all(isnumeric(myLevels))
         Data.(myIV) = categorical(string(Data2.(myIV)));
         catVars = union(catVars, myIV, 'stable');
         if ismember(myIV, x)
@@ -765,7 +765,6 @@ if nY > 1
 end
 
 % get dependent variable
-Data.(depVar) = Data2.(depVar);
 Data.(depVar) = Data2.(depVar);
 
 % store Data table in options
