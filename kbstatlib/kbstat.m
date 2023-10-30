@@ -91,7 +91,7 @@ function mdl = kbstat(options)
 %                           options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
-%       co              Comma-separated list of (continuous or categorical) 
+%       coVar           Comma-separated list of (continuous or categorical) 
 %                       variables that are added as covariates to improve
 %                       the model without being represented in the plots or
 %                       included in the posthoc comparisons. They are,
@@ -454,10 +454,10 @@ else % option not provided
 end
 
 % covariates
-if isfield(options, 'co') && ~isempty(options.co) % option provided and not empty
-    co = strtrim(strsplit(options.co, {',', ';'}));
+if isfield(options, 'coVar') && ~isempty(options.coVar) % option provided and not empty
+    coVar = strtrim(strsplit(options.coVar, {',', ';'}));
 else % option not provided
-    co = {};
+    coVar = {};
 end
 
 % random slopes
@@ -731,7 +731,7 @@ if ~isempty(id)
 end
 
 % get independent variables
-IVs = union(x, co, 'stable');
+IVs = union(x, coVar, 'stable');
 catVars = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
@@ -1037,18 +1037,18 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
     xNoInteract = setdiff(x, interact, 'stable');
 
-    sumTerm = strjoin(union(xNoInteract, co, 'stable'), ' + ');
+    sumTerm = strjoin(union(xNoInteract, coVar, 'stable'), ' + ');
     
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randomSlopes
             randomEffect = '';
             if nY > 1 && ~separateMulti
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, co, 'stable'), 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, co, 'stable'), 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
             end
         else
-            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, co, 'stable'), 'UniformOutput', false), ' + ');
+            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
             randomSlopes = '';
         end
     else
