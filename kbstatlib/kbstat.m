@@ -63,15 +63,13 @@ function mdl = kbstat(options)
 %                       String-valued variables are considered as
 %                       categorical, i.e. as factors. Only factors are
 %                       included in the barplot chart. Numerical variables
-%                       are not considered factors. Either this parameter
-%                       or "factors" must be given.
+%                       are not considered factors, except they are
+%                       included in the "catVar" list, see below.
 %
-%       factors         Comma-separated list of independent variables that
-%                       are taken to be categorical, even if they have
-%                       numerical values. Up to 4 factors are supported. If
-%                       this parameter is not given, then "x" must be
-%                       given, where string-valued variables in x are
-%                       considered categorical.
+%       catVar          Comma-separated list of (dependent or independent)
+%                       variables that are taken as categorical, i.e. as
+%                       factors, even if they have numerical values.
+%                       OPTIONAL, default = '';
 %
 %       id              Name of the subject variable.
 %                       OPTIONAL, default = ''.
@@ -367,22 +365,15 @@ for iVar = 1:length(tableVars)
     end
 end
 
-% factors
-if isfield(options, 'factors') && ~isempty(options.factors)
-    factors = strtrim(strsplit(options.factors, {',', ';'}));
+% catVar
+if isfield(options, 'catVar') && ~isempty(options.catVar)
+    catVar = strtrim(strsplit(options.catVar, {',', ';'}));
 else
-    factors = {};
+    catVar = {};
 end
 
 % independent variable(s)
-if isfield(options, 'x') && ~isempty(options.x)
-    x = strtrim(strsplit(options.x, {',', ';'}));
-else
-    x = {};
-end
-
-x = union(x, factors, 'stable');
-
+x = strtrim(strsplit(options.x, {',', ';'}));
 
 %% dependent variable(s)
 
@@ -733,35 +724,36 @@ for iField = 1:length(paramFields)
 end
 fclose(fidOptions);
 
-%% Decide which variables are categorical
+%% Create Data table
 
 % init Data table
 Data = table;
 
-% get subject variable
+% subject variable
 if ~isempty(id)
-    myIV = id;
-    myLevels = unique(DataRaw.(id));
-    if ~all(isnumeric(myLevels)) || (all(isnumeric(myLevels)) && all(mod(myLevels,1) == 0)) % levels all integers or strings -> make categorical
-        Data.(myIV) = categorical(string(Data2.(myIV))); % make categorical
-    else
-        Data.(myIV) = Data2.(myIV); % keep continuous values
-    end
+    Data.(id) = categorical(string(Data2.(id))); % make categorical
+end
+
+% make catVar variables categorical
+for iVar = 1:length(catVar)
+    myVar = catVar{iVar};
+    Data.(myVar) = categorical(string(Data2.(myVar))); % make categorical
 end
 
 % get independent variables
 IVs = union(x, coVar, 'stable');
-catVars = {};
+catVars = catVar;
+factors = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
-    if ismember(myIV, factors) || ~all(isnumeric(myLevels))
+    if ismember(myIV, catVars) || ~all(isnumeric(myLevels))
         Data.(myIV) = categorical(string(Data2.(myIV)));
         catVars = union(catVars, myIV, 'stable');
         if ismember(myIV, x)
             factors = union(factors, myIV, 'stable');
         end
-    else % data are not in factors and they are numerical
+    else % data are not in catVars and they are numerical
         Data.(myIV) = Data2.(myIV); % keep continuous values
     end
 end
