@@ -1,7 +1,7 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, plotLines)
+function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, est_values)
 
 if nargin < 13
-    plotLines = false;
+    est_values = [];
 end
 
 if nargin < 12 || isnan(markerSize)
@@ -68,10 +68,11 @@ for iGroup = 1:nGroups
     end
 
     % plot horizontal lines at values
-    if plotLines
+    if ~isempty(est_values)
         colors = lines;
         for iMember = 1:nMembers
             yline(lineVals(iMember), '-', 'Color', colors(iMember,:));
+            % yline(est_values(iGroup, iMember), '-', 'Color', colors(iMember,:));
         end
     end
 

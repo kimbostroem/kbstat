@@ -35,7 +35,7 @@ function mdl = kbstat(options)
 %       Data            (char) Matlab table. must be in long format, so
 %                       one row per data point.
 %
-%       y               Name of the dependent variable or comma-separated 
+%       y               Name of the dependent variable or comma-separated
 %                       list of names of multiple dependent variables. In
 %                       the latter case, by default each component is
 %                       treated as a separate dependent variable and as
@@ -68,13 +68,13 @@ function mdl = kbstat(options)
 %
 %       catVar          Comma-separated list of (dependent or independent)
 %                       variables that are taken as categorical, even if
-%                       they have numerical values. 
+%                       they have numerical values.
 %                       OPTIONAL, default = '';
 %
 %       id              Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
-%       within          Comma-separated list of within-subject variables.  
+%       within          Comma-separated list of within-subject variables.
 %                       Within-subject variables are nested within the
 %                       subject variable, i.e. they vary for each subject.
 %                       Variables that are not declared as within-subject,
@@ -97,7 +97,7 @@ function mdl = kbstat(options)
 %                           options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
-%       coVar           Comma-separated list of (continuous or categorical) 
+%       coVar           Comma-separated list of (continuous or categorical)
 %                       variables that are added as covariates to improve
 %                       the model without being represented in the plots or
 %                       included in the posthoc comparisons. They are,
@@ -109,7 +109,7 @@ function mdl = kbstat(options)
 %
 %       multiVarLevels  Comma-separated list of the levels of multiVar that
 %                       will be taken into account. If empty or undefined,
-%                       all levels are taken. 
+%                       all levels are taken.
 %                       OPTIONAL, default = ''.
 %
 %       separateMulti   Flag if, when the dependent variable has multiple
@@ -308,8 +308,8 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = [].
 %                       Example: options.xOrder = '[1 3 2]'
 %
-%       plotLines      Flag if the data plots should display the median as 
-%                       a horizontal line in the color of the corresponding 
+%       plotLines      Flag if the data plots should display the median as
+%                       a horizontal line in the color of the corresponding
 %                       dataset.
 %
 % OUTPUT
@@ -1045,14 +1045,14 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     % open summary file for writing
     fidSummary = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
 
-    productTerm = strjoin(interact, '*');    
+    productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
         productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
     end
     xNoInteract = setdiff(x, interact, 'stable');
 
     sumTerm = strjoin(union(xNoInteract, coVar, 'stable'), ' + ');
-    
+
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randomSlopes
             randomEffect = '';
@@ -1351,16 +1351,16 @@ nPosthocLevels = min(posthocLevel, nFactors);
 
 for iLevel = 1:nPosthocLevels
 
-    % define what is member and what are the others    
+    % define what is member and what are the others
     memberVar = allVars{iLevel};
     members = allVarLevels{iLevel};
     newIdx = 1:4;
     newIdx([1, iLevel]) = newIdx([iLevel, 1]);
-    groupVar = allVars{newIdx(2)};    
+    groupVar = allVars{newIdx(2)};
     groups = allVarLevels{newIdx(2)};
-    colVar = allVars{newIdx(3)};    
+    colVar = allVars{newIdx(3)};
     cols = allVarLevels{newIdx(3)};
-    rowVar = allVars{newIdx(4)};    
+    rowVar = allVars{newIdx(4)};
     rows = allVarLevels{newIdx(4)};
     nMembers = length(members);
     nGroups = length(groups);
@@ -1370,6 +1370,11 @@ for iLevel = 1:nPosthocLevels
     % define posthoc comparison pairs
     pairs = nchoosek(members, 2);
     nPairs = size(pairs, 1);
+
+    % estimated values
+    est_values      = nan(nRows, nCols, nGroups, nMembers, nY);
+    % est_errorTop    = nan(nRows, nCols, nGroups, nMembers, nY);
+    % est_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
 
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
     bar_values      = nan(nRows, nCols, nGroups, nMembers, nY);
@@ -1430,7 +1435,7 @@ for iLevel = 1:nPosthocLevels
         % calc plot data and fill arrays
         for iRow = 1:nRows % loop over 4th x
             for iCol = 1:nCols % loop over 3rd x
-                for iGroup = 1:nGroups % loop over 2nd x                    
+                for iGroup = 1:nGroups % loop over 2nd x
                     for iMember = 1:nMembers % loop over 1st x
 
                         if nY > 1
@@ -1465,8 +1470,6 @@ for iLevel = 1:nPosthocLevels
                             statsRow.(rowVar) = string(row);
                             idx = idx & Data.(rowVar) == row;
                         end
-
-                        % bar_values(iRow, iCol, iGroup, iMember, iVar) = mdl.table.Estimated_Marginal_Mean;
 
                         bar_data = Data(idx, :);
                         values = bar_data.(depVar);
@@ -1514,39 +1517,40 @@ for iLevel = 1:nPosthocLevels
                     end
 
                     % get post-hoc p-values
-                    for iPair = 1:nPairs
-                        pair = pairs(iPair, :);
+                    switch posthocMethod
 
-                        switch posthocMethod
+                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests
 
-                            case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests
+                            if nY > 1
+                                idxDep = (Data.(yVar) == myVar);
+                            else
+                                idxDep = true(size(Data, 1), 1);
+                            end
 
-                                if nY > 1
-                                    idxDep = (Data.(yVar) == myVar);
-                                else
-                                    idxDep = true(size(Data, 1), 1);
-                                end
+                            % init idx
+                            idx = idxDep;
 
-                                % init idx
-                                idx = idxDep;
+                            % 2nd x, if given
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idx = idx & (Data.(groupVar) == group);
+                            end
 
-                                % 2nd x, if given
-                                if nGroups > 1
-                                    group = groups(iGroup);
-                                    idx = idx & (Data.(groupVar) == group);
-                                end
+                            % 3rd x, if given
+                            if nCols > 1
+                                col = cols(iCol);
+                                idx = idx & (Data.(colVar) == col);
+                            end
 
-                                % 3rd x, if given
-                                if nCols > 1
-                                    col = cols(iCol);
-                                    idx = idx & (Data.(colVar) == col);
-                                end
+                            % 4th x, if given
+                            if nRows > 1
+                                row = rows(iRow);
+                                idx = idx & (Data.(rowVar) == row);
+                            end
 
-                                % 4th x, if given
-                                if nRows > 1
-                                    row = rows(iRow);
-                                    idx = idx & (Data.(rowVar) == row);
-                                end
+                            % pairwise comparison
+                            for iPair = 1:nPairs
+                                pair = pairs(iPair, :);
 
                                 % calc contrasts
                                 L1 = (Data.(memberVar) == pair(1) & idx);
@@ -1601,51 +1605,62 @@ for iLevel = 1:nPosthocLevels
                                             main_eff(iPair, iRow, iCol, iVar) =  r;
                                     end
                                 end
+                            end
 
-                            case 'emm' % perform post-hoc analysis using emmeans
+                        case 'emm' % perform post-hoc analysis using emmeans
 
-                                if nY > 1 && separateMulti
-                                    mdl = mdls{iVar};
-                                end
+                            if nY > 1 && separateMulti
+                                mdl = mdls{iVar};
+                            end
 
-                                % Calc estimated marginal means of all
-                                % factors. Continuous variables cannot be
-                                % included, because then emmeans gives an
-                                % error
-                                emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
+                            % Calc estimated marginal means of all
+                            % factors. Continuous variables cannot be
+                            % included, because then emmeans gives an
+                            % error
+                            emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
 
-                                if nY > 1 && ~separateMulti
-                                    idxDep = (emm.table.(yVar) == myVar);
-                                else
-                                    idxDep = true(size(emm.table, 1), 1);
-                                end
+                            if nY > 1 && ~separateMulti
+                                idxDep = (emm.table.(yVar) == myVar);
+                            else
+                                idxDep = true(size(emm.table, 1), 1);
+                            end
 
-                                % init idx
-                                idx = idxDep;
+                            % init idx
+                            idx = idxDep;
 
-                                % 2nd x, if given
-                                if nGroups > 1
-                                    group = groups(iGroup);
-                                    idx = idx & (emm.table.(groupVar) == group);
-                                end
+                            % 2nd x, if given
+                            if nGroups > 1
+                                group = groups(iGroup);
+                                idx = idx & (emm.table.(groupVar) == group);
+                            end
 
-                                % 3rd x, if given
-                                if nCols > 1
-                                    col = cols(iCol);
-                                    idx = idx & (emm.table.(colVar) == col);
-                                end
+                            % 3rd x, if given
+                            if nCols > 1
+                                col = cols(iCol);
+                                idx = idx & (emm.table.(colVar) == col);
+                            end
 
-                                % 4th x, if given
-                                if nRows > 1
-                                    row = rows(iRow);
-                                    idx = idx & (emm.table.(rowVar) == row);
-                                end
+                            % 4th x, if given
+                            if nRows > 1
+                                row = rows(iRow);
+                                idx = idx & (emm.table.(rowVar) == row);
+                            end
+
+                            % get estimated values
+                            for iMember = 1:nMembers
+                                myIdx = idx & (emm.table.(memberVar) == members(iMember));
+                                est_values(iRow, iCol, iGroup, iMember, iVar) = mean(emm.table.Estimated_Marginal_Mean(myIdx));
+                            end
+
+                            % pairwise comparison
+                            for iPair = 1:nPairs
+                                pair = pairs(iPair, :);
 
                                 % calc contrasts
                                 L1 = idx & (emm.table.(memberVar) == pair(1));
                                 L2 = idx & (emm.table.(memberVar) == pair(2));
                                 L = (L1 - L2)';
-                                contrasts = kbcontrasts_wald(mdl, emm, L);                                
+                                contrasts = kbcontrasts_wald(mdl, emm, L);
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
                                 bar_test(iGroup, iPair, iRow, iCol, iVar) = contrasts.F;
                                 bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
@@ -1664,7 +1679,7 @@ for iLevel = 1:nPosthocLevels
                                     main_aux(iPair, iRow, iCol, iVar) = contrasts.DF2;
                                     main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 end
-                        end
+                            end
                     end
                 end
             end
@@ -1757,7 +1772,7 @@ for iLevel = 1:nPosthocLevels
         if isPlot
 
             figWidth = nCols * panelWidth;
-            figHeight = nRows * panelHeight + 50;            
+            figHeight = nRows * panelHeight + 50;
             if nPosthocLevels > 1
                 figName = sprintf('DataPlots_%d', iLevel);
             else
@@ -1841,7 +1856,7 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines);
+                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, squeeze(est_values(iRow, iCol, :, :, iVar)));
                 end
             end
 
