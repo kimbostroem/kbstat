@@ -1466,6 +1466,8 @@ for iLevel = 1:nPosthocLevels
                             idx = idx & Data.(rowVar) == row;
                         end
 
+                        % bar_values(iRow, iCol, iGroup, iMember, iVar) = mdl.table.Estimated_Marginal_Mean;
+
                         bar_data = Data(idx, :);
                         values = bar_data.(depVar);
                         if nGroups > 1
@@ -1643,7 +1645,7 @@ for iLevel = 1:nPosthocLevels
                                 L1 = idx & (emm.table.(memberVar) == pair(1));
                                 L2 = idx & (emm.table.(memberVar) == pair(2));
                                 L = (L1 - L2)';
-                                contrasts = kbcontrasts_wald(mdl, emm, L);
+                                contrasts = kbcontrasts_wald(mdl, emm, L);                                
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
                                 bar_test(iGroup, iPair, iRow, iCol, iVar) = contrasts.F;
                                 bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
@@ -1839,7 +1841,6 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    [ypred,ypredCI,DF] = predict(mdls{iVar});
                     plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines);
                 end
             end
