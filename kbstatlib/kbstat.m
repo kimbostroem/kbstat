@@ -1370,12 +1370,7 @@ for iLevel = 1:nPosthocLevels
     % define posthoc comparison pairs
     pairs = nchoosek(members, 2);
     nPairs = size(pairs, 1);
-
-    % estimated values
-    est_values      = nan(nRows, nCols, nGroups, nMembers, nY);
-    % est_errorTop    = nan(nRows, nCols, nGroups, nMembers, nY);
-    % est_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
-
+    
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
     bar_values      = nan(nRows, nCols, nGroups, nMembers, nY);
     bar_errorTop    = nan(nRows, nCols, nGroups, nMembers, nY);
@@ -1646,12 +1641,6 @@ for iLevel = 1:nPosthocLevels
                                 idx = idx & (emm.table.(rowVar) == row);
                             end
 
-                            % get estimated values
-                            for iMember = 1:nMembers
-                                myIdx = idx & (emm.table.(memberVar) == members(iMember));
-                                est_values(iRow, iCol, iGroup, iMember, iVar) = mean(emm.table.Estimated_Marginal_Mean(myIdx));
-                            end
-
                             % pairwise comparison
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
@@ -1856,7 +1845,7 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, squeeze(est_values(iRow, iCol, :, :, iVar)));
+                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines);
                 end
             end
 
