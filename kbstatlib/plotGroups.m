@@ -1,4 +1,8 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize)
+function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, plotLines)
+
+if nargin < 13
+    plotLines = false;
+end
 
 if nargin < 12 || isnan(markerSize)
     markerSize = 24;
@@ -44,21 +48,32 @@ for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
     switch lower(plotStyle)
         case 'violin'
+            lineVals = median(squeeze(values(iGroup,:,:)), 2, 'omitnan');
             violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
         case 'boxplot'
+            lineVals = median(squeeze(values(iGroup,:,:)), 2, 'omitnan');
             boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
         case 'bar'
             barValues = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
             errorBottom = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
             errorTop = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
             colors = lines(nMembers);
+            lineVals = barValues;
             hbar = bar(1:nMembers, barValues, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
                 hbar.CData(iMember,:) = colors(iMember,:);
                 hold on
                 errorbar(iMember, barValues(iMember), barValues(iMember)-errorBottom(iMember), errorTop(iMember)-barValues(iMember), 'LineStyle', 'none', 'Color', 0.6*[1 1 1], 'LineWidth', 2);
             end
-    end   
+    end
+
+    % plot horizontal lines at values
+    if plotLines
+        colors = lines;
+        for iMember = 1:nMembers
+            yline(lineVals(iMember), '-', 'Color', colors(iMember,:));
+        end
+    end
 
     if ~isempty(groupName)
         title(groups(iGroup))
@@ -71,6 +86,7 @@ for iGroup = 1:nGroups
             sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iGroup, iPair));
         end
     end
+
     if iGroup == 1
         ylabel(ylabelStr, 'interpreter', 'none'); 
     end    

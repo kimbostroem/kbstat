@@ -308,6 +308,10 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = [].
 %                       Example: options.xOrder = '[1 3 2]'
 %
+%       plotLines      Flag if the data plots should display the median as 
+%                       a horizontal line in the color of the corresponding 
+%                       dataset.
+%
 % OUTPUT
 %       mdl             (Generalized linear mixed-effects model) Result
 %                       from linear model fit
@@ -629,6 +633,13 @@ if isfield(options, 'xOrder') && ~isempty(options.xOrder)
 else
     xOrder = [];
 end
+
+if isfield(options, 'plotLines') && ~isempty(options.plotLines)
+    plotLines = getValue(options.plotLines);
+else
+    plotLines = false;
+end
+
 
 %% Apply constraint, if given
 
@@ -1828,7 +1839,8 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize);
+                    [ypred,ypredCI,DF] = predict(mdls{iVar});
+                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines);
                 end
             end
 

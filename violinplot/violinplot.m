@@ -63,7 +63,7 @@ function violins = violinplot(data, cats, varargin)
 %                    Defaults to false
 %     'ShowBox'      Whether to show the box.
 %                    Defaults to true
-%     'ShowMedian'   Whether to show the median indicator.
+%     'plotLines'   Whether to show the median indicator.
 %                    Defaults to true
 %     'ShowWhiskers' Whether to show the whiskers
 %                    Defaults to true
