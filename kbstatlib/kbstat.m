@@ -296,11 +296,10 @@ function mdl = kbstat(options)
 %
 %       showVarNames    Flag how variables and levels are displayed in data
 %                       plots.
-%                       0 = dispaly only variable levels
-%                       1 = display variable names and levels
-%                       2 = display capitalized variable names and levels
-%                       3 = do not display variable names but display
-%                           capitalized levels.
+%                       0, 'levels'             = display variable levels
+%                       1, 'names_and_levels'   = display variable names and levels
+%                       2, 'Levels'             = display capitalized levels
+%                       3, 'Names_and_Levels'   = display capitalized names and levels.
 %                       OPTIONAL, default = 1.
 %
 %       xOrder          Ordering of the items on the x axis in data plots.
@@ -1767,7 +1766,7 @@ for iLevel = 1:nPosthocLevels
 
             % prepare to display variable names and levels
             switch showVarNames
-                case {2, 3} % capitalize variable names and levels
+                case {2, 3, 'Levels', 'Names_and_Levels'} % capitalize variable names and levels
                     displayMemberVar = string(capitalize(memberVar));
                     displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
                     displayGroupVar = string(capitalize(groupVar));
@@ -1808,7 +1807,7 @@ for iLevel = 1:nPosthocLevels
                     end
 
                     switch showVarNames
-                        case {1, 2} % display variable names and levels
+                        case {1, 3, 'names_and_levels', 'Names_and_Levels'} % display variable names and levels
                             if length(cols) > 1 && length(rows) > 1
                                 panelTitle = sprintf('%s = %s, %s = %s', displayRowVar, displayRows(iRow), displayColVar, displayCols(iCol));
                             elseif length(rows) > 1
@@ -1818,7 +1817,7 @@ for iLevel = 1:nPosthocLevels
                             else
                                 panelTitle = '';
                             end
-                        otherwise % only display variable levels
+                        otherwise % display variable levels
                             if length(cols) > 1 && length(rows) > 1
                                 panelTitle = sprintf('%s, %s', displayRows(iRow), displayCols(iCol));
                             elseif length(rows) > 1

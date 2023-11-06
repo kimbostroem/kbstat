@@ -16,7 +16,7 @@ if nargin < 9
 end
 
 switch showVarNames
-    case {1, 2} % display variable names and levels
+    case {1, 3, 'names_and_levels', 'Names_and_Levels'} % display variable names and levels
     members = strcat(memberName, {' = '}, cellstr(members));
     groups = strcat(groupName, {' = '}, cellstr(groups));
 end
@@ -72,7 +72,7 @@ for iGroup = 1:nGroups
         end
     end
     if iGroup == 1
-        ylabel(ylabelStr); 
+        ylabel(ylabelStr, 'interpreter', 'none'); 
     end    
     linkaxes(hnt);
     if iGroup > 1
@@ -82,7 +82,7 @@ for iGroup = 1:nGroups
 end
 
 if ~isempty(plotTitle)
-    title(htl, plotTitle)
+    title(htl, plotTitle, 'interpreter', 'none')
 end
 
 ylimits = ylim;
