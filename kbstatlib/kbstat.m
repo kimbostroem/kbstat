@@ -81,20 +81,22 @@ function mdl = kbstat(options)
 %                       are considered between-subject, i.e. they vary only
 %                       between, not within, subjects. "within" can be a
 %                       subset of "x", or else its members are added to
-%                       "x". Example:
-%                           options.id = 'subject'
-%                           options.x = 'time, age, sex'
-%                           options.within = 'dose'.
+%                       "x". 
+%                       Example:
+%                       options.id = 'subject'
+%                       options.x = 'time, age, sex'
+%                       options.within = 'dose'.
 %                       OPTIONAL, default = ''.
 %
 %       interact        Comma-separated list of variables whose interaction
 %                       with each other is to be analyzed. Can be a subset
 %                       of "x", or else its members are added to "x". When
 %                       not set, all members of x are assumed to mutually
-%                       interact. Example:
-%                           options.id = 'subject'
-%                           options.x = 'time, dose'
-%                           options.interact = 'dose, age'.
+%                       interact. 
+%                       Example:
+%                       options.id = 'subject'
+%                       options.x = 'time, dose'
+%                       options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
 %       coVar           Comma-separated list of (continuous or categorical)
@@ -127,11 +129,11 @@ function mdl = kbstat(options)
 %
 %       fitMethod       Fit method used for the GLM fit.%
 %                       Possible values:
-%                           'none'                  Skip linear model fit
-%                           'MPL'                   Maximum pseudo likelihood
-%                           'REMPL'                 Restricted maximum pseudo likelihood
-%                           'Laplace'               Maximum likelihood using Laplace approximation
-%                           'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
+%                       'none'                  Skip linear model fit
+%                       'MPL'                   Maximum pseudo likelihood
+%                       'REMPL'                 Restricted maximum pseudo likelihood
+%                       'Laplace'               Maximum likelihood using Laplace approximation
+%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
 %                       OPTIONAL, default = 'REMPL'.
 %
 %       distribution    Distribution used for the GLM fit.
@@ -154,15 +156,15 @@ function mdl = kbstat(options)
 %                       are equal to this component, or it must have the
 %                       same number of components as y.
 %                       Possible values:
-%                           'identity'	    g(mu) = mu.             Default for Normal distribution
-%                           'log'	        g(mu) = log(mu).        Default for Poisson
-%                           'logit'	        g(mu) = log(mu/(1-mu))  Default for Binomial distribution
-%                           'loglog'	    g(mu) = log(-log(mu))
-%                           'probit'	    g(mu) = norminv(mu)
-%                           'comploglog'	g(mu) = log(-log(1-mu))
-%                           'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma
-%                           Scalar p	    g(mu) = mu.^p           Default for InverseGaussian (p= -2)
-%                           'auto'          depends on chosen distribution
+%                       'identity'	    g(mu) = mu.             Default for Normal distribution
+%                       'log'	        g(mu) = log(mu).        Default for Poisson
+%                       'logit'	        g(mu) = log(mu/(1-mu))  Default for Binomial distribution
+%                       'loglog'	    g(mu) = log(-log(mu))
+%                       'probit'	    g(mu) = norminv(mu)
+%                       'comploglog'	g(mu) = log(-log(1-mu))
+%                       'reciprocal'	g(mu) = mu.^(-1)        Default for Gamma
+%                       Scalar p	    g(mu) = mu.^p           Default for InverseGaussian (p= -2)
+%                       'auto'          depends on chosen distribution
 %                       OPTIONAL, default = 'auto'.
 %
 %       posthocMethod   Method for the posthoc pairwise comparison.
@@ -172,10 +174,20 @@ function mdl = kbstat(options)
 %                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
 %                       'auto'      Perform posthoc analysis using
-%                           'emm'   if univariate or multi-valued y with separateMulti = true
-%                           'ttest' if distribution = 'normal'
-%                           'utest' otherwise
+%                                   'emm' if univariate or multi-valued y
+%                                   with separateMulti=true, 'ttest' if
+%                                   distribution='normal', and 'utest'
+%                                   otherwise.
 %                       OPTIONAL, default = 'auto'.
+%
+%       posthocCorrection   Method to correct the multiple comparisons
+%                       Possible values:
+%                       'holm'      Holm-Bonferroni correction
+%                       'bonf',     Bonferroni resp. Sidak correction.
+%                       'sidak'     Sidak is (approx.) equal to
+%                                   Bonferroni for small p and cares
+%                                   for p not exceeding 1. 
+%                       OPTIONAL, default = 'holm'.
 %
 %       posthocMainEffects  Flag if also the posthoc main effects should be
 %                       calculated, i.e. the comparison between one
@@ -509,6 +521,13 @@ if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
     posthocMethod = 'auto';
+end
+
+% posthoc correction
+if isfield(options, 'posthocCorrection') && ~isempty(options.posthocCorrection)
+    posthocCorrection = options.posthocCorrection;
+else
+    posthocCorrection = 'holm';
 end
 
 % posthoc main effects
@@ -1702,7 +1721,13 @@ for iLevel = 1:nPosthocLevels
         sizeOrig = size(bar_p); % store original array shape
         bar_p = bar_p(:); % make column vector
         bar_pCorr = bar_pCorr(:); % make column vector
-        [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+        switch posthocCorrection
+            case 'holm'
+                [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+            case {'bonf', 'sidak'}
+                nTests = sum(idx);
+                bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nTests);
+        end        
         bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
         bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
         bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
