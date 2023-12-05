@@ -1237,8 +1237,6 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'probability', 'ResidualType', 'Pearson');
-    [isNotNormal, pNormal] = lillietest(mdlResiduals);
-    text(gca, 0.05,0.95,sprintf('Normality = %d (p = %.3f)', ~isNotNormal, pNormal), 'Units', 'normalized');
 
     % symmetry
     iPanel = iPanel+1;
