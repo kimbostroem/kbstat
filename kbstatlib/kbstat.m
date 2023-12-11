@@ -1531,7 +1531,7 @@ for iLevel = 1:nPosthocLevels
                     % get post-hoc p-values
                     switch posthocMethod
 
-                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests
+                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests resp. u-tests
 
                             if nY > 1
                                 idxDep = (Data.(yVar) == myVar);
