@@ -171,14 +171,15 @@ function mdl = kbstat(options)
 %                       Possible values:
 %                       'none'      Do not perform posthoc analysis
 %                       'ttest'     t-test with Holm-Bonferroni correction
-%                       'utest'     Mann-Whitney u-Test (ranksum test) with Holm-Bonferroni correction
+%                       'utest'     Mann-Whitney u-Test (Wilcoxon ranksum test) 
+%                                   with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
 %                       'auto'      Perform posthoc analysis using
 %                                   'emm' if univariate or multi-valued y
 %                                   with separateMulti=true, 'ttest' if
 %                                   distribution='normal', and 'utest'
 %                                   otherwise.
-%                       OPTIONAL, default = 'auto'.
+%                       OPTIONAL, default = 'utest'.
 %
 %       posthocCorrection   Method to correct the multiple comparisons
 %                       Possible values:
@@ -222,11 +223,11 @@ function mdl = kbstat(options)
 %                                   scaled median absolute deviations (MAD)
 %                       'mean'      Remove values outside 3 standard
 %                                   deviations from the mean.
-%                       OPTIONAL, default = 'quartiles'.
+%                       OPTIONAL, default = 'none'.
 %
 %       preOutlierMethod   Method to remove pre-fit outliers from the data.
 %                       Possible values: see outlierMethod.
-%                       OPTIONAL, default = 'quartiles'.
+%                       OPTIONAL, default = 'none'.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -244,12 +245,13 @@ function mdl = kbstat(options)
 %                       the case of categorical variables, or a numeric
 %                       value. In the case of a category, the value must be put in
 %						double quotes, as in 'bla = "bli"'.
-%                       OPTIONAL, default = unset.
+%                       OPTIONAL, default = ''.
 %
 %       transform       Choose how to transform the dependent variable.
 %                       The linear model is fit on the transformed data,
 %                       but the data are plotted using the original data.
-%                       OPTIONAL, default = ''. Possible values
+%                       OPTIONAL, default = ''. 
+%                       Possible values:
 %                       'mean'      Divide by mean
 %                       'std'       Divide by standard deviation
 %                       'Z'         Z-transform to zero-centered
@@ -279,6 +281,7 @@ function mdl = kbstat(options)
 %                       output folder defaults to the local folder.
 %
 %       isPlot          Plot data as grouped bars with significance brackets
+%
 %       errorBars       What the error bars indicate. This also defines
 %                       what the bar height indicates
 %                       'std'   Standard deviation. Bar height is mean
@@ -287,6 +290,7 @@ function mdl = kbstat(options)
 %                               mean
 %                       'q25'   25% and 75% quantiles. Bar height is the
 %                               median, which is the 50% quantile
+%
 %       levelOrder      The order in which the levels are displayed in the
 %                       plots.
 %                       'sorted'    sorted alphanumerically (default)
@@ -520,7 +524,7 @@ end
 if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
-    posthocMethod = 'auto';
+    posthocMethod = 'utest';
 end
 
 % posthoc correction
@@ -603,14 +607,14 @@ end
 if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
     outlierMethod = options.outlierMethod;
 else
-    outlierMethod = 'quartiles';
+    outlierMethod = 'none';
 end
 
 % flag if pre-fit outliers should be removed
 if isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
     preOutlierMethod = options.preOutlierMethod;
 else
-    preOutlierMethod = 'quartiles';
+    preOutlierMethod = 'none';
 end
 
 % output folder
