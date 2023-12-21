@@ -183,6 +183,7 @@ function mdl = kbstat(options)
 %
 %       posthocCorrection   Method to correct the multiple comparisons
 %                       Possible values:
+%                       'none'      Do not correct
 %                       'holm'      Holm-Bonferroni correction
 %                       'bonf',     Bonferroni resp. Sidak correction.
 %                       'sidak'     Sidak is (approx.) equal to
@@ -1724,6 +1725,8 @@ for iLevel = 1:nPosthocLevels
         bar_p = bar_p(:); % make column vector
         bar_pCorr = bar_pCorr(:); % make column vector
         switch posthocCorrection
+            case 'none'
+                % do nothing
             case 'holm'
                 [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
             case {'bonf', 'sidak'}
