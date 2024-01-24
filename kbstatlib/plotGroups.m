@@ -76,7 +76,7 @@ for iGroup = 1:nGroups
     end
 
     if ~isempty(groupName)
-        title(groups(iGroup))
+        title(groups(iGroup), 'interpreter', 'none');
     end
     xticklabels(members);
 
