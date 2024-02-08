@@ -752,22 +752,6 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     end
 end
 
-%% Save options to file
-
-% fpath = fullfile(outDir, 'options.mat');
-% save(fpath, 'options');
-fpath = fullfile(outDir, 'Options.txt');
-fidOptions = fopen(fpath, 'w+');
-fields = fieldnames(options);
-fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
-fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
-paramFields = sort(fields); % sort fields alphabetically
-for iField = 1:length(paramFields)
-    field = paramFields{iField};
-    fprintf(fidOptions, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
-end
-fclose(fidOptions);
-
 %% Create Data table
 
 % init Data table
@@ -1034,6 +1018,27 @@ mdls = cell(1, nFits);
 anovas = cell(1, nFits);
 Datasets = cell(1, nFits);
 for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st iteration
+    % dependent variable
+    myVar = y{iFit};
+
+    % create output folder
+    outSubDir = sprintf('%s/%s', outDir, myVar);
+    if ~isfolder(outSubDir)
+        mkdir(outSubDir);
+    end
+
+    % save options
+    fpath = fullfile(outSubDir, 'Options.txt');
+    fidOptions = fopen(fpath, 'w+');
+    fields = fieldnames(options);
+    fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
+    fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
+    paramFields = sort(fields); % sort fields alphabetically
+    for iField = 1:length(paramFields)
+        field = paramFields{iField};
+        fprintf(fidOptions, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+    end
+    fclose(fidOptions);
 
     if length(distribution) >= nFits
         myDistribution = distribution{iFit};
@@ -1047,13 +1052,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         myLink = link{1};
     end
 
-    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
-        myVar = y{iFit};
+    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable        
         idxDep = (Data.(yVar) == myVar);
         DataOrig = Data;
-        Data = Data(idxDep, :);
-        outDirOrig = outDir;
-        outDir = sprintf('%s/%s', outDir, myVar);
+        Data = Data(idxDep, :);        
         fprintf('Performing GLMM analysis for %s...\n', myVar);
     elseif nY > 1
         fprintf('Performing multivariate GLMM analysis...\n');
@@ -1061,13 +1063,8 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         fprintf('Performing GLMM analysis for %s...\n', depVar);
     end
 
-    % create output folder, if not existing
-    if ~isfolder(outDir)
-        mkdir(outDir);
-    end
-
     % open summary file for writing
-    fidSummary = fopen(fullfile(outDir, 'Summary.txt'), 'w+');
+    fidSummary = fopen(fullfile(outSubDir, 'Summary.txt'), 'w+');
 
     productTerm = strjoin(interact, '*');
     if nY > 1 && ~separateMulti
@@ -1194,7 +1191,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     fclose(fidSummary);
 
     % report outlier removal to file
-    fidOutliers = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
+    fidOutliers = fopen(fullfile(outSubDir, 'Outliers.txt'), 'w+');
     msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
     fprintf(msg);
     fprintf(fidOutliers, msg);
@@ -1300,7 +1297,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     set(fig, 'PaperPositionMode', 'auto');
     set(fig, 'PaperUnits', 'points');
     set(fig, 'PaperSize', [figWidth figHeight]);
-    print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+    print(fig, fullfile(outSubDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
 
     % close figure
     close(fig);
@@ -1318,7 +1315,6 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     if nY > 1 && separateMulti
         Data = DataOrig; % set Data to original Data minus post-fit outliers
         formula = formulaOrig;
-        outDir = outDirOrig;
     end
 end
 
@@ -1335,11 +1331,13 @@ end
 %% Create ANOVA table
 
 for iFit = 1:nFits
+    % dependent variable
+    myVar = y{iFit};
 
-    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
-        myVar = y{iFit};
-        outDirOrig = outDir;
-        outDir = sprintf('%s/%s', outDir, myVar);
+    % create output folder
+    outSubDir = sprintf('%s/%s', outDir, myVar);
+    if ~isfolder(outSubDir)
+        mkdir(outSubDir);
     end
 
     % retrieve GLM fit
@@ -1361,23 +1359,18 @@ for iFit = 1:nFits
     anovaTable.significance = string(sigprint(anovaTable.p));
 
     % save Data
-    saveTable(Datasets{iFit}, 'Data', {'csv'}, outDir);
+    saveTable(Datasets{iFit}, 'Data', {'csv'}, outSubDir);
 
     % save raw Data table
-    saveTable(DataRaw, 'DataRaw', {'csv'}, outDir);
+    saveTable(DataRaw, 'DataRaw', {'csv'}, outSubDir);
 
     % save ANOVA table
-    saveTable(anovaTable, 'Anova', {'xlsx'}, outDir);
+    saveTable(anovaTable, 'Anova', {'xlsx'}, outSubDir);
     disp(anovaTable) % display table
-
-    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
-        outDir = outDirOrig;
-    end
 end
 
 %% Plot data and make posthoc comparisons
 
-outDirOrig = outDir;
 allVars = {memberVar, groupVar, colVar, rowVar};
 allVarLevels = {members, groups, cols, rows};
 nPosthocLevels = min(posthocLevel, nFactors);
@@ -1442,7 +1435,14 @@ for iLevel = 1:nPosthocLevels
     violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
     for iVar = 1:nY
+        % dependent variable
         myVar = y{iVar};
+
+        % create output folder
+        outSubDir = sprintf('%s/%s', outDir, myVar);
+        if ~isfolder(outSubDir)
+            mkdir(outSubDir);
+        end
 
         % posthoc method
         if strcmp(posthocMethod, 'auto')
@@ -1709,21 +1709,13 @@ for iLevel = 1:nPosthocLevels
 
         %% Save descriptive statistics
 
-        if nY > 1
-            outDir = sprintf('%s/%s', outDirOrig, myVar);
-            if ~isfolder(outDir)
-                mkdir(outDir);
-            end
-        end
-
         % dispaly and save statistics (only necessary for 1st posthoc level)
         if iLevel == 1
             % display statistics
             disp(Stats);
             fileName = 'Statistics';
-            saveTable(Stats, fileName, {'xlsx'}, outDir);
+            saveTable(Stats, fileName, {'xlsx'}, outSubDir);
         end
-        outDir = outDirOrig;
     end
 
     %% Statistical correction of posthoc comparisons
@@ -1767,11 +1759,15 @@ for iLevel = 1:nPosthocLevels
 
     %% Loop over dependent variables
 
-    outDirOrig = outDir;
     for iVar = 1:nY
-
         % dependent variable
         myVar = y{iVar};
+
+        % create output folder
+        outSubDir = sprintf('%s/%s', outDir, myVar);
+        if ~isfolder(outSubDir)
+            mkdir(outSubDir);
+        end
 
         % yLabel
         if length(yLabel) == nY
@@ -1785,12 +1781,6 @@ for iLevel = 1:nPosthocLevels
             myUnits = yUnits{iVar};
         elseif length(yUnits) == 1
             myUnits = yUnits{1};
-        end
-
-
-        % set output folder
-        if nY > 1 && separateMulti
-            outDir = sprintf('%s/%s', outDirOrig, myVar);
         end
 
         % figure size
@@ -1907,21 +1897,12 @@ for iLevel = 1:nPosthocLevels
             end
 
             % save figure
-            if nY > 1
-                outDir = sprintf('%s/%s', outDirOrig, myVar);
-                if ~isfolder(outDir)
-                    mkdir(outDir);
-                end
-            end
             set(fig, 'PaperPositionMode', 'auto');
             set(fig, 'PaperUnits', 'points');
             set(fig, 'PaperSize', [figWidth figHeight]);
-            print(fig, fullfile(outDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-            print(fig, fullfile(outDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
-            saveas(fig, fullfile(outDir, sprintf('%s.fig', figName)));
-            outDir = outDirOrig;
-
-            % close figure
+            print(fig, fullfile(outSubDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
+            print(fig, fullfile(outSubDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
+            saveas(fig, fullfile(outSubDir, sprintf('%s.fig', figName)));
             close(fig);
         end
 
@@ -2016,23 +1997,14 @@ for iLevel = 1:nPosthocLevels
         disp(posthocTable);
 
         % save table
-        if nY > 1
-            outDir = sprintf('%s/%s', outDirOrig, myVar);
-            if ~isfolder(outDir)
-                mkdir(outDir);
-            end
-        end
         if nPosthocLevels > 1
             fileName = sprintf('Posthoc_%d', iLevel);
         else
             fileName = 'Posthoc';
         end
-        saveTable(posthocTable, fileName, {'xlsx'}, outDir);
-        outDir = outDirOrig;
+        saveTable(posthocTable, fileName, {'xlsx'}, outSubDir);
     end
-
 end
-
 end
 
 %% Helper functions %%%%%%%%%%%%%%%%%%%%%%
