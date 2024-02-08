@@ -919,8 +919,6 @@ end
 
 %% Remove pre-fit outliers
 
-% open outlier file for writing
-fidOutliers = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
 nPreOutliers = 0;
 nPreObs = size(Data, 1);
 
@@ -1022,14 +1020,6 @@ if ~strcmp(preOutlierMethod, 'none')
         Data = Data(~idxOut, :);
     end
 end
-
-% report to file
-msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
-fprintf(msg);
-fprintf(fidOutliers, msg);
-
-% close outlier file
-fclose(fidOutliers);
 
 %% Fit linear model and perform ANOVA
 
@@ -1148,21 +1138,22 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
 
     % remove post-fit outliers and refit model
-    if ~strcmp(postOutlierMethod, 'none')
-        mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        mdlOutliers = isoutlier(mdlResiduals, postOutlierMethod);
-        nOutliers = sum(mdlOutliers);
-        nObs = length(mdlResiduals);
-        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, postOutlierMethod);
+    nPostOutliers = 0;
+    mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
+    nPostObs = length(mdlResiduals);
+    if ~strcmp(postOutlierMethod, 'none')        
+        postOutliers = isoutlier(mdlResiduals, postOutlierMethod);
+        nPostOutliers = sum(postOutliers);        
+        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
         fprintf(msg);
         fprintf(fidSummary, msg);
-        if nOutliers > 0
+        if nPostOutliers > 0
             % remove outliers from Data
-            Data(mdlOutliers, :) = [];
+            Data(postOutliers, :) = [];
             % remove outliers from DataOrig
             if nY > 1 && separateMulti
                 idxTmp = false(size(DataOrig, 1), 1);
-                idxTmp(idxDep) =  mdlOutliers;
+                idxTmp(idxDep) =  postOutliers;
                 DataOrig(idxTmp, :) = [];
             end
             msg = sprintf('Re-fitting model...\n');
@@ -1201,6 +1192,16 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         fprintf(fidSummary, 'Data have been transformed using f(x) = %s\n', transform);
     end
     fclose(fidSummary);
+
+    % report outlier removal to file
+    fidOutliers = fopen(fullfile(outDir, 'Outliers.txt'), 'w+');
+    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
+    fprintf(msg);
+    fprintf(fidOutliers, msg);
+    msg = sprintf('Removed %d post-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
+    fprintf(msg);
+    fprintf(fidOutliers, msg);
+    fclose(fidOutliers);
 
     %% Plot diagnostics
 
