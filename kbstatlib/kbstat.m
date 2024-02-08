@@ -215,7 +215,7 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       outlierMethod   Method to remove post-fit outliers from the data.
+%       preOutlierMethod   Method to remove pre-fit outliers from the data.
 %                       Possible values:
 %                       'none'      Do not remove outliers
 %                       'quartiles' Remove values outside 1.5 times the
@@ -226,9 +226,13 @@ function mdl = kbstat(options)
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'none'.
 %
-%       preOutlierMethod   Method to remove pre-fit outliers from the data.
-%                       Possible values: see outlierMethod.
+%       postOutlierMethod  Method to remove post-fit outliers, i.e., 
+%                       outliers in the residuals.
+%                       Possible values: see preOutlierMethod
 %                       OPTIONAL, default = 'none'.
+%
+%       outlierMethod   Set both preOutlierMethod and postOutlierMethod to 
+%                       this value.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -604,18 +608,24 @@ else
     rescale = true;
 end
 
-% flag if post-fit outliers should be removed
-if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
-    outlierMethod = options.outlierMethod;
-else
-    outlierMethod = 'none';
-end
-
 % flag if pre-fit outliers should be removed
 if isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
     preOutlierMethod = options.preOutlierMethod;
 else
     preOutlierMethod = 'none';
+end
+
+% flag if post-fit outliers should be removed
+if isfield(options, 'postOutlierMethod') && ~isempty(options.postOutlierMethod)
+    postOutlierMethod = options.postOutlierMethod;
+else
+    postOutlierMethod = 'none';
+end
+
+% interpret "outlierMethod" as both pre and post outlier method
+if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
+    preOutlierMethod = options.outlierMethod;
+    postOutlierMethod = options.outlierMethod;
 end
 
 % output folder
@@ -1138,12 +1148,12 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
 
     % remove post-fit outliers and refit model
-    if ~strcmp(outlierMethod, 'none')
+    if ~strcmp(postOutlierMethod, 'none')
         mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
-        mdlOutliers = isoutlier(mdlResiduals, outlierMethod);
+        mdlOutliers = isoutlier(mdlResiduals, postOutlierMethod);
         nOutliers = sum(mdlOutliers);
         nObs = length(mdlResiduals);
-        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, outlierMethod);
+        msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nOutliers, nObs, nOutliers/nObs*100, postOutlierMethod);
         fprintf(msg);
         fprintf(fidSummary, msg);
         if nOutliers > 0
