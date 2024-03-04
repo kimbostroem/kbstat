@@ -13,7 +13,8 @@ function out = effprint(effects, effectType)
 %                   'eta2' eta squared (for one-way ANOVA) or partial 
 %                           eta squared (for multi-way ANOVA)
 %                   'd'     Cohen's d
-%                   'r'     Pearson's correlation coefficient r or rho
+%                   'r'     Pearson's correlation coefficient r
+%                   'rho'   Spearman's correlation coefficient rho
 %                   'R2'    Coefficient of determination, the square of 
 %                           the Pearson correlation r.
 %                   'f2'    Amount of bias in an F-test (ANOVA or multiple 
@@ -31,6 +32,8 @@ switch effectType
     case 'd'
         p = [.2 .5 .8];
     case 'r'
+        p = [.1 .3 .5];
+    case 'rho'
         p = [.1 .3 .5];
     case 'R2'
         p = [.1 .3 .5].^2;
