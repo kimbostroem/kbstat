@@ -1688,7 +1688,9 @@ for iLevel = 1:nPosthocLevels
                                 bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-
+                                % comparisonSign = sign(contrasts.table.Estimated_Marginal_Mean(L2) - contrasts.table.Estimated_Marginal_Mean(L1));
+                                % bar_eff(iGroup, iPair, iRow, iCol, iVar) = comparisonSign * bar_eff(iGroup, iPair, iRow, iCol, iVar);
+                                
                                 % calc main contrasts
                                 if posthocMainEffects
                                     L1 = idxDep & (emm.table.(memberVar) == pair(1));
