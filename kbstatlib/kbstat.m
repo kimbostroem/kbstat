@@ -1192,10 +1192,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
 
     % report outlier removal to file
     fidOutliers = fopen(fullfile(outSubDir, 'Outliers.txt'), 'w+');
-    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
+    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
     fprintf(msg);
     fprintf(fidOutliers, msg);
-    msg = sprintf('Removed %d post-fit outlier(s) from %d observations (%.1f %%%%) using ''%s''\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
+    msg = sprintf('Removed %d post-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
     fprintf(msg);
     fprintf(fidOutliers, msg);
     fclose(fidOutliers);
