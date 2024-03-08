@@ -293,8 +293,9 @@ function mdl = kbstat(options)
 %                       'se'    Standard error. Bar height is the mean
 %                       'ci95'  95% confidence interval. Bar height is the
 %                               mean
-%                       'q25'   25% and 75% quantiles. Bar height is the
-%                               median, which is the 50% quantile
+%                       'iqr'   interquartile range, i.e. the .25 and .75 
+%                               quantiles. Bar height is the median, which 
+%                               is the .5 quantile
 %
 %       levelOrder      The order in which the levels are displayed in the
 %                       plots.
@@ -598,7 +599,7 @@ end
 if isfield(options, 'errorBars') && ~isempty(options.errorBars)
     errorBars = lower(options.errorBars);
 else
-    errorBars = 'std';
+    errorBars = 'iqr';
 end
 
 % flag to rescale all panel plots to the same y-scale
@@ -1398,9 +1399,6 @@ for iLevel = 1:nPosthocLevels
     nPairs = size(pairs, 1);
     
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
-    bar_values      = nan(nRows, nCols, nGroups, nMembers, nY);
-    bar_errorTop    = nan(nRows, nCols, nGroups, nMembers, nY);
-    bar_errorBottom = nan(nRows, nCols, nGroups, nMembers, nY);
     bar_p           = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_test        = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_DF          = nan(nGroups, nPairs, nRows, nCols, nY);
@@ -1520,28 +1518,6 @@ for iLevel = 1:nPosthocLevels
                         Stats = [Stats; statsRow]; %#ok<AGROW>
 
                         violin_values(iGroup, iMember, 1:length(values), iRow, iCol, iVar) = values; %%%%%%%
-
-                        % plot values
-                        switch errorBars
-                            case 'std'
-                                bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
-                                bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean - statsRow.std;
-                                bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean + statsRow.std;
-                            case 'se'
-                                bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
-                                bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean - statsRow.SE;
-                                bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean + statsRow.SE;
-                            case 'q25'
-                                bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.median;
-                                bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.q25;
-                                bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.q75;
-                            case 'ci95'
-                                bar_values(iRow, iCol, iGroup, iMember, iVar) = statsRow.mean;
-                                bar_errorBottom(iRow, iCol, iGroup, iMember, iVar) = statsRow.q25;
-                                bar_errorTop(iRow, iCol, iGroup, iMember, iVar) = statsRow.q75;
-                        end
-
-
                     end
 
                     % get post-hoc p-values
@@ -1688,8 +1664,8 @@ for iLevel = 1:nPosthocLevels
                                 bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-                                % comparisonSign = sign(contrasts.table.Estimated_Marginal_Mean(L2) - contrasts.table.Estimated_Marginal_Mean(L1));
-                                % bar_eff(iGroup, iPair, iRow, iCol, iVar) = comparisonSign * bar_eff(iGroup, iPair, iRow, iCol, iVar);
+                                comparisonSign = sign(contrasts.table.Estimated_Marginal_Mean(L2) - contrasts.table.Estimated_Marginal_Mean(L1));
+                                bar_eff(iGroup, iPair, iRow, iCol, iVar) = comparisonSign * bar_eff(iGroup, iPair, iRow, iCol, iVar);
                                 
                                 % calc main contrasts
                                 if posthocMainEffects
@@ -1878,7 +1854,7 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines);
+                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines, errorBars);
                 end
             end
 

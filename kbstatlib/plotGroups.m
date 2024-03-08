@@ -1,4 +1,8 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, plotLines)
+function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, plotLines, errorBars)
+
+if nargin < 14
+    errorBars = 'iqr';
+end
 
 if nargin < 13
     plotLines = false;
@@ -46,19 +50,37 @@ end
 hnt = gobjects(nGroups, 1);
 for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
-    switch lower(plotStyle)
-        case 'violin'
-            lineVals = median(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-            violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
-        case 'boxplot'
-            lineVals = median(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-            boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
-        case 'bar'
+    switch errorBars
+        case 'iqr'
             barValues = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
             errorBottom = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
             errorTop = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
+        case 'std'
+            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            errorBottom = barValues - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+            errorTop = barValues + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+        case 'se'
+            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            errorBottom = barValues - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+            errorTop = barValues + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+        case 'ci95'
+            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            errorBottom = NaN(nMembers, 1);
+            errorTop = NaN(nMembers, 1);
+            for iCol = 1:length(barValues)
+                pd = fitdist(squeeze(values(iGroup,iCol,:)),'Normal');
+                ci = paramci(pd);
+                errorBottom(iCol) = ci(1,1);
+                errorTop(iCol) = ci(2,1);
+            end
+    end
+    switch lower(plotStyle)
+        case 'violin'
+            violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
+        case 'boxplot'
+            boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
+        case 'bar'
             colors = lines(nMembers);
-            lineVals = barValues;
             hbar = bar(1:nMembers, barValues, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
                 hbar.CData(iMember,:) = colors(iMember,:);
@@ -71,7 +93,7 @@ for iGroup = 1:nGroups
     if plotLines
         colors = lines;
         for iMember = 1:nMembers
-            yline(lineVals(iMember), '-', 'Color', colors(iMember,:));
+            yline(barValues(iMember), '-', 'Color', colors(iMember,:));
         end
     end
 
