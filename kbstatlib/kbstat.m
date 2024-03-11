@@ -287,21 +287,22 @@ function mdl = kbstat(options)
 %
 %       isPlot          Plot data as grouped bars with significance brackets
 %
-%       errorBars       What the error bars indicate. This also defines
-%                       what the bar height indicates
-%                       'std'   Standard deviation. Bar height is mean
-%                       'se'    Standard error. Bar height is the mean
-%                       'ci95'  95% confidence interval. Bar height is the
-%                               mean
-%                       'iqr'   interquartile range, i.e. the .25 and .75 
-%                               quantiles. Bar height is the median, which 
-%                               is the .5 quantile
+%       barType         What the bars and error bars indicate.
+%                       'custom' Bar height and error bars are defined by posthocMethod
+%                       'mean'   Bar height is mean, error bars are standard deviation
+%                       'meanSE' Bar height is mean, error bars are standard error
+%                       'meanCI' Bar height is mean, error bars are 95% confidence interval
+%                       'median' Bar height is median, error bars are 
+%                                interquartile range, i.e. the .25 and .75 
+%                                quantiles.
+%                       OPTIONAL, default = 'custom'
 %
 %       levelOrder      The order in which the levels are displayed in the
 %                       plots.
-%                       'sorted'    sorted alphanumerically (default)
+%                       'sorted'    sorted alphanumerically
 %                       'stable'    sorted in the order of occurrence in
 %                                   the data table
+%                       OPTIONAL, default = 'sorted'
 %
 %       plotStyle       The style with which the data are plotted.
 %                       Possible values:
@@ -596,10 +597,10 @@ else
     isPlot = true;
 end
 
-if isfield(options, 'errorBars') && ~isempty(options.errorBars)
-    errorBars = lower(options.errorBars);
+if isfield(options, 'barType') && ~isempty(options.barType)
+    barType = lower(options.barType);
 else
-    errorBars = 'iqr';
+    barType = 'custom';
 end
 
 % flag to rescale all panel plots to the same y-scale
@@ -1400,9 +1401,9 @@ for iLevel = 1:nPosthocLevels
     nPairs = size(pairs, 1);
 
     % create arrays for the estimated marginal means and confidence intervals
-    bar_emm = nan(nGroups, nMembers, nRows, nCols, nY);
-    bar_cil = nan(nGroups, nMembers, nRows, nCols, nY);
-    bar_cih = nan(nGroups, nMembers, nRows, nCols, nY);
+    barCenter = nan(nGroups, nMembers, nRows, nCols, nY);
+    barBottom = nan(nGroups, nMembers, nRows, nCols, nY);
+    barTop = nan(nGroups, nMembers, nRows, nCols, nY);
    
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
     bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
@@ -1578,8 +1579,12 @@ for iLevel = 1:nPosthocLevels
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = tValue;
                                         bar_DF(iGroup, iPair, iRow, iCol, iVar) = df;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  dCohen;
-                                        bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan');
-                                        bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan');
+                                        barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan');
+                                        barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan') - std(val1, 'omitnan');
+                                        barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan') + std(val1, 'omitnan');
+                                        barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan');
+                                        barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan') - std(val2, 'omitnan');
+                                        barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan') + std(val2, 'omitnan');
                                     case 'utest'
                                         [bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                         N1 = sum(~isnan(val1));
@@ -1589,8 +1594,12 @@ for iLevel = 1:nPosthocLevels
                                         r = 1 - 2*U/(N1*N2);
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = U;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  r;
-                                        bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = median(val1, 'omitnan');
-                                        bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = median(val2, 'omitnan');
+                                        barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = median(val1, 'omitnan');
+                                        barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = quantile(val1, .25);
+                                        barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = quantile(val1, .75);
+                                        barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = median(val2, 'omitnan');
+                                        barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = quantile(val2, .25);
+                                        barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = quantile(val2, .75);
                                 end
 
                                 % calc main contrasts
@@ -1669,9 +1678,14 @@ for iLevel = 1:nPosthocLevels
                                 L1 = idx & (emm.table.(memberVar) == pair(1));
                                 L2 = idx & (emm.table.(memberVar) == pair(2));
 
-                                bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1));
-                                bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2));
-
+                                barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1));
+                                barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 1));
+                                barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 2));
+                                
+                                barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2));
+                                barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 1));
+                                barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 2));
+                                
                                 L = (L1 - L2)';
                                 contrasts = kbcontrasts_wald(mdl, emm, L);
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
@@ -1870,12 +1884,10 @@ for iLevel = 1:nPosthocLevels
                             end
                     end
 
-                    if plotLines
-                        emms = squeeze(bar_emm(:, :, iRow, iCol, iVar));
-                    else
-                        emms = [];
-                    end
-                    plotGroups(plotData(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, emms, errorBars);
+                    myBarCenter = barCenter(:, :, iRow, iCol, iVar);
+                    myBarBottom = barBottom(:, :, iRow, iCol, iVar);
+                    myBarTop = barTop(:, :, iRow, iCol, iVar);
+                    plotGroups(plotData(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, barType, myBarCenter, myBarBottom, myBarTop, plotLines);
                 end
             end
 

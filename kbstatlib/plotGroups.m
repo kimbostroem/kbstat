@@ -1,11 +1,23 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, emms, errorBars)
+function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines)
+
+if nargin < 17
+    plotLines = false;
+end
+
+if nargin < 16
+    barBottom = [];
+end
+
+if nargin < 15
+    barTop = [];
+end
 
 if nargin < 14
-    errorBars = 'iqr';
+    barCenter = [];
 end
 
 if nargin < 13
-    emms = [];
+    barType = 'median';
 end
 
 if nargin < 12 || isnan(markerSize)
@@ -50,50 +62,79 @@ end
 hnt = gobjects(nGroups, 1);
 for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
-    switch errorBars
-        case 'iqr'
-            barValues = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
-            errorBottom = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
-            errorTop = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
-        case 'std'
-            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-            errorBottom = barValues - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
-            errorTop = barValues + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
-        case 'se'
-            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-            errorBottom = barValues - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
-            errorTop = barValues + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
-        case 'ci95'
-            barValues = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-            errorBottom = NaN(nMembers, 1);
-            errorTop = NaN(nMembers, 1);
-            for iCol = 1:length(barValues)
-                pd = fitdist(squeeze(values(iGroup,iCol,:)),'Normal');
-                ci = paramci(pd);
-                errorBottom(iCol) = ci(1,1);
-                errorTop(iCol) = ci(2,1);
-            end
+    if isempty(barCenter)
+        switch barType
+            case 'custom'
+                % take over arrays provided by user
+            case 'median'
+                barCenter(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
+                barBottom(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
+                barTop(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
+            case 'mean'
+                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+                barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+                barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+            case 'meanSE'
+                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+                barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+                barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+            case 'meanCI'
+                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+                barBottom(iGroup, :) = NaN(1, nMembers);
+                barTop(iGroup, :) = NaN(1, nMembers);
+                for iMember = 1:nMembers
+                    pd = fitdist(squeeze(values(iGroup,iMember,:)),'Normal');
+                    ci = paramci(pd);
+                    barBottom(iGroup, iMember) = ci(1,1);
+                    barTop(iGroup, iMember) = ci(2,1);
+                end
+        end
     end
     switch lower(plotStyle)
+
         case 'violin'
-            violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
+            switch barType
+
+                case 'custom'
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ShowBox', false, 'ShowMedian', false);
+
+                    % plot bar inside violins
+                    hold on
+                    for iMember = 1:nMembers
+                        pos = iMember;
+                        % Bar ends
+                        plot([pos pos], [barBottom(iGroup, iMember) barTop(iGroup, iMember)], 'LineWidth', 2, 'Color', 0.2*[1 1 1]);
+                        % Center
+                        scatter(pos, barCenter(iGroup, iMember), 48, [1 1 1], 'filled', 'MarkerEdgeColor', 0.2*[1 1 1]);
+                    end
+
+                case 'mean'
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ShowMean', true);
+
+                otherwise
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
+            end
+
         case 'boxplot'
             boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
+
         case 'bar'
             colors = lines(nMembers);
-            hbar = bar(1:nMembers, barValues, 'LineStyle', 'none', 'FaceColor', 'flat');
+            hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
                 hbar.CData(iMember,:) = colors(iMember,:);
                 hold on
-                errorbar(iMember, barValues(iMember), barValues(iMember)-errorBottom(iMember), errorTop(iMember)-barValues(iMember), 'LineStyle', 'none', 'Color', 0.6*[1 1 1], 'LineWidth', 2);
+                errorbar(iMember, barCenter(iGroup, iMember), barCenter(iGroup, iMember) - barBottom(iGroup, iMember), barTop(iGroup, iMember) - barCenter(iGroup, iMember), 'LineStyle', 'none', 'Color', 0.6*[1 1 1], 'LineWidth', 2);
             end
     end
 
-    % plot horizontal lines at values
-    if size(emms, 1) == nGroups && size(emms, 2) == nMembers
+    
+
+    % plot horizontal lines at values if desired
+    if plotLines && size(barCenter, 1) == nGroups && size(barCenter, 2) == nMembers
         colors = lines;
         for iMember = 1:nMembers
-            yline(emms(iGroup, iMember), '-', 'Color', colors(iMember,:));
+            yline(barCenter(iGroup, iMember), '-', 'Color', colors(iMember,:));
         end
     end
 
