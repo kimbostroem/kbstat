@@ -81,7 +81,7 @@ function mdl = kbstat(options)
 %                       are considered between-subject, i.e. they vary only
 %                       between, not within, subjects. "within" can be a
 %                       subset of "x", or else its members are added to
-%                       "x". 
+%                       "x".
 %                       Example:
 %                       options.id = 'subject'
 %                       options.x = 'time, age, sex'
@@ -92,14 +92,14 @@ function mdl = kbstat(options)
 %                       with each other is to be analyzed. Can be a subset
 %                       of "x", or else its members are added to "x". When
 %                       not set, all members of x are assumed to mutually
-%                       interact. 
+%                       interact.
 %                       Example:
 %                       options.id = 'subject'
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
-%       coVar           Comma-separated list of (continuous or categorical)
+%       covariate       Comma-separated list of (continuous or categorical)
 %                       variables that are added as covariates to improve
 %                       the model without being represented in the plots or
 %                       included in the posthoc comparisons. They are,
@@ -171,7 +171,7 @@ function mdl = kbstat(options)
 %                       Possible values:
 %                       'none'      Do not perform posthoc analysis
 %                       'ttest'     t-test with Holm-Bonferroni correction
-%                       'utest'     Mann-Whitney u-Test (Wilcoxon ranksum test) 
+%                       'utest'     Mann-Whitney u-Test (Wilcoxon ranksum test)
 %                                   with Holm-Bonferroni correction
 %                       'emm'       Extract contrasts from linear model fit
 %                       'auto'      Perform posthoc analysis using
@@ -188,7 +188,7 @@ function mdl = kbstat(options)
 %                       'bonf',     Bonferroni resp. Sidak correction.
 %                       'sidak'     Sidak is (approx.) equal to
 %                                   Bonferroni for small p and cares
-%                                   for p not exceeding 1. 
+%                                   for p not exceeding 1.
 %                       OPTIONAL, default = 'holm'.
 %
 %       posthocMainEffects  Flag if also the posthoc main effects should be
@@ -226,12 +226,12 @@ function mdl = kbstat(options)
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'none'.
 %
-%       postOutlierMethod  Method to remove post-fit outliers, i.e., 
+%       postOutlierMethod  Method to remove post-fit outliers, i.e.,
 %                       outliers in the residuals.
 %                       Possible values: see preOutlierMethod
 %                       OPTIONAL, default = 'none'.
 %
-%       outlierMethod   Set both preOutlierMethod and postOutlierMethod to 
+%       outlierMethod   Set both preOutlierMethod and postOutlierMethod to
 %                       this value.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
@@ -255,7 +255,7 @@ function mdl = kbstat(options)
 %       transform       Choose how to transform the dependent variable.
 %                       The linear model is fit on the transformed data,
 %                       but the data are plotted using the original data.
-%                       OPTIONAL, default = ''. 
+%                       OPTIONAL, default = ''.
 %                       Possible values:
 %                       'mean'      Divide by mean
 %                       'std'       Divide by standard deviation
@@ -288,14 +288,14 @@ function mdl = kbstat(options)
 %       isPlot          Plot data as grouped bars with significance brackets
 %
 %       barType         What the bars and error bars indicate.
-%                       'custom' Bar height and error bars are defined by posthocMethod
+%                       'auto'   Bar height and error bars are defined by posthocMethod
 %                       'mean'   Bar height is mean, error bars are standard deviation
 %                       'meanSE' Bar height is mean, error bars are standard error
 %                       'meanCI' Bar height is mean, error bars are 95% confidence interval
-%                       'median' Bar height is median, error bars are 
-%                                interquartile range, i.e. the .25 and .75 
+%                       'median' Bar height is median, error bars are
+%                                interquartile range, i.e. the .25 and .75
 %                                quantiles.
-%                       OPTIONAL, default = 'custom'
+%                       OPTIONAL, default = 'auto'
 %
 %       levelOrder      The order in which the levels are displayed in the
 %                       plots.
@@ -438,8 +438,8 @@ elseif ~isempty(multiVar)
     if isempty(multiVarLevels)
         Data2 = Data1;
     else
-        idx = ismember(string(Data1.(yVar)), string(multiVarLevels));
-        Data2 = Data1(idx, :);
+        idxDesc = ismember(string(Data1.(yVar)), string(multiVarLevels));
+        Data2 = Data1(idxDesc, :);
     end
     depVar = y{1}; % set dependent variable to y
     Data2.(yVar) = categorical(string(Data2.(yVar)));
@@ -493,10 +493,10 @@ else % option not provided
 end
 
 % covariates
-if isfield(options, 'coVar') && ~isempty(options.coVar) % option provided and not empty
-    coVar = strtrim(strsplit(options.coVar, {',', ';'}));
+if isfield(options, 'covariate') && ~isempty(options.covariate) % option provided and not empty
+    covariate = strtrim(strsplit(options.covariate, {',', ';'}));
 else % option not provided
-    coVar = {};
+    covariate = {};
 end
 
 % random slopes
@@ -600,7 +600,7 @@ end
 if isfield(options, 'barType') && ~isempty(options.barType)
     barType = lower(options.barType);
 else
-    barType = 'custom';
+    barType = 'auto';
 end
 
 % flag to rescale all panel plots to the same y-scale
@@ -714,26 +714,26 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         end
         switch compVar
             case {'=', '=='}
-                idx = (constraintVals == constraintVal);
+                idxDesc = (constraintVals == constraintVal);
             case '~='
-                idx = (constraintVals ~= constraintVal);
+                idxDesc = (constraintVals ~= constraintVal);
             case '<'
-                idx = (constraintVals < constraintVal);
+                idxDesc = (constraintVals < constraintVal);
             case '<='
-                idx = (constraintVals <= constraintVal);
+                idxDesc = (constraintVals <= constraintVal);
             case '>'
-                idx = (constraintVals > constraintVal);
+                idxDesc = (constraintVals > constraintVal);
             case '>='
-                idx = (constraintVals >= constraintVal);
+                idxDesc = (constraintVals >= constraintVal);
             otherwise
                 error('No valid comparison operator ''%s''', compVar);
         end
         if  iCond > 1 && iCond-1 <= length(ops)
             op = ops{iCond-1};
-            cmd = sprintf('allIdx %s idx', op);
+            cmd = sprintf('allIdx %s idxDesc', op);
             allIdx = eval(cmd);
         else
-            allIdx = idx;
+            allIdx = idxDesc;
         end
     end
     if any(allIdx)
@@ -771,7 +771,7 @@ for iVar = 1:length(catVar)
 end
 
 % get independent variables
-IVs = union(x, coVar, 'stable');
+IVs = union(x, covariate, 'stable');
 catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
@@ -850,9 +850,9 @@ if ~isempty(transform)
     transVar = sprintf('%sTrans', depVar);
     for iVar = 1:nY
         if nY > 1
-            idxDep = (Data.(yVar) == y{iVar});
+            idxDesc = (Data.(yVar) == y{iVar});
         else
-            idxDep = true(size(Data, 1), 1);
+            idxDesc = true(size(Data, 1), 1);
         end
         switch transform
             case 'mean'
@@ -862,42 +862,42 @@ if ~isempty(transform)
             case 'Z'
                 transformFcn = @(x) (x - mean(x, 'omitnan'))/std(x, 'omitnan');
             case {'median'}
-                upperThresh = quantile(Data.(depVar)(idxDep), 0.5);
+                upperThresh = quantile(Data.(depVar)(idxDesc), 0.5);
                 transformFcn = @(x) x/upperThresh;
             case 'IQR'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
             case 'IQRmax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'quartiles');
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
                 transformFcn = @(x) x/upperThresh;
             case 'MAD'
-                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
+                [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
                 transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case 'MADmax'
-                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDep), 'median');
+                [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
                 transformFcn = @(x) x/upperThresh;
             case 'max'
-                upperThresh = max(Data.(depVar)(idxDep));
+                upperThresh = max(Data.(depVar)(idxDesc));
                 transformFcn = @(x) x/upperThresh;
             case 'minmax'
-                lowerThresh = min(Data.(depVar)(idxDep));
-                upperThresh = max(Data.(depVar)(idxDep));
+                lowerThresh = min(Data.(depVar)(idxDesc));
+                upperThresh = max(Data.(depVar)(idxDesc));
                 transformFcn = @(x) x/(upperThresh - lowerThresh);
             otherwise % any other expression
                 tokens = regexp(transform, '[q,p](\d+)(?:[q,p]?)(\d+)?', 'tokens', 'once');
                 tokens(cellfun(@isempty, tokens)) = [];
                 if length(tokens) == 1 % upper percentile given in the form 'q%d' or 'p%d'
-                    upperThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{1}));
+                    upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
                     transformFcn = @(x) x/upperThresh;
                 elseif length(tokens) == 2 % lower and upper percentile given in the form 'q%dq%d' or 'p%dp%d'
-                    lowerThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{1}));
-                    upperThresh = prctile(Data.(depVar)(idxDep), str2double(tokens{2}));
+                    lowerThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
+                    upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{2}));
                     transformFcn = @(x) x/(upperThresh - lowerThresh);
                 else % any other function given in the form 'f(x)'
                     transformFcn = eval(sprintf('@(x) %s', transform));
                 end
         end
-        Data.(transVar)(idxDep) = transformFcn(Data.(depVar)(idxDep));
+        Data.(transVar)(idxDesc) = transformFcn(Data.(depVar)(idxDesc));
     end
 else
     transVar = depVar;
@@ -916,12 +916,12 @@ if ~strcmp(preOutlierMethod, 'none')
     for iVar = 1:nY
 
         if nY > 1
-            idxDep = (Data.(yVar) == y{iVar});
+            idxDesc = (Data.(yVar) == y{iVar});
         else
-            idxDep = true(size(Data, 1), 1);
+            idxDesc = true(size(Data, 1), 1);
         end
 
-        idxTest = idxDep;
+        idxTest = idxDesc;
 
         if outlierLevel == 0 % level 0: all data
             yData = Data.(transVar)(idxTest);
@@ -929,7 +929,7 @@ if ~strcmp(preOutlierMethod, 'none')
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
             for iMember = 1:nMembers
-                idxTest = idxDep;
+                idxTest = idxDesc;
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(transVar)(idxTest);
@@ -939,7 +939,7 @@ if ~strcmp(preOutlierMethod, 'none')
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
             for iMember = 1:nMembers
                 for iGroup = 1:nGroups
-                    idxTest = idxDep;
+                    idxTest = idxDesc;
                     member = members(iMember);
                     idxTest = idxTest & (Data.(memberVar) == member);
                     if nGroups > 1
@@ -955,7 +955,7 @@ if ~strcmp(preOutlierMethod, 'none')
             for iMember = 1:nMembers
                 for iGroup = 1:nGroups
                     for iCol = 1:nCols
-                        idxTest = idxDep;
+                        idxTest = idxDesc;
                         member = members(iMember);
                         idxTest = idxTest & (Data.(memberVar) == member);
                         if nGroups > 1
@@ -976,7 +976,7 @@ if ~strcmp(preOutlierMethod, 'none')
                 for iGroup = 1:nGroups
                     for iCol = 1:nCols
                         for iRow = 1:nRows
-                            idxTest = idxDep;
+                            idxTest = idxDesc;
                             member = members(iMember);
                             idxTest = idxTest & (Data.(memberVar) == member);
                             if nGroups > 1
@@ -1054,10 +1054,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         myLink = link{1};
     end
 
-    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable        
-        idxDep = (Data.(yVar) == myVar);
+    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
+        idxDesc = (Data.(yVar) == myVar);
         DataOrig = Data;
-        Data = Data(idxDep, :);        
+        Data = Data(idxDesc, :);
         fprintf('Performing GLMM analysis for %s...\n', myVar);
     elseif nY > 1
         fprintf('Performing multivariate GLMM analysis...\n');
@@ -1074,18 +1074,18 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     end
     xNoInteract = setdiff(x, interact, 'stable');
 
-    sumTerm = strjoin(union(xNoInteract, coVar, 'stable'), ' + ');
+    sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randomSlopes
             randomEffect = '';
             if nY > 1 && ~separateMulti
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             end
         else
-            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, coVar, 'stable'), 'UniformOutput', false), ' + ');
+            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             randomSlopes = '';
         end
     else
@@ -1140,9 +1140,9 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     nPostOutliers = 0;
     mdlResiduals = residuals(mdl, 'ResidualType', 'Pearson');
     nPostObs = length(mdlResiduals);
-    if ~strcmp(postOutlierMethod, 'none')        
+    if ~strcmp(postOutlierMethod, 'none')
         postOutliers = isoutlier(mdlResiduals, postOutlierMethod);
-        nPostOutliers = sum(postOutliers);        
+        nPostOutliers = sum(postOutliers);
         msg = sprintf('Removing %d post-fit outliers from %d observations (%.1f %%%%) using ''%s''...\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
         fprintf(msg);
         fprintf(fidSummary, msg);
@@ -1152,7 +1152,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             % remove outliers from DataOrig
             if nY > 1 && separateMulti
                 idxTmp = false(size(DataOrig, 1), 1);
-                idxTmp(idxDep) =  postOutliers;
+                idxTmp(idxDesc) =  postOutliers;
                 DataOrig(idxTmp, :) = [];
             end
             msg = sprintf('Re-fitting model...\n');
@@ -1401,16 +1401,22 @@ for iLevel = 1:nPosthocLevels
     nPairs = size(pairs, 1);
 
     % create arrays for the estimated marginal means and confidence intervals
+    emmCenter = nan(nGroups, nMembers, nRows, nCols, nY);
+    emmBottom = nan(nGroups, nMembers, nRows, nCols, nY);
+    emmTop = nan(nGroups, nMembers, nRows, nCols, nY);
+
+    % create arrays for the bar data
     barCenter = nan(nGroups, nMembers, nRows, nCols, nY);
     barBottom = nan(nGroups, nMembers, nRows, nCols, nY);
     barTop = nan(nGroups, nMembers, nRows, nCols, nY);
-   
+
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
     bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_test = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_DF = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_aux = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_eff = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_diff = nan(nGroups, nPairs, nRows, nCols, nY);
 
     % create (nPairs x nY) arrays of main effects data
     main_p = nan(nPairs, nRows, nCols, nY);
@@ -1418,6 +1424,7 @@ for iLevel = 1:nPosthocLevels
     main_DF = nan(nPairs, nRows, nCols, nY);
     main_aux = nan(nPairs, nRows, nCols, nY);
     main_eff = nan(nPairs, nRows, nCols, nY);
+    main_diff = nan(nPairs, nRows, nCols, nY);
 
     maxNValues = 0;
     for iVar = 1:nY
@@ -1437,11 +1444,18 @@ for iLevel = 1:nPosthocLevels
         end
         maxNValues = max([maxNValues, myMaxNValues]);
     end
-    plotData = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
+    DataPoints = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
     for iVar = 1:nY
         % dependent variable
         myVar = y{iVar};
+        mdl = mdls{iVar};
+
+        % Calc estimated marginal means of all
+        % factors. Continuous variables cannot be
+        % included, because then emmeans gives an
+        % error
+        emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
@@ -1463,109 +1477,117 @@ for iLevel = 1:nPosthocLevels
         end
 
         % init statistics table
-        Stats = table;
+        StatsTable = table;
 
-        % calc plot data and fill arrays
+        % calc plot data and emm data
         for iRow = 1:nRows % loop over 4th x
             for iCol = 1:nCols % loop over 3rd x
                 for iGroup = 1:nGroups % loop over 2nd x
                     for iMember = 1:nMembers % loop over 1st x
 
-                        if nY > 1
-                            idxDep = (Data.(yVar) == myVar);
-                        else
-                            idxDep = true(size(Data, 1), 1);
-                        end
-
-                        % init statistics table row
+                        % init descriptive statistics table row
                         statsRow = table;
+
+                        if nY > 1
+                            idxDesc = (Data.(yVar) == myVar);
+                            if ~separateMulti
+                                idxEmm = (emm.table.(yVar) == myVar);
+                            else
+                                idxEmm = true(size(emm.table, 1), 1);
+                            end
+                        else
+                            idxDesc = true(size(Data, 1), 1);
+                            idxEmm = true(size(emm.table, 1), 1);
+                        end
 
                         % 1st x
                         member = members(iMember);
-                        idx = (Data.(memberVar) == member) & idxDep;
+                        statsRow.(memberVar) = string(member);
 
                         % 2nd x, if given
                         if nGroups > 1
                             group = groups(iGroup);
-                            idx = idx & (Data.(groupVar) == group);
+                            idxDesc = idxDesc & (Data.(groupVar) == group);
+                            idxEmm = idxEmm & (emm.table.(groupVar) == group);
+                            statsRow.(groupVar) = string(group);
                         end
 
                         % 3rd x, if given
                         if nCols > 1
                             col = cols(iCol);
+                            idxDesc = idxDesc & Data.(colVar) == col;
+                            idxEmm = idxEmm & (emm.table.(colVar) == col);
                             statsRow.(colVar) = string(col);
-                            idx = idx & Data.(colVar) == col;
                         end
 
                         % 4th x, if given
                         if nRows > 1
                             row = rows(iRow);
+                            idxDesc = idxDesc & Data.(rowVar) == row;
+                            idxEmm = idxEmm & (emm.table.(rowVar) == row);
                             statsRow.(rowVar) = string(row);
-                            idx = idx & Data.(rowVar) == row;
                         end
 
-                        bar_data = Data(idx, :);
-                        values = bar_data.(depVar);
-                        if nGroups > 1
-                            statsRow.(groupVar) = string(group);
-                        end
-                        statsRow.(memberVar) = string(member);
-                        statsRow.N = length(values(~isnan(values)));
-                        statsRow.median = median(values, 'omitnan');
-                        statsRow.q25 = quantile(values, 0.25);
-                        statsRow.q75 = quantile(values, 0.75);
-                        statsRow.mean = mean(values, 'omitnan');
-                        statsRow.std = std(values, 'omitnan');
+                        % 1st x
+                        member = members(iMember);
+                        idxDescMember = idxDesc & (Data.(memberVar) == member);
+                        idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
+
+                        statsRow.emMean = mean(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(idxEmmMember)));
+                        statsRow.emSE = mean(mdl.Link.Inverse(emm.table.SE(idxEmmMember)));
+                        statsRow.emCI95_lower = mean(mdl.Link.Inverse(emm.table.CI_95_0pct(idxEmmMember, 1)));
+                        statsRow.emCI95_upper = mean(mdl.Link.Inverse(emm.table.CI_95_0pct(idxEmmMember, 2)));
+
+                        vals = Data.(transVar)(idxDescMember);
+                        statsRow.N = length(vals(~isnan(vals)));                        
+                        statsRow.mean = mean(vals, 'omitnan');
+                        statsRow.std = std(vals, 'omitnan');
                         statsRow.SE = statsRow.std / sqrt(statsRow.N);
-                        statsRow.RE = statsRow.SE / statsRow.mean * 100;
+                        statsRow.median = median(vals, 'omitnan');
+                        statsRow.q25 = quantile(vals, 0.25);
+                        statsRow.q75 = quantile(vals, 0.75);
                         tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
                         ci95 = statsRow.mean + tci95 * statsRow.SE;
-                        statsRow.ci95_1 = ci95(1);
-                        statsRow.ci95_2 = ci95(2);
-                        Stats = [Stats; statsRow]; %#ok<AGROW>
+                        statsRow.CI95_lower = ci95(1);
+                        statsRow.CI95_upper = ci95(2);
+                        StatsTable = [StatsTable; statsRow]; %#ok<AGROW>
 
-                        plotData(iGroup, iMember, 1:length(values), iRow, iCol, iVar) = values; %%%%%%%
+                        DataPoints(iGroup, iMember, 1:length(vals), iRow, iCol, iVar) = vals;
+                        emmCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.emMean;
+                        emmBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_lower;
+                        emmTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_upper;
+
+                        switch posthocMethod
+
+                            case 'emm'
+                                barCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.emMean;
+                                barBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_lower;
+                                barTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_upper;
+
+                            case 'ttest'
+                                barCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.mean;
+                                barBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.mean - statsRow.std;
+                                barTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.mean + statsRow.std;
+
+                            case 'utest'
+                                barCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.median;
+                                barBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.q25;
+                                barTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.q75;
+                        end
                     end
 
                     % get post-hoc p-values
                     switch posthocMethod
 
-                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests resp. u-tests
-
-                            if nY > 1
-                                idxDep = (Data.(yVar) == myVar);
-                            else
-                                idxDep = true(size(Data, 1), 1);
-                            end
-
-                            % init idx
-                            idx = idxDep;
-
-                            % 2nd x, if given
-                            if nGroups > 1
-                                group = groups(iGroup);
-                                idx = idx & (Data.(groupVar) == group);
-                            end
-
-                            % 3rd x, if given
-                            if nCols > 1
-                                col = cols(iCol);
-                                idx = idx & (Data.(colVar) == col);
-                            end
-
-                            % 4th x, if given
-                            if nRows > 1
-                                row = rows(iRow);
-                                idx = idx & (Data.(rowVar) == row);
-                            end
+                        case {'ttest', 'utest'} % perform post-hoc analysis using paired t-tests or u-tests
 
                             % pairwise comparison
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
 
                                 % calc contrasts
-                                L1 = (Data.(memberVar) == pair(1) & idx);
-                                L2 = (Data.(memberVar) == pair(2) & idx);
+                                L1 = idxDesc & (Data.(memberVar) == pair(1));
+                                L2 = idxDesc & (Data.(memberVar) == pair(2));
 
                                 val1 = Data.(transVar)(L1);
                                 val2 = Data.(transVar)(L2);
@@ -1575,16 +1597,11 @@ for iLevel = 1:nPosthocLevels
                                         tValue = stats.tstat;
                                         df = stats.df;
                                         sPool = stats.sd;
-                                        dCohen = (mean(val1, 'omitnan') - mean(val2, 'omitnan')) / sPool;
+                                        dCohen = (mean(val2, 'omitnan') - mean(val1, 'omitnan')) / sPool;
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = tValue;
                                         bar_DF(iGroup, iPair, iRow, iCol, iVar) = df;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  dCohen;
-                                        barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan');
-                                        barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan') - std(val1, 'omitnan');
-                                        barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan') + std(val1, 'omitnan');
-                                        barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan');
-                                        barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan') - std(val2, 'omitnan');
-                                        barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan') + std(val2, 'omitnan');
+                                        bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(val2, 'omitnan') - mean(val1, 'omitnan');
                                     case 'utest'
                                         [bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                         N1 = sum(~isnan(val1));
@@ -1594,12 +1611,7 @@ for iLevel = 1:nPosthocLevels
                                         r = 1 - 2*U/(N1*N2);
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = U;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  r;
-                                        barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = median(val1, 'omitnan');
-                                        barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = quantile(val1, .25);
-                                        barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = quantile(val1, .75);
-                                        barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = median(val2, 'omitnan');
-                                        barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = quantile(val2, .25);
-                                        barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = quantile(val2, .75);
+                                        bar_diff(iGroup, iPair, iRow, iCol, iVar) = median(val2, 'omitnan') - median(val1, 'omitnan');
                                 end
 
                                 % calc main contrasts
@@ -1614,10 +1626,11 @@ for iLevel = 1:nPosthocLevels
                                             tValue = stats.tstat;
                                             df = stats.df;
                                             sPool = stats.sd;
-                                            dCohen = (mean(val1, 'omitnan') - mean(val2, 'omitnan')) / sPool;
+                                            dCohen = (mean(val2, 'omitnan') - mean(val1, 'omitnan')) / sPool;
                                             main_test(iPair, iRow, iCol, iVar) = tValue;
                                             main_DF(iPair, iRow, iCol, iVar) = df;
                                             main_eff(iPair, iRow, iCol, iVar) =  dCohen;
+                                            main_diff(iPair, iRow, iCol, iVar) =  mean(val2, 'omitnan') - mean(val1, 'omitnan');
                                         case 'utest'
                                             [main_p(iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                             N1 = sum(~isnan(val1));
@@ -1627,65 +1640,20 @@ for iLevel = 1:nPosthocLevels
                                             r = 1 - 2*U/(N1*N2);
                                             main_test(iPair, iRow, iCol, iVar) = U;
                                             main_eff(iPair, iRow, iCol, iVar) =  r;
+                                            main_diff(iPair, iRow, iCol, iVar) =  median(val2, 'omitnan') - median(val1, 'omitnan');
                                     end
                                 end
                             end
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
-                            if nY > 1 && separateMulti
-                                mdl = mdls{iVar};
-                            end
-
-                            % Calc estimated marginal means of all
-                            % factors. Continuous variables cannot be
-                            % included, because then emmeans gives an
-                            % error
-                            emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
-
-                            if nY > 1 && ~separateMulti
-                                idxDep = (emm.table.(yVar) == myVar);
-                            else
-                                idxDep = true(size(emm.table, 1), 1);
-                            end
-
-                            % init idx
-                            idx = idxDep;
-
-                            % 2nd x, if given
-                            if nGroups > 1
-                                group = groups(iGroup);
-                                idx = idx & (emm.table.(groupVar) == group);
-                            end
-
-                            % 3rd x, if given
-                            if nCols > 1
-                                col = cols(iCol);
-                                idx = idx & (emm.table.(colVar) == col);
-                            end
-
-                            % 4th x, if given
-                            if nRows > 1
-                                row = rows(iRow);
-                                idx = idx & (emm.table.(rowVar) == row);
-                            end
-
-                            % calc center, bottom and top values
-                            for iMember = 1:nMembers
-                                member = members(iMember);
-                                L = idx & (emm.table.(memberVar) == member);
-                                barCenter(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L));
-                                barBottom(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L, 1));
-                                barTop(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L, 2));
-                            end
-
                             % pairwise comparison
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
 
                                 % calc contrasts
-                                L1 = idx & (emm.table.(memberVar) == pair(1));
-                                L2 = idx & (emm.table.(memberVar) == pair(2));
+                                L1 = idxEmm & (emm.table.(memberVar) == pair(1));
+                                L2 = idxEmm & (emm.table.(memberVar) == pair(2));
                                 L = (L1 - L2)';
                                 contrasts = kbcontrasts_wald(mdl, emm, L);
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
@@ -1693,13 +1661,12 @@ for iLevel = 1:nPosthocLevels
                                 bar_DF(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF1;
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-                                comparisonSign = sign(contrasts.table.Estimated_Marginal_Mean(L2) - contrasts.table.Estimated_Marginal_Mean(L1));
-                                bar_eff(iGroup, iPair, iRow, iCol, iVar) = comparisonSign * bar_eff(iGroup, iPair, iRow, iCol, iVar);
-                                
+                                bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
+
                                 % calc main contrasts
                                 if posthocMainEffects
-                                    L1 = idxDep & (emm.table.(memberVar) == pair(1));
-                                    L2 = idxDep & (emm.table.(memberVar) == pair(2));
+                                    L1 = (emm.table.(memberVar) == pair(1));
+                                    L2 = (emm.table.(memberVar) == pair(2));
                                     L = (L1 - L2)';
                                     contrasts = kbcontrasts_wald(mdl, emm, L);
                                     main_p(iPair, iRow, iCol, iVar) = contrasts.pVal;
@@ -1707,6 +1674,7 @@ for iLevel = 1:nPosthocLevels
                                     main_DF(iPair, iRow, iCol, iVar) = contrasts.DF1;
                                     main_aux(iPair, iRow, iCol, iVar) = contrasts.DF2;
                                     main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
+                                    main_diff(iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
                                 end
                             end
                     end
@@ -1718,10 +1686,10 @@ for iLevel = 1:nPosthocLevels
 
         % dispaly and save statistics (only necessary for 1st posthoc level)
         if iLevel == 1
-            % display statistics
-            disp(Stats);
+            % descriptive statistics
+            disp(StatsTable);
             fileName = 'Statistics';
-            saveTable(Stats, fileName, {'xlsx'}, outSubDir);
+            saveTable(StatsTable, fileName, {'xlsx'}, outSubDir);
         end
     end
 
@@ -1729,8 +1697,8 @@ for iLevel = 1:nPosthocLevels
     % Holm-Bonferroni correction of all p-values
 
     bar_pCorr = bar_p; % create array of corrected p-values
-    idx = ~isnan(bar_p(:)); % identify NaN-entries
-    if ~isempty(idx)
+    idxDesc = ~isnan(bar_p(:)); % identify NaN-entries
+    if ~isempty(idxDesc)
         sizeOrig = size(bar_p); % store original array shape
         bar_p = bar_p(:); % make column vector
         bar_pCorr = bar_pCorr(:); % make column vector
@@ -1738,27 +1706,27 @@ for iLevel = 1:nPosthocLevels
             case 'none'
                 % do nothing
             case 'holm'
-                [~, bar_pCorr(idx)] = bonferroni_holm(bar_p(idx)); % correct p-values, omitting NaNs
+                [~, bar_pCorr(idxDesc)] = bonferroni_holm(bar_p(idxDesc)); % correct p-values, omitting NaNs
             case {'bonf', 'sidak'}
-                nTests = sum(idx);
-                bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nTests);
-        end        
-        bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-        bar_pCorr(idx) = sidak_corr(bar_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
+                nTests = sum(idxDesc);
+                bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nTests);
+        end
+        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
+        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), correctForN); % additionally correct for multiple tests like this one
         bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
         bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     end
     % statistical correction of main posthoc p-Values
     if posthocMainEffects
         main_pCorr = main_p;
-        idx = ~isnan(main_p(:)); % identify NaN-entries
-        if ~isempty(idx)
+        idxDesc = ~isnan(main_p(:)); % identify NaN-entries
+        if ~isempty(idxDesc)
             sizeOrig = size(main_p); % store original array shape
             main_p = main_p(:); % make column vector
             main_pCorr = main_pCorr(:); % make column vector
-            [~, main_pCorr(idx)] = bonferroni_holm(main_p(idx)); % correct p-values, omitting NaNs
-            main_pCorr(idx) = sidak_corr(main_pCorr(idx), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-            main_pCorr(idx) = sidak_corr(main_pCorr(idx), correctForN); % additionally correct for multiple tests like this one
+            [~, main_pCorr(idxDesc)] = bonferroni_holm(main_p(idxDesc)); % correct p-values, omitting NaNs
+            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
+            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), correctForN); % additionally correct for multiple tests like this one
             main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
             main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
         end
@@ -1884,11 +1852,26 @@ for iLevel = 1:nPosthocLevels
                             end
                     end
 
-                    myPlotData = plotData(:, :, :, iRow, iCol, iVar);
-                    myBarCenter = barCenter(:, :, iRow, iCol, iVar);
-                    myBarBottom = barBottom(:, :, iRow, iCol, iVar);
-                    myBarTop = barTop(:, :, iRow, iCol, iVar);
-                    plotGroups(myPlotData, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, barType, myBarCenter, myBarBottom, myBarTop, plotLines);
+                    myDataPoints = DataPoints(:, :, :, iRow, iCol, iVar);
+                    myBarCenter = emmCenter(:, :, iRow, iCol, iVar);
+                    myBarBottom = emmBottom(:, :, iRow, iCol, iVar);
+                    myBarTop = emmTop(:, :, iRow, iCol, iVar);
+                    switch barType
+                        case 'auto'
+                            switch posthocMethod
+                                case 'emm'
+                                    myBarType = 'custom';
+                                case 'ttest'
+                                    myBarType = 'mean';
+                                case 'utest'
+                                    myBarType = 'median';
+                                otherwise
+                                    myBarType = 'emm';
+                            end
+                        otherwise
+                            myBarType = barType;
+                    end
+                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines);
                 end
             end
 
@@ -1940,6 +1923,7 @@ for iLevel = 1:nPosthocLevels
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                 tableRow.p = main_p(iPair, iRow, iCol, iVar);
                 tableRow.pCorr = main_pCorr(iPair, iRow, iCol, iVar);
+                tableRow.diff = main_diff(iPair, iRow, iCol, iVar);
                 switch posthocMethod
                     case 'ttest'
                         tableRow.t = main_test(iPair, iRow, iCol, iVar);
@@ -1981,6 +1965,7 @@ for iLevel = 1:nPosthocLevels
                         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                         tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol, iVar);
+                        tableRow.diff = bar_diff(iGroup, iPair, iRow, iCol, iVar);
                         switch posthocMethod
                             case 'ttest'
                                 tableRow.t = bar_test(iGroup, iPair, iRow, iCol, iVar);

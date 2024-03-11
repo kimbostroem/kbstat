@@ -37,8 +37,8 @@ end
 
 switch showVarNames
     case {1, 3, 'names_and_levels', 'Names_and_Levels'} % display variable names and levels
-    members = strcat(memberName, {' = '}, cellstr(members));
-    groups = strcat(groupName, {' = '}, cellstr(groups));
+        members = strcat(memberName, {' = '}, cellstr(members));
+        groups = strcat(groupName, {' = '}, cellstr(groups));
 end
 
 members = string(members);
@@ -62,40 +62,38 @@ end
 hnt = gobjects(nGroups, 1);
 for iGroup = 1:nGroups
     hnt(iGroup) = nexttile(htl, iGroup);
-    if isempty(barCenter)
-        switch barType
-            case 'custom'
-                % take over arrays provided by user
-            case 'median'
-                barCenter(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
-                barBottom(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
-                barTop(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
-            case 'mean'
-                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-                barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
-                barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
-            case 'meanSE'
-                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-                barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
-                barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
-            case 'meanCI'
-                barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
-                barBottom(iGroup, :) = NaN(1, nMembers);
-                barTop(iGroup, :) = NaN(1, nMembers);
-                for iMember = 1:nMembers
-                    pd = fitdist(squeeze(values(iGroup,iMember,:)),'Normal');
-                    ci = paramci(pd);
-                    barBottom(iGroup, iMember) = ci(1,1);
-                    barTop(iGroup, iMember) = ci(2,1);
-                end
-        end
+    switch barType
+        case 'custom'
+            % take over arrays provided by user
+        case 'median'
+            barCenter(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.5, 3));
+            barBottom(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.25, 3));
+            barTop(iGroup, :) = squeeze(quantile(values(iGroup,:,:), 0.75, 3));
+        case 'mean'
+            barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+            barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan');
+        case 'meanSE'
+            barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            barBottom(iGroup, :) = barCenter(iGroup, :) - std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+            barTop(iGroup, :) = barCenter(iGroup, :) + std(squeeze(values(iGroup,:,:)), 0, 2, 'omitnan') / size(squeeze(values(iGroup,:,:)), 2);
+        case 'meanCI'
+            barCenter(iGroup, :) = mean(squeeze(values(iGroup,:,:)), 2, 'omitnan');
+            barBottom(iGroup, :) = NaN(1, nMembers);
+            barTop(iGroup, :) = NaN(1, nMembers);
+            for iMember = 1:nMembers
+                pd = fitdist(squeeze(values(iGroup,iMember,:)),'Normal');
+                ci = paramci(pd);
+                barBottom(iGroup, iMember) = ci(1,1);
+                barTop(iGroup, iMember) = ci(2,1);
+            end
     end
     switch lower(plotStyle)
 
         case 'violin'
             switch barType
 
-                case 'custom'
+                case {'auto', 'custom'}
                     violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ShowBox', false, 'ShowMedian', false);
 
                     % plot bar inside violins
@@ -128,7 +126,7 @@ for iGroup = 1:nGroups
             end
     end
 
-    
+
 
     % plot horizontal lines at values if desired
     if plotLines && size(barCenter, 1) == nGroups && size(barCenter, 2) == nMembers
@@ -151,8 +149,8 @@ for iGroup = 1:nGroups
     end
 
     if iGroup == 1
-        ylabel(ylabelStr, 'interpreter', 'none'); 
-    end    
+        ylabel(ylabelStr, 'interpreter', 'none');
+    end
     linkaxes(hnt);
     if iGroup > 1
         hnt(iGroup).YAxis.TickValues = [];
