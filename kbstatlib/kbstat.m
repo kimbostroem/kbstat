@@ -1395,22 +1395,28 @@ for iLevel = 1:nPosthocLevels
     nRows = length(rows);
 
     % define posthoc comparison pairs
-    pairs = nchoosek(members, 2);
+    pairsIdx = nchoosek(1:nMembers, 2);
+    pairs = members(pairsIdx);
     nPairs = size(pairs, 1);
-    
+
+    % create arrays for the estimated marginal means and confidence intervals
+    bar_emm = nan(nGroups, nMembers, nRows, nCols, nY);
+    bar_cil = nan(nGroups, nMembers, nRows, nCols, nY);
+    bar_cih = nan(nGroups, nMembers, nRows, nCols, nY);
+   
     % create (nRows x nCols x nGroups x nMembers x nY) arrays of plot data
-    bar_p           = nan(nGroups, nPairs, nRows, nCols, nY);
-    bar_test        = nan(nGroups, nPairs, nRows, nCols, nY);
-    bar_DF          = nan(nGroups, nPairs, nRows, nCols, nY);
-    bar_aux         = nan(nGroups, nPairs, nRows, nCols, nY);
-    bar_eff         = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_p = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_test = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_DF = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_aux = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_eff = nan(nGroups, nPairs, nRows, nCols, nY);
 
     % create (nPairs x nY) arrays of main effects data
-    main_p      = nan(nPairs, nRows, nCols, nY);
-    main_test   = nan(nPairs, nRows, nCols, nY);
-    main_DF     = nan(nPairs, nRows, nCols, nY);
-    main_aux    = nan(nPairs, nRows, nCols, nY);
-    main_eff    = nan(nPairs, nRows, nCols, nY);
+    main_p = nan(nPairs, nRows, nCols, nY);
+    main_test = nan(nPairs, nRows, nCols, nY);
+    main_DF = nan(nPairs, nRows, nCols, nY);
+    main_aux = nan(nPairs, nRows, nCols, nY);
+    main_eff = nan(nPairs, nRows, nCols, nY);
 
     maxNValues = 0;
     for iVar = 1:nY
@@ -1430,7 +1436,7 @@ for iLevel = 1:nPosthocLevels
         end
         maxNValues = max([maxNValues, myMaxNValues]);
     end
-    violin_values = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
+    plotData = nan(nGroups, nMembers, maxNValues, nRows, nCols, nY);
 
     for iVar = 1:nY
         % dependent variable
@@ -1517,7 +1523,7 @@ for iLevel = 1:nPosthocLevels
                         statsRow.ci95_2 = ci95(2);
                         Stats = [Stats; statsRow]; %#ok<AGROW>
 
-                        violin_values(iGroup, iMember, 1:length(values), iRow, iCol, iVar) = values; %%%%%%%
+                        plotData(iGroup, iMember, 1:length(values), iRow, iCol, iVar) = values; %%%%%%%
                     end
 
                     % get post-hoc p-values
@@ -1559,6 +1565,7 @@ for iLevel = 1:nPosthocLevels
                                 % calc contrasts
                                 L1 = (Data.(memberVar) == pair(1) & idx);
                                 L2 = (Data.(memberVar) == pair(2) & idx);
+
                                 val1 = Data.(transVar)(L1);
                                 val2 = Data.(transVar)(L2);
                                 switch posthocMethod
@@ -1571,6 +1578,8 @@ for iLevel = 1:nPosthocLevels
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = tValue;
                                         bar_DF(iGroup, iPair, iRow, iCol, iVar) = df;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  dCohen;
+                                        bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mean(val1, 'omitnan');
+                                        bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mean(val2, 'omitnan');
                                     case 'utest'
                                         [bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                         N1 = sum(~isnan(val1));
@@ -1580,6 +1589,8 @@ for iLevel = 1:nPosthocLevels
                                         r = 1 - 2*U/(N1*N2);
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = U;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  r;
+                                        bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = median(val1, 'omitnan');
+                                        bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = median(val2, 'omitnan');
                                 end
 
                                 % calc main contrasts
@@ -1657,6 +1668,10 @@ for iLevel = 1:nPosthocLevels
                                 % calc contrasts
                                 L1 = idx & (emm.table.(memberVar) == pair(1));
                                 L2 = idx & (emm.table.(memberVar) == pair(2));
+
+                                bar_emm(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1));
+                                bar_emm(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2));
+
                                 L = (L1 - L2)';
                                 contrasts = kbcontrasts_wald(mdl, emm, L);
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
@@ -1854,7 +1869,13 @@ for iLevel = 1:nPosthocLevels
                                 panelTitle = '';
                             end
                     end
-                    plotGroups(violin_values(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, plotLines, errorBars);
+
+                    if plotLines
+                        emms = squeeze(bar_emm(:, :, iRow, iCol, iVar));
+                    else
+                        emms = [];
+                    end
+                    plotGroups(plotData(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, emms, errorBars);
                 end
             end
 
