@@ -82,7 +82,7 @@ for np=nplots:-1:1
             table2plot = data_table{np}( ismember(data_table{np}(:,var2compare),ucompare(uc,:)), {'Estimated_Marginal_Mean',err} );
             data2plot(:,uc) = table2plot.Estimated_Marginal_Mean;
             err2plot(:,uc) = table2plot.(err);
-            datanames{uc} = strjoin( ucompare{uc,:},{'\_'} );
+            datanames{uc} = strjoin( string(ucompare{uc,:}),{'\_'} );
         end
     end
     h{np} = errorbar( data2plot, err2plot );
@@ -133,6 +133,7 @@ for ip=1:length(indepplots)
     ax(indepplots(ip)).XTickLabelRotation = 60;
     rotationoffset = 0; %0.25;
     ax(indepplots(ip)).XTick = ax(1).XLim(1)-rotationoffset:ax(1).XLim(2)-rotationoffset;
+    ind_names = string(ind_names);
     ax(indepplots(ip)).XTickLabel = {'',ind_names{:},''};
 end
 otherxplots = setdiff(1:nplots,indepplots);
