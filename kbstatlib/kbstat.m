@@ -1397,7 +1397,7 @@ for iLevel = 1:nPosthocLevels
 
     % define posthoc comparison pairs
     pairsIdx = nchoosek(1:nMembers, 2);
-    pairs = members(pairsIdx);
+    pairs = nchoosek(members, 2);
     nPairs = size(pairs, 1);
 
     % create arrays for the estimated marginal means and confidence intervals
@@ -1670,6 +1670,15 @@ for iLevel = 1:nPosthocLevels
                                 idx = idx & (emm.table.(rowVar) == row);
                             end
 
+                            % calc center, bottom and top values
+                            for iMember = 1:nMembers
+                                member = members(iMember);
+                                L = idx & (emm.table.(memberVar) == member);
+                                barCenter(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L));
+                                barBottom(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L, 1));
+                                barTop(iGroup, iMember, iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L, 2));
+                            end
+
                             % pairwise comparison
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
@@ -1677,15 +1686,6 @@ for iLevel = 1:nPosthocLevels
                                 % calc contrasts
                                 L1 = idx & (emm.table.(memberVar) == pair(1));
                                 L2 = idx & (emm.table.(memberVar) == pair(2));
-
-                                barCenter(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1));
-                                barBottom(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 1));
-                                barTop(iGroup, pairsIdx(iPair, 1), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 2));
-                                
-                                barCenter(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2));
-                                barBottom(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 1));
-                                barTop(iGroup, pairsIdx(iPair, 2), iRow, iCol, iVar) = mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 2));
-                                
                                 L = (L1 - L2)';
                                 contrasts = kbcontrasts_wald(mdl, emm, L);
                                 bar_p(iGroup, iPair, iRow, iCol, iVar) = contrasts.pVal;
@@ -1884,10 +1884,11 @@ for iLevel = 1:nPosthocLevels
                             end
                     end
 
+                    myPlotData = plotData(:, :, :, iRow, iCol, iVar);
                     myBarCenter = barCenter(:, :, iRow, iCol, iVar);
                     myBarBottom = barBottom(:, :, iRow, iCol, iVar);
                     myBarTop = barTop(:, :, iRow, iCol, iVar);
-                    plotGroups(plotData(:, :, :, iRow, iCol, iVar), displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, barType, myBarCenter, myBarBottom, myBarTop, plotLines);
+                    plotGroups(myPlotData, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, barType, myBarCenter, myBarBottom, myBarTop, plotLines);
                 end
             end
 
