@@ -569,6 +569,21 @@ else % no parameter given
     link = {'auto'};
 end
 
+% create hash map for canonical link functions
+distributions = {
+    'normal'
+    'gamma'
+    'binomial'
+    'poisson'
+    };
+links = {
+    'identity'
+    'reciprocal'
+    'logit'
+    'log'
+    };
+canonicalLink = containers.Map(distributions,links);
+
 % level order
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
@@ -1118,11 +1133,20 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
 
     try
         if ~isempty(myLink) && ~strcmp(myLink, 'auto') % link function given -> use it
-            mdl = fitglme(Data, formula, ...
-                'DummyVarCoding', 'effects', ...
-                'FitMethod', fitMethod, ...
-                'Distribution', myDistribution, ...
-                'link', myLink);
+            if ismember(myDistribution, distributions) && ~strcmp(myLink, canonicalLink(myDistribution))
+                mdl = fitglme(Data, formula, ...
+                    'DummyVarCoding', 'effects', ...
+                    'FitMethod', fitMethod, ...
+                    'Distribution', myDistribution, ...
+                    'link', myLink, ...
+                    'EBMethod', 'TrustRegion2D'); % use this EBMethod, if custom link function is not canonical link function
+            else
+                mdl = fitglme(Data, formula, ...
+                    'DummyVarCoding', 'effects', ...
+                    'FitMethod', fitMethod, ...
+                    'Distribution', myDistribution, ...
+                    'link', myLink);
+            end
         else % no link function given or set to 'auto' -> use built-in default
             mdl = fitglme(Data, formula, ...
                 'DummyVarCoding', 'effects', ...
@@ -1953,7 +1977,7 @@ for iLevel = 1:nPosthocLevels
                 for iCol = 1:nCols
                     for iGroup = 1:nGroups
                         tableRow = table;
-                        
+
                         if nRows > 1
                             tableRow.(rowVar) = string(rows(iRow));
                         end
