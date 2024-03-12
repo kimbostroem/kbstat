@@ -1097,7 +1097,8 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             if nY > 1 && ~separateMulti
                 randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = sprintf('(%s|%s)', strjoin(union(interact, covariate, 'stable'), '+'), id);
+                randomSlopes = sprintf('(%s|%s)', strjoin(union(within, covariate, 'stable'), '+'), id);
+                % randomSlopes = sprintf('(%s|%s)', strjoin(union(interact, covariate, 'stable'), '+'), id);
                 % randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             end
         else
@@ -1442,6 +1443,7 @@ for iLevel = 1:nPosthocLevels
     bar_aux = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_eff = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_diff = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_diffpct = nan(nGroups, nPairs, nRows, nCols, nY);
 
     % create (nPairs x nY) arrays of main effects data
     main_p = nan(nPairs, nRows, nCols, nY);
@@ -1450,6 +1452,7 @@ for iLevel = 1:nPosthocLevels
     main_aux = nan(nPairs, nRows, nCols, nY);
     main_eff = nan(nPairs, nRows, nCols, nY);
     main_diff = nan(nPairs, nRows, nCols, nY);
+    main_diffpct = nan(nPairs, nRows, nCols, nY);
 
     maxNValues = 0;
     for iVar = 1:nY
@@ -1624,6 +1627,7 @@ for iLevel = 1:nPosthocLevels
                                         bar_DF(iGroup, iPair, iRow, iCol, iVar) = df;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  dCohen;
                                         bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(val2, 'omitnan') - mean(val1, 'omitnan');
+                                        bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(val1, 'omitnan') * 100;
                                     case 'utest'
                                         [bar_p(iGroup, iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                         N1 = sum(~isnan(val1));
@@ -1634,6 +1638,7 @@ for iLevel = 1:nPosthocLevels
                                         bar_test(iGroup, iPair, iRow, iCol, iVar) = U;
                                         bar_eff(iGroup, iPair, iRow, iCol, iVar) =  r;
                                         bar_diff(iGroup, iPair, iRow, iCol, iVar) = median(val2, 'omitnan') - median(val1, 'omitnan');
+                                        bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / median(val1, 'omitnan') * 100;
                                 end
 
                                 % calc main contrasts
@@ -1653,6 +1658,7 @@ for iLevel = 1:nPosthocLevels
                                             main_DF(iPair, iRow, iCol, iVar) = df;
                                             main_eff(iPair, iRow, iCol, iVar) =  dCohen;
                                             main_diff(iPair, iRow, iCol, iVar) =  mean(val2, 'omitnan') - mean(val1, 'omitnan');
+                                            main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / mean(val1, 'omitnan') * 100;
                                         case 'utest'
                                             [main_p(iPair, iRow, iCol, iVar), ~, stats] = ranksum(val1, val2);
                                             N1 = sum(~isnan(val1));
@@ -1663,6 +1669,7 @@ for iLevel = 1:nPosthocLevels
                                             main_test(iPair, iRow, iCol, iVar) = U;
                                             main_eff(iPair, iRow, iCol, iVar) =  r;
                                             main_diff(iPair, iRow, iCol, iVar) =  median(val2, 'omitnan') - median(val1, 'omitnan');
+                                            main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / median(val1, 'omitnan') * 100;
                                     end
                                 end
                             end
@@ -1684,6 +1691,7 @@ for iLevel = 1:nPosthocLevels
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
+                                bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
 
                                 % calc main contrasts
                                 if posthocMainEffects
@@ -1697,6 +1705,7 @@ for iLevel = 1:nPosthocLevels
                                     main_aux(iPair, iRow, iCol, iVar) = contrasts.DF2;
                                     main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                     main_diff(iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
+                                    main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
                                 end
                             end
                     end
@@ -1949,6 +1958,7 @@ for iLevel = 1:nPosthocLevels
                 tableRow.p = main_p(iPair, iRow, iCol, iVar);
                 tableRow.pCorr = main_pCorr(iPair, iRow, iCol, iVar);
                 tableRow.diff = main_diff(iPair, iRow, iCol, iVar);
+                tableRow.diffpct = main_diffpct(iPair, iRow, iCol, iVar);
                 switch posthocMethod
                     case 'ttest'
                         tableRow.t = main_test(iPair, iRow, iCol, iVar);
@@ -1995,6 +2005,7 @@ for iLevel = 1:nPosthocLevels
                         tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.diff = bar_diff(iGroup, iPair, iRow, iCol, iVar);
+                        tableRow.diffpct = bar_diffpct(iGroup, iPair, iRow, iCol, iVar);
                         switch posthocMethod
                             case 'ttest'
                                 tableRow.t = bar_test(iGroup, iPair, iRow, iCol, iVar);
