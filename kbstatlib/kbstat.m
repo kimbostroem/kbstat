@@ -430,7 +430,7 @@ if nY > 1
     yVar = 'yVar';
     yVal = 'Y';
     Data2 = stack(Data1, y, 'NewDataVariableName', yVal, 'IndexVariableName', yVar);
-    Data2.(yVar) = categorical(string(Data2.(yVar)));
+    Data2.(yVar) = string(string(Data2.(yVar)));
     depVar = yVal; % set dependent variable to y
 elseif ~isempty(multiVar)
     yVar = multiVar;
@@ -442,7 +442,7 @@ elseif ~isempty(multiVar)
         Data2 = Data1(idxDesc, :);
     end
     depVar = y{1}; % set dependent variable to y
-    Data2.(yVar) = categorical(string(Data2.(yVar)));
+    Data2.(yVar) = string(string(Data2.(yVar)));
     y = cellstr(unique(Data2.(yVar)));
     nY = length(y);
 else
@@ -761,7 +761,7 @@ Data = table;
 
 % subject variable
 if ~isempty(id)
-    Data.(id) = categorical(string(Data2.(id))); % make categorical
+    Data.(id) = string(string(Data2.(id))); % make categorical
 end
 
 % make catVar variables string
@@ -778,7 +778,7 @@ for iIV = 1:length(IVs)
     myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
     if ismember(myIV, catVar) || ~all(isnumeric(myLevels))
-        Data.(myIV) = categorical(string(Data2.(myIV)));
+        Data.(myIV) = string(string(Data2.(myIV)));
         catVars = union(catVars, myIV, 'stable');
         if ismember(myIV, x)
             factors = union(factors, myIV, 'stable');
@@ -1082,7 +1082,8 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             if nY > 1 && ~separateMulti
                 randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
+                randomSlopes = sprintf('(%s|%s)', strjoin(union(interact, covariate, 'stable'), '+'), id);
+                % randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             end
         else
             randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
@@ -1498,18 +1499,14 @@ for iLevel = 1:nPosthocLevels
                         else
                             idxDesc = true(size(Data, 1), 1);
                             idxEmm = true(size(emm.table, 1), 1);
-                        end
+                        end       
 
-                        % 1st x
-                        member = members(iMember);
-                        statsRow.(memberVar) = string(member);
-
-                        % 2nd x, if given
-                        if nGroups > 1
-                            group = groups(iGroup);
-                            idxDesc = idxDesc & (Data.(groupVar) == group);
-                            idxEmm = idxEmm & (emm.table.(groupVar) == group);
-                            statsRow.(groupVar) = string(group);
+                        % 4th x, if given
+                        if nRows > 1
+                            row = rows(iRow);
+                            idxDesc = idxDesc & Data.(rowVar) == row;
+                            idxEmm = idxEmm & (emm.table.(rowVar) == row);
+                            statsRow.(rowVar) = string(row);
                         end
 
                         % 3rd x, if given
@@ -1520,18 +1517,19 @@ for iLevel = 1:nPosthocLevels
                             statsRow.(colVar) = string(col);
                         end
 
-                        % 4th x, if given
-                        if nRows > 1
-                            row = rows(iRow);
-                            idxDesc = idxDesc & Data.(rowVar) == row;
-                            idxEmm = idxEmm & (emm.table.(rowVar) == row);
-                            statsRow.(rowVar) = string(row);
+                        % 2nd x, if given
+                        if nGroups > 1
+                            group = groups(iGroup);
+                            idxDesc = idxDesc & (Data.(groupVar) == group);
+                            idxEmm = idxEmm & (emm.table.(groupVar) == group);
+                            statsRow.(groupVar) = string(group);
                         end
 
                         % 1st x
                         member = members(iMember);
                         idxDescMember = idxDesc & (Data.(memberVar) == member);
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
+                        statsRow.(memberVar) = string(member);
 
                         statsRow.emMean = mean(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(idxEmmMember)));
                         statsRow.emSE = mean(mdl.Link.Inverse(emm.table.SE(idxEmmMember)));
@@ -1913,12 +1911,15 @@ for iLevel = 1:nPosthocLevels
                 if nRows > 1
                     tableRow.(rowVar) = "any";
                 end
+                
                 if nCols > 1
                     tableRow.(colVar) = "any";
                 end
+
                 if nGroups > 1
                     tableRow.(groupVar) = "any";
                 end
+
                 tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                 tableRow.p = main_p(iPair, iRow, iCol, iVar);
@@ -1952,15 +1953,19 @@ for iLevel = 1:nPosthocLevels
                 for iCol = 1:nCols
                     for iGroup = 1:nGroups
                         tableRow = table;
+                        
                         if nRows > 1
                             tableRow.(rowVar) = string(rows(iRow));
                         end
+
                         if nCols > 1
                             tableRow.(colVar) = string(cols(iCol));
                         end
+
                         if nGroups > 1
                             tableRow.(groupVar) = string(groups(iGroup));
                         end
+
                         tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
                         tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iVar);
