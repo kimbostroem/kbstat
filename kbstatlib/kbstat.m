@@ -564,7 +564,22 @@ end
 
 % link (for GLM)
 if isfield(options, 'link') && ~isempty(options.link)
-    link = cellstr(options.link);
+    % link may be numerical for power functions, e.g. -1 or -2
+    % make them into cell array of strings
+    if ischar(options.link) || isstring(options.link)
+        link = cellstr(options.link);
+    elseif isnumeric(options.link)
+        link = {num2str(options.link)};
+    elseif iscell(options.link)
+        link = options.link;
+        for iCell = 1:length(link)
+            if isnumeric(link{iCell})
+                link{iCell} = num2str(link{iCell});
+            end
+        end
+    else
+        error('No valid value given for ''link''');
+    end    
 else % no parameter given
     link = {'auto'};
 end
@@ -573,12 +588,14 @@ end
 distributions = {
     'normal'
     'gamma'
+    'inverseGaussian'
     'binomial'
     'poisson'
     };
 links = {
     'identity'
     'reciprocal'
+    '-2'
     'logit'
     'log'
     };
@@ -1135,6 +1152,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     try
         if ~isempty(myLink) && ~strcmp(myLink, 'auto') % link function given -> use it
             if ismember(myDistribution, distributions) && ~strcmp(myLink, canonicalLink(myDistribution))
+                [numVal, isNum] = str2num(myLink);
+                if isNum
+                    myLink = numVal;
+                end
                 mdl = fitglme(Data, formula, ...
                     'DummyVarCoding', 'effects', ...
                     'FitMethod', fitMethod, ...
@@ -1142,6 +1163,10 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
                     'link', myLink, ...
                     'EBMethod', 'TrustRegion2D'); % use this EBMethod, if custom link function is not canonical link function
             else
+                [numVal, isNum] = str2num(myLink);
+                if isNum
+                    myLink = numVal;
+                end
                 mdl = fitglme(Data, formula, ...
                     'DummyVarCoding', 'effects', ...
                     'FitMethod', fitMethod, ...
