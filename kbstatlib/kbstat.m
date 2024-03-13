@@ -1376,8 +1376,8 @@ end
 if ~isempty(anovas)
     % Sidak correction
     for iFit = 1:nFits
-        anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, nFits);
-        anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, correctForN); % additionally correct for multiple tests like this one
+        % anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, nFits); % correct for multivariate dimension
+        anovas{iFit}.pValue = sidak_corr(anovas{iFit}.pValue, correctForN); % correct for custom number of tests
     end
 end
 
@@ -1767,8 +1767,8 @@ for iLevel = 1:nPosthocLevels
                 nTests = sum(idxDesc);
                 bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nTests);
         end
-        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), correctForN); % additionally correct for multiple tests like this one
+        % bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
+        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), correctForN); % correct for custom number of tests
         bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
         bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     end
@@ -1781,8 +1781,8 @@ for iLevel = 1:nPosthocLevels
             main_p = main_p(:); % make column vector
             main_pCorr = main_pCorr(:); % make column vector
             [~, main_pCorr(idxDesc)] = bonferroni_holm(main_p(idxDesc)); % correct p-values, omitting NaNs
-            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), nPosthocLevels); % additionally correct for multiple sets of posthoc comparisons
-            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), correctForN); % additionally correct for multiple tests like this one
+            % main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
+            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), correctForN); % correct for custom number of tests
             main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
             main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
         end
