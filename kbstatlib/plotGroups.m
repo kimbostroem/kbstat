@@ -1,4 +1,4 @@
-function [barPositions, ylimits] = plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines)
+function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines)
 
 if nargin < 17
     plotLines = false;
@@ -161,7 +161,5 @@ end
 if ~isempty(plotTitle)
     title(htl, plotTitle, 'interpreter', 'none')
 end
-
-ylimits = ylim;
 
 end
