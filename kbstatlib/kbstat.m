@@ -202,7 +202,7 @@ function mdl = kbstat(options)
 %                                   for p not exceeding 1.
 %                       OPTIONAL, default = 'holm'.
 %
-%       posthocMainEffects  Flag if also the posthoc main effects should be
+%       posthocMain  Flag if also the posthoc main effects should be
 %                       calculated, i.e. the comparison between one
 %                       variable set to 'any'.
 %                       OPTIONAL, default = true.
@@ -553,10 +553,10 @@ else
 end
 
 % posthoc main effects
-if isfield(options, 'posthocMainEffects') && ~isempty(options.posthocMainEffects)
-    posthocMainEffects = getValue(options.posthocMainEffects);
+if isfield(options, 'posthocMain') && ~isempty(options.posthocMain)
+    posthocMain = getValue(options.posthocMain);
 else
-    posthocMainEffects = true;
+    posthocMain = true;
 end
 
 % posthoc comparison level
@@ -1738,7 +1738,7 @@ for iLevel = 1:nPosthocLevels
                                 end
 
                                 % calc main contrasts
-                                if posthocMainEffects
+                                if posthocMain
                                     L1 = (Data.(memberVar) == pair(1));
                                     L2 = (Data.(memberVar) == pair(2));
                                     val1 = Data.(transVar)(L1);
@@ -1790,7 +1790,7 @@ for iLevel = 1:nPosthocLevels
                                 bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
 
                                 % calc main contrasts
-                                if posthocMainEffects
+                                if posthocMain
                                     L1 = (emm.table.(memberVar) == pair(1));
                                     L2 = (emm.table.(memberVar) == pair(2));
                                     L = (L1 - L2)';
@@ -1844,7 +1844,7 @@ for iLevel = 1:nPosthocLevels
         bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     end
     % statistical correction of main posthoc p-Values
-    if posthocMainEffects
+    if posthocMain
         main_pCorr = main_p;
         idxDesc = ~isnan(main_p(:)); % identify NaN-entries
         if ~isempty(idxDesc)
@@ -2040,7 +2040,7 @@ for iLevel = 1:nPosthocLevels
         posthocTable = table;
 
         % posthoc main effects
-        if posthocMainEffects
+        if posthocMain
             for iPair = 1:nPairs
                 tableRow = table;
 
