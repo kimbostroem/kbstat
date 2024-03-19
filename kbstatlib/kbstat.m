@@ -44,6 +44,10 @@ function mdl = kbstat(options)
 %                       treated as a vector-valued dependent variable and a
 %                       multivariate analysis is performed.
 %
+%       yName           Display name of dependent variable appearing in 
+%                       tables and plots
+%                       OPTIONAL, default = y
+%
 %       yLabel          Label for y axis in data plots.
 %                       If y has more than one component, then this
 %                       parameter can have either one component, in which
@@ -58,6 +62,9 @@ function mdl = kbstat(options)
 %                       must have the same number of components as y.
 %                       OPTIONAL, default = ''.
 %
+%       yMult           Factor to multiply (each dimension of) y
+%                       OPTIONAL, default = 1
+%
 %       x               Comma-separated list of independent variables. Up
 %                       to 4 independent variables are supported.
 %                       String-valued variables are considered as
@@ -65,6 +72,10 @@ function mdl = kbstat(options)
 %                       included in the barplot chart. Numerical variables
 %                       are not considered factors, except they are
 %                       included in the "catVar" list, see below.
+%
+%       xName           Display name of independent variable(s) appearing 
+%                       in tables and plots
+%                       OPTIONAL, default = x
 %
 %       catVar          Comma-separated list of (dependent or independent)
 %                       variables that are taken as categorical, even if
@@ -393,13 +404,13 @@ end
 
 % catVar
 if isfield(options, 'catVar') && ~isempty(options.catVar)
-    catVar = strtrim(strsplit(options.catVar, {',', ';'}));
+    catVar = getList(options.catVar);
 else
     catVar = {};
 end
 
 % independent variable(s)
-x = strtrim(strsplit(options.x, {',', ';'}));
+x = getList(options.x);
 
 %% dependent variable(s)
 
@@ -421,7 +432,7 @@ end
 
 % multiVarLevels
 if isfield(options, 'multiVarLevels') && ~isempty(options.multiVarLevels)
-    multiVarLevels = strtrim(strsplit(options.multiVarLevels, ','));
+    multiVarLevels = getList(options.multiVarLevels);
 else
     multiVarLevels = '';
 end
@@ -476,7 +487,7 @@ end
 
 % within-subject variables
 if isfield(options, 'within') && ~isempty(options.within) % option provided and not empty
-    within = strtrim(strsplit(options.within, {',', ';'}));
+    within = getList(options.within);
     x = union(x, within, 'stable'); % add within-subject variables to independent variables
 else % option not provided or empty
     within = {};
@@ -484,7 +495,7 @@ end
 
 % interaction variables
 if isfield(options, 'interact') && ~isempty(options.interact) % option provided and not empty
-    interact = strtrim(strsplit(options.interact, {',', ';'}));
+    interact = getList(options.interact);
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 elseif isfield(options, 'interact') && isempty(options.interact) % option provided as empty
     interact = {};
@@ -494,7 +505,7 @@ end
 
 % covariates
 if isfield(options, 'covariate') && ~isempty(options.covariate) % option provided and not empty
-    covariate = strtrim(strsplit(options.covariate, {',', ';'}));
+    covariate = getList(options.covariate);
 else % option not provided
     covariate = {};
 end
@@ -684,6 +695,18 @@ else
     showVarNames = 1;
 end
 
+if isfield(options, 'xName') && ~isempty(options.xName)
+    xName = getList(options.xName);
+else
+    xName = cellstr(x);
+end
+
+if isfield(options, 'yName') && ~isempty(options.yName)
+    yName = cellstr(options.yName);
+else
+    yName = cellstr(y);
+end
+
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
     yLabel = cellstr(options.yLabel);
 else
@@ -694,6 +717,12 @@ if isfield(options, 'yUnits')
     yUnits = cellstr(options.yUnits);
 else
     yUnits = {''};
+end
+
+if isfield(options, 'yMult') && ~isempty(options.yMult)
+    yMult = getValue(options.yMult);
+else
+    yMult = 1;
 end
 
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
@@ -707,7 +736,6 @@ if isfield(options, 'plotLines') && ~isempty(options.plotLines)
 else
     plotLines = false;
 end
-
 
 %% Apply constraint, if given
 
@@ -1039,6 +1067,32 @@ if ~strcmp(preOutlierMethod, 'none')
     end
 end
 
+%% Multiply dependent variable data with provided factor(s)
+
+for iVar = 1:nY
+    % dependent variable
+    myVar = y{iVar};
+
+    % multiplication factor(s)
+    if length(yMult) == nY
+        myMult = yMult(iVar);
+    else
+        myMult = yMult(1);
+    end
+
+    % do multiplication
+    if nY > 1 % multiple dependent variables or multivariate dependent variable
+        idxDesc = (Data.(yVar) == myVar);
+        Data.(transVar)(idxDesc) = myMult * Data.(transVar)(idxDesc);
+        fprintf('Multiplying %s with %g...\n', myVar, myMult);
+    else % one dependent variable
+        Data.(transVar) = myMult * Data.(transVar);
+        fprintf('Multiplying %s with %g...\n', depVar, myMult);
+    end
+
+    
+end
+
 %% Fit linear model and perform ANOVA
 
 % perform nY fits only if separateMulti=true
@@ -1054,6 +1108,13 @@ Datasets = cell(1, nFits);
 for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st iteration
     % dependent variable
     myVar = y{iFit};
+
+    % yName
+    if length(yName) == nFits
+        myName = yName{iFit};
+    elseif length(yName) == 1
+        myName = yName{1};
+    end
 
     % create output folder
     outSubDir = sprintf('%s/%s', outDir, myVar);
@@ -1271,7 +1332,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
 
     if nY > 1 && separateMulti
         if strcmp(depVar, yVal)
-            sgtitle(sprintf('Diagnostics for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            sgtitle(sprintf('Diagnostics for %s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
             sgtitle(sprintf('Diagnostics for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         end
@@ -1425,13 +1486,14 @@ end
 %% Plot data and make posthoc comparisons
 
 allVars = {memberVar, groupVar, colVar, rowVar};
+allVarNames = xName;
 allVarLevels = {members, groups, cols, rows};
 nPosthocLevels = min(posthocLevel, nFactors);
 
 for iLevel = 1:nPosthocLevels
 
     % define what is member and what are the others
-    memberVar = allVars{iLevel};
+    memberVar = allVars{iLevel};    
     members = allVarLevels{iLevel};
     newIdx = 1:4;
     newIdx([1, iLevel]) = newIdx([iLevel, 1]);
@@ -1446,8 +1508,33 @@ for iLevel = 1:nPosthocLevels
     nCols = length(cols);
     nRows = length(rows);
 
+    % display names
+    idxDisp = strcmp(x, memberVar);
+    if any(idxDisp)
+        memberVarDisp = xName{idxDisp};
+    else
+        memberVarDisp = memberVar;
+    end
+    idxDisp = strcmp(x, groupVar);
+    if any(idxDisp)
+        groupVarDisp = xName{idxDisp};
+    else
+        groupVarDisp = groupVar;
+    end
+    idxDisp = strcmp(x, colVar);
+    if any(idxDisp)
+        colVarDisp = xName{idxDisp};
+    else
+        colVarDisp = colVar;
+    end
+    idxDisp = strcmp(x, rowVar);
+    if any(idxDisp)
+        rowVarDisp = xName{idxDisp};
+    else
+        rowVarDisp = rowVar;
+    end
+
     % define posthoc comparison pairs
-    pairsIdx = nchoosek(1:nMembers, 2);
     pairs = nchoosek(members, 2);
     nPairs = size(pairs, 1);
 
@@ -1558,7 +1645,7 @@ for iLevel = 1:nPosthocLevels
                             row = rows(iRow);
                             idxDesc = idxDesc & Data.(rowVar) == row;
                             idxEmm = idxEmm & (emm.table.(rowVar) == row);
-                            statsRow.(rowVar) = string(row);
+                            statsRow.(rowVarDisp) = string(row);
                         end
 
                         % 3rd x, if given
@@ -1566,7 +1653,7 @@ for iLevel = 1:nPosthocLevels
                             col = cols(iCol);
                             idxDesc = idxDesc & Data.(colVar) == col;
                             idxEmm = idxEmm & (emm.table.(colVar) == col);
-                            statsRow.(colVar) = string(col);
+                            statsRow.(colVarDisp) = string(col);
                         end
 
                         % 2nd x, if given
@@ -1574,14 +1661,14 @@ for iLevel = 1:nPosthocLevels
                             group = groups(iGroup);
                             idxDesc = idxDesc & (Data.(groupVar) == group);
                             idxEmm = idxEmm & (emm.table.(groupVar) == group);
-                            statsRow.(groupVar) = string(group);
+                            statsRow.(groupVarDisp) = string(group);
                         end
 
                         % 1st x
                         member = members(iMember);
                         idxDescMember = idxDesc & (Data.(memberVar) == member);
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
-                        statsRow.(memberVar) = string(member);
+                        statsRow.(memberVarDisp) = string(member);
 
                         statsRow.emMean = mean(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(idxEmmMember)));
                         statsRow.emSE = mean(mdl.Link.Inverse(emm.table.SE(idxEmmMember)));
@@ -1800,6 +1887,13 @@ for iLevel = 1:nPosthocLevels
             mkdir(outSubDir);
         end
 
+        % yName
+        if length(yName) == nY
+            myName = yName{iVar};
+        elseif length(yName) == 1
+            myName = myVar;
+        end
+
         % yLabel
         if length(yLabel) == nY
             myLabel = yLabel{iVar};
@@ -1833,35 +1927,35 @@ for iLevel = 1:nPosthocLevels
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && separateMulti
                 if strcmp(depVar, yVal)
-                    title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, sprintf('%s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
-                    title(layout, sprintf('Data plots for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, sprintf('%s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 end
             elseif nY > 1 && strcmp(plotTitle, yVal)
-                title(layout, sprintf('Data plots for %s', myVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, sprintf('%s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             else
-                title(layout, sprintf('Data plots for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, sprintf('%s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             end
 
             % prepare to display variable names and levels
             switch showVarNames
                 case {2, 3, 'Levels', 'Names_and_Levels'} % capitalize variable names and levels
-                    displayMemberVar = string(capitalize(memberVar));
+                    displayMemberVar = string(capitalize(memberVarDisp));
                     displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
-                    displayGroupVar = string(capitalize(groupVar));
+                    displayGroupVar = string(capitalize(groupVarDisp));
                     displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', ')), ', '));
-                    displayColVar = string(capitalize(colVar));
+                    displayColVar = string(capitalize(colVarDisp));
                     displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', ')), ', '));
-                    displayRowVar = string(capitalize(rowVar));
+                    displayRowVar = string(capitalize(rowVarDisp));
                     displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', ')), ', '));
                 otherwise % use original variable names and levels
-                    displayMemberVar = memberVar;
+                    displayMemberVar = memberVarDisp;
                     displayMembers = members;
-                    displayGroupVar = groupVar;
+                    displayGroupVar = groupVarDisp;
                     displayGroups = groups;
-                    displayColVar = colVar;
+                    displayColVar = colVarDisp;
                     displayCols = cols;
-                    displayRowVar = rowVar;
+                    displayRowVar = rowVarDisp;
                     displayRows = rows;
             end
             for iRow = 1:nRows
@@ -2072,7 +2166,7 @@ end
 %% Helper functions %%%%%%%%%%%%%%%%%%%%%%
 
 function value = getValue(in)
-% get numerical or logical value from string, if possible
+% get numerical, logical, or string value from string
 if ischar(in) || isstring(in)
     [numValue, isNum] = str2num(in);
     if isNum
@@ -2080,7 +2174,21 @@ if ischar(in) || isstring(in)
     else
         value = in;
     end
-else
+else % bool or whatever
+    value = in;
+end
+end
+
+function value = getList(in)
+% get numerical, logical, or string array from string
+if ischar(in) || isstring(in)
+    [numValue, isNum] = str2num(in);
+    if isNum
+        value = numValue;
+    else
+        value = strtrim(strsplit(in, {',', ';'}));
+    end
+else % bool or whatever
     value = in;
 end
 end
