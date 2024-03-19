@@ -1384,22 +1384,6 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     iPanel = iPanel+1;
     subplot(nPanelRows, nPanelCols, iPanel);
     plotResiduals(mdl, 'fitted', 'ResidualType', 'Pearson');
-    % % plot fitted line
-    % hold on
-    % h = gca;
-    % xData = h(1).XData;
-    % yData = h(1).YData;
-    % [xData, sortOrder] = sort(xData, 'ascend');
-    % yData = yData(sortOrder); % Need to sort b the same way.
-    % idxValid = ~isnan(yData);
-    % fitCoeffs = polyfit(xData(idxValid), yData(idxValid), 1);
-    % xFitted = xData(idxValid); % Evalutate the fit as the same x coordinates.
-    % yFitted = polyval(fitCoeffs, xFitted);
-    % plot(xFitted, yFitted, 'b-', 'LineWidth', 2);
-    % % test for homoscedasticity using Arch test
-    % cleanResiduals = mdlResiduals(~isnan(mdlResiduals));
-    % [isHetero, pHetero] = archtest(cleanResiduals);
-    % text(gca, 0.05,0.95,sprintf('Homoscedasticity = %d (p = %f)', ~isHetero, pHetero), 'Units', 'normalized');
 
     % lagged residuals
     iPanel = iPanel+1;
