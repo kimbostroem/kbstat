@@ -1772,8 +1772,7 @@ for iLevel = 1:nPosthocLevels
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
-                            % pairwise comparison
-                            pValues = nan(nPairs, 1);
+                            % pairwise comparison                            
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
 
@@ -1789,10 +1788,6 @@ for iLevel = 1:nPosthocLevels
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
                                 bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
-                                if ismember(contrasts.pVal, pValues)
-                                    error('Duplicate p-values found! Something is dead wrong!');
-                                end
-                                pValues(iPair) = contrasts.pVal;
 
                                 % calc main contrasts
                                 if posthocMain && nGroups * nRows * nCols * nPairs > 1
@@ -1833,6 +1828,16 @@ for iLevel = 1:nPosthocLevels
     if ~isempty(idxDesc)
         sizeOrig = size(bar_p); % store original array shape
         bar_p = bar_p(:); % make column vector
+
+        % check for duplicate p-values indicating a severe problem
+        for iP = 1:length(bar_p)
+            pValue = bar_p(iP);
+            if length(setdiff(bar_p, pValue)) < length(bar_p) - 1
+                warning('!!!WARNING!!!! Duplicate p-values found. Something is wrong.');
+                break
+            end
+        end
+
         bar_pCorr = bar_pCorr(:); % make column vector
         switch posthocCorrection
             case 'none'
