@@ -150,13 +150,13 @@ for iGroup = 1:nGroups
 
     if iGroup == 1
         ylabel(ylabelStr, 'interpreter', 'none');
-    end
-    linkaxes(hnt);
+    end    
     if iGroup > 1
         hnt(iGroup).YAxis.TickValues = [];
     end
     set(gca,'TickLabelInterpreter','none');
 end
+linkaxes(hnt, 'y');
 
 if ~isempty(plotTitle)
     title(htl, plotTitle, 'interpreter', 'none')
