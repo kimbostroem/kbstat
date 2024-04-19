@@ -15,8 +15,6 @@ Subject;Chocolate;Gender;Distance
 "7";"with";"male";7.616520935
 "8";"without";"male";7.890738439
 "8";"with";"male";7.88392995
-"9";"without";"male";9.065341776
-"9";"with";"male";9.056599522
 "10";"without";"male";8.755056095
 "10";"with";"male";8.765536784
 "11";"without";"male";7.252657149
@@ -275,8 +273,6 @@ Subject;Chocolate;Gender;Distance
 "137";"with";"female";7.150069429
 "138";"without";"female";6.804695217
 "138";"with";"female";6.778115187
-"139";"without";"female";5.573354558
-"139";"with";"female";5.539778821
 "140";"without";"female";6.574451136
 "140";"with";"female";6.548281923
 "141";"without";"female";5.938464463
@@ -359,8 +355,6 @@ Subject;Chocolate;Gender;Distance
 "179";"with";"female";5.772924032
 "180";"without";"female";6.774589906
 "180";"with";"female";6.758519596
-"181";"without";"female";7.246774838
-"181";"with";"female";7.22673887
 "182";"without";"female";6.746896625
 "182";"with";"female";6.730556484
 "183";"without";"female";6.306551717

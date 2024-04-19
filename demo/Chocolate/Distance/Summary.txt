@@ -4,36 +4,36 @@ Formula:
 Generalized linear mixed-effects model fit by PL
 
 Model information:
-    Number of observations             500
+    Number of observations             494
     Fixed effects coefficients           4
-    Random effects coefficients        500
+    Random effects coefficients        494
     Covariance parameters                4
     Distribution                    Gamma 
     Link                            Power 
-    FitMethod                       REMPL 
+    FitMethod                       MPL   
 
 Formula:
     Distance ~ 1 + Chocolate*Gender + (1 + Chocolate | Subject)
 
 Model fit statistics:
     AIC        BIC        LogLikelihood    Deviance
-    -5023.5    -4989.9    2519.8           -5039.5 
+    -5055.2    -5021.6    2535.6           -5071.2 
 
 Fixed effects coefficients (95% CIs):
-    Name                                     Estimate       SE            tStat      DF     pValue         Lower          Upper      
-    {'(Intercept)'                  }            0.14246    0.00048191     295.61    496              0        0.14151         0.1434
-    {'Chocolate_without'            }        -3.1255e-05    9.0196e-06    -3.4652    496     0.00057578    -4.8976e-05    -1.3534e-05
-    {'Gender_male'                  }          -0.014024    0.00048191    -29.101    496    2.4128e-109      -0.014971      -0.013077
-    {'Chocolate_without:Gender_male'}         0.00010932    9.0196e-06      12.12    496     8.5582e-30     9.1597e-05     0.00012704
+    Name                                     Estimate       SE            tStat      DF     pValue         Lower          Upper     
+    {'(Intercept)'                  }            0.14253    0.00046378     307.32    490              0        0.14162       0.14344
+    {'Chocolate_without'            }        -2.9047e-05    8.9762e-06    -3.2359    490      0.0012944    -4.6683e-05    -1.141e-05
+    {'Gender_male'                  }          -0.013915    0.00046378    -30.003    490    4.9563e-113      -0.014826     -0.013004
+    {'Chocolate_without:Gender_male'}         0.00010897    8.9762e-06      12.14    490     7.8361e-30      9.133e-05     0.0001266
 
 Random effects covariance parameters:
-Group: Subject (250 Levels)
+Group: Subject (247 Levels)
     Name1                        Name2                        Type            Estimate  
-    {'(Intercept)'      }        {'(Intercept)'      }        {'std' }         0.0074644
+    {'(Intercept)'      }        {'(Intercept)'      }        {'std' }         0.0071427
     {'Chocolate_without'}        {'(Intercept)'      }        {'corr'}                -1
-    {'Chocolate_without'}        {'Chocolate_without'}        {'std' }        6.0721e-06
+    {'Chocolate_without'}        {'Chocolate_without'}        {'std' }        5.6148e-06
 
 Group: Error
     Name                        Estimate 
-    {'sqrt(Dispersion)'}        0.0014125
+    {'sqrt(Dispersion)'}        0.0013964
 Performing post-hoc comparison using method 'emm'

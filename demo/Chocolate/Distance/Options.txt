@@ -1,9 +1,13 @@
 options.distribution = "gamma";
+options.fitMethod = "MPL";
 options.id = "Subject";
 options.inFile = "Chocolate.csv";
 options.interact = "Chocolate, Gender";
+options.postOutlierMethod = "none";
+options.posthocLevel = "1";
 options.posthocMethod = "emm";
-options.removeOutliers = "true";
+options.preOutlierMethod = "quartiles";
+options.showVarNames = "Levels";
 options.within = "Chocolate";
 options.x = "Chocolate, Gender";
 options.y = "Distance";
