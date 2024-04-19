@@ -131,7 +131,7 @@ function mdl = kbstat(options)
 %                       statistically corrected for these multiple tests.
 %                       OPTIONAL, default = true.
 %
-%       randSlopes    Flag if random slopes should be estimated.
+%       randSlopes      Flag if random slopes should be estimated.
 %                       OPTIONAL, default = true.
 %
 %       formula         Formula in Wilkinson Notation. If given, it
@@ -1471,7 +1471,6 @@ end
 %% Plot data and make posthoc comparisons
 
 allVars = {memberVar, groupVar, colVar, rowVar};
-allVarNames = xName;
 allVarLevels = {members, groups, cols, rows};
 nPosthocLevels = min(posthocLevel, nFactors);
 
@@ -1739,7 +1738,7 @@ for iLevel = 1:nPosthocLevels
                                 end
 
                                 % calc main contrasts
-                                if posthocMain
+                                if posthocMain && nPairs > 1
                                     L1 = (Data.(memberVar) == pair(1));
                                     L2 = (Data.(memberVar) == pair(2));
                                     val1 = Data.(transVar)(L1);
@@ -1791,7 +1790,7 @@ for iLevel = 1:nPosthocLevels
                                 bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
 
                                 % calc main contrasts
-                                if posthocMain
+                                if posthocMain && nPairs > 1
                                     L1 = (emm.table.(memberVar) == pair(1));
                                     L2 = (emm.table.(memberVar) == pair(2));
                                     L = (L1 - L2)';
@@ -1845,7 +1844,7 @@ for iLevel = 1:nPosthocLevels
         bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     end
     % statistical correction of main posthoc p-Values
-    if posthocMain
+    if posthocMain && nPairs > 1
         main_pCorr = main_p;
         idxDesc = ~isnan(main_p(:)); % identify NaN-entries
         if ~isempty(idxDesc)
@@ -2041,7 +2040,7 @@ for iLevel = 1:nPosthocLevels
         posthocTable = table;
 
         % posthoc main effects
-        if posthocMain
+        if posthocMain && nPairs > 1
             for iPair = 1:nPairs
                 tableRow = table;
 
