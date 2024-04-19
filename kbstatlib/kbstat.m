@@ -1738,7 +1738,7 @@ for iLevel = 1:nPosthocLevels
                                 end
 
                                 % calc main contrasts
-                                if posthocMain && nPairs > 1
+                                if posthocMain && nGroups * nRows * nCols * nPairs > 1
                                     L1 = (Data.(memberVar) == pair(1));
                                     L2 = (Data.(memberVar) == pair(2));
                                     val1 = Data.(transVar)(L1);
@@ -1773,6 +1773,7 @@ for iLevel = 1:nPosthocLevels
                         case 'emm' % perform post-hoc analysis using emmeans
 
                             % pairwise comparison
+                            pValues = nan(nPairs, 1);
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
 
@@ -1788,9 +1789,13 @@ for iLevel = 1:nPosthocLevels
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
                                 bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
+                                if ismember(contrasts.pVal, pValues)
+                                    error('Duplicate p-values found! Something is dead wrong!');
+                                end
+                                pValues(iPair) = contrasts.pVal;
 
                                 % calc main contrasts
-                                if posthocMain && nPairs > 1
+                                if posthocMain && nGroups * nRows * nCols * nPairs > 1
                                     L1 = (emm.table.(memberVar) == pair(1));
                                     L2 = (emm.table.(memberVar) == pair(2));
                                     L = (L1 - L2)';
@@ -1844,7 +1849,7 @@ for iLevel = 1:nPosthocLevels
         bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
     end
     % statistical correction of main posthoc p-Values
-    if posthocMain && nPairs > 1
+    if posthocMain && nGroups * nRows * nCols * nPairs > 1
         main_pCorr = main_p;
         idxDesc = ~isnan(main_p(:)); % identify NaN-entries
         if ~isempty(idxDesc)
@@ -2040,7 +2045,7 @@ for iLevel = 1:nPosthocLevels
         posthocTable = table;
 
         % posthoc main effects
-        if posthocMain && nPairs > 1
+        if posthocMain && nGroups * nRows * nCols * nPairs > 1
             for iPair = 1:nPairs
                 tableRow = table;
 
