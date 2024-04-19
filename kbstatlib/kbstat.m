@@ -1170,15 +1170,18 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
     if ~isempty(id) && length(unique(Data.(id))) > 1
-        if randSlopes && ~isempty(within)
+        if randSlopes && ~isempty(union(within, covariate))
             randomEffect = '';
             if nY > 1 && ~separateMulti
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), within, 'UniformOutput', false), ' + ');
+                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             else
-                randomSlopes = sprintf('(%s|%s)', strjoin(within, '+'), id);
+                randomSlopes = sprintf('(%s|%s)', strjoin(union(within, covariate, 'stable'), '+'), id);
             end
+        elseif ~randSlopes && ~isempty(union(within, covariate)) % no within variables and no covariates
+            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
+            randomSlopes = '';
         else
-            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), within, 'UniformOutput', false), ' + ');
+            randomEffect = sprintf('(1|%s)', id);
             randomSlopes = '';
         end
     else
