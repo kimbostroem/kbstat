@@ -196,8 +196,8 @@ function mdl = kbstat(options)
 %                       Possible values:
 %                       'none'      Do not correct
 %                       'holm'      Holm-Bonferroni correction
-%                       'bonf',     Bonferroni resp. Sidak correction.
-%                       'sidak'     Sidak is (approx.) equal to
+%                       'bonf',     Same as 'sidak'.
+%                       'sidak'     Sidak is approx. equal to
 %                                   Bonferroni for small p and cares
 %                                   for p not exceeding 1.
 %                       OPTIONAL, default = 'holm'.
@@ -226,7 +226,7 @@ function mdl = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       preOutlierMethod   Method to remove pre-fit outliers from the data.
+%       outlierRemoval  Method to remove pre-fit outliers from the data.
 %                       Possible values:
 %                       'none'      Do not remove outliers
 %                       'quartiles' Remove values outside 1.5 times the
@@ -237,13 +237,10 @@ function mdl = kbstat(options)
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'none'.
 %
-%       postOutlierMethod  Method to remove post-fit outliers, i.e.,
+%       postOutlierRemoval  Method to remove post-fit outliers, i.e.,
 %                       outliers in the residuals.
 %                       Possible values: see preOutlierMethod
 %                       OPTIONAL, default = 'none'.
-%
-%       outlierMethod   Set both preOutlierMethod and postOutlierMethod to
-%                       this value.
 %
 %       constraint      One or more restrictive constraints on the data before analysis.
 %						Must be of the form
@@ -654,10 +651,14 @@ else
 end
 
 % flag if pre-fit outliers should be removed
-if isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
-    preOutlierMethod = options.preOutlierMethod;
+if isfield(options, 'outlierRemoval') && ~isempty(options.outlierRemoval)
+    outlierRemoval = options.outlierRemoval;
+elseif isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
+    outlierRemoval = options.preOutlierMethod;
+elseif isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
+    outlierRemoval = options.outlierMethod;
 else
-    preOutlierMethod = 'none';
+    outlierRemoval = 'none';
 end
 
 % flag if post-fit outliers should be removed
@@ -665,12 +666,6 @@ if isfield(options, 'postOutlierMethod') && ~isempty(options.postOutlierMethod)
     postOutlierMethod = options.postOutlierMethod;
 else
     postOutlierMethod = 'none';
-end
-
-% interpret "outlierMethod" as both pre and post outlier method
-if isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
-    preOutlierMethod = options.outlierMethod;
-    postOutlierMethod = options.outlierMethod;
 end
 
 % output folder
@@ -969,7 +964,7 @@ nPreOutliers = 0;
 nPreObs = size(Data, 1);
 
 outlierLevel = nFactors;
-if ~strcmp(preOutlierMethod, 'none')
+if ~strcmp(outlierRemoval, 'none')
 
     idxOut = false(size(Data, 1), 1);
 
@@ -985,7 +980,7 @@ if ~strcmp(preOutlierMethod, 'none')
 
         if outlierLevel == 0 % level 0: all data
             yData = Data.(transVar)(idxTest);
-            idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
+            idxOut(idxTest) = isoutlier(yData, outlierRemoval);
 
         elseif outlierLevel == 1 % level 1: 1st dependent variable
             for iMember = 1:nMembers
@@ -993,7 +988,7 @@ if ~strcmp(preOutlierMethod, 'none')
                 member = members(iMember);
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(transVar)(idxTest);
-                idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
+                idxOut(idxTest) = isoutlier(yData, outlierRemoval);
             end
 
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
@@ -1007,7 +1002,7 @@ if ~strcmp(preOutlierMethod, 'none')
                         idxTest = idxTest & (Data.(groupVar) == group);
                     end
                     yData = Data.(transVar)(idxTest);
-                    idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
+                    idxOut(idxTest) = isoutlier(yData, outlierRemoval);
                 end
             end
 
@@ -1027,7 +1022,7 @@ if ~strcmp(preOutlierMethod, 'none')
                             idxTest = idxTest & (Data.(colVar) == col);
                         end
                         yData = Data.(transVar)(idxTest);
-                        idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
+                        idxOut(idxTest) = isoutlier(yData, outlierRemoval);
                     end
                 end
             end
@@ -1052,7 +1047,7 @@ if ~strcmp(preOutlierMethod, 'none')
                                 idxTest = idxTest & (Data.(rowVar) == row);
                             end
                             yData = Data.(transVar)(idxTest);
-                            idxOut(idxTest) = isoutlier(yData, preOutlierMethod);
+                            idxOut(idxTest) = isoutlier(yData, outlierRemoval);
                         end
                     end
                 end
@@ -1307,7 +1302,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
 
     % report outlier removal to file
     fidOutliers = fopen(fullfile(outSubDir, 'Outliers.txt'), 'w+');
-    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, preOutlierMethod);
+    msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, outlierRemoval);
     fprintf(msg);
     fprintf(fidOutliers, msg);
     msg = sprintf('Removed %d post-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
