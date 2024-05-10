@@ -13,7 +13,7 @@ function mdl = kbstat(options)
 % univariate analyses, because this works in a more stable fashion. Note,
 % however, that the results are not statistically corrected for multiple
 % testing. To enable true multivariate analysis, set
-% options.separateMulti=false. However, the posthoc test then only works
+% options.multiVariate=true. However, the posthoc test then only works
 % when options.posthocMethod='ttest' instead of 'emm', due to limitations
 % of the external package 'emmeans'.
 %
@@ -40,7 +40,7 @@ function mdl = kbstat(options)
 %                       the latter case, by default each component is
 %                       treated as a separate dependent variable and as
 %                       many independent univariate analyses are performed.
-%                       If "separateMulti" is set to "false", then y is
+%                       If "multiVariate" is set to "true", then y is
 %                       treated as a vector-valued dependent variable and a
 %                       multivariate analysis is performed.
 %
@@ -125,11 +125,12 @@ function mdl = kbstat(options)
 %                       all levels are taken.
 %                       OPTIONAL, default = ''.
 %
-%       separateMulti   Flag if, when the dependent variable has multiple
+%       multiVariate    Flag if, when the dependent variable has multiple
 %                       components, these components should be analyzed
-%                       separately. In the latter case, the results are
+%                       together. If set to false, they are treated as
+%                       independent variables instead and the results are
 %                       statistically corrected for these multiple tests.
-%                       OPTIONAL, default = true.
+%                       OPTIONAL, default = false.
 %
 %       randSlopes      Flag if random slopes should be estimated.
 %                       OPTIONAL, default = true.
@@ -187,7 +188,7 @@ function mdl = kbstat(options)
 %                       'emm'       Extract contrasts from linear model fit
 %                       'auto'      Perform posthoc analysis using
 %                                   'emm' if univariate or multi-valued y
-%                                   with separateMulti=true, 'ttest' if
+%                                   with multiVariate=false, 'ttest' if
 %                                   distribution='normal', and 'utest'
 %                                   otherwise.
 %                       OPTIONAL, default = 'utest'.
@@ -521,11 +522,13 @@ else
     formula = '';
 end
 
-% separateMulti
-if isfield(options, 'separateMulti') && ~isempty(options.separateMulti)
-    separateMulti = getValue(options.separateMulti);
+% multiVariate
+if isfield(options, 'multiVariate') && ~isempty(options.multiVariate)
+    multiVariate = getValue(options.multiVariate);
+elseif isfield(options, 'separateMulti') && ~isempty(options.separateMulti)
+    multiVariate = not(getValue(options.separateMulti));
 else
-    separateMulti = true;
+    multiVariate = false;
 end
 
 % fit method
@@ -1090,17 +1093,17 @@ end
 
 %% Fit linear model and perform ANOVA
 
-% perform nY fits only if separateMulti=true
+% perform nY fits only if multiVariate=false
 nFits = 1;
 if strcmp(fitMethod, 'none')
     nFits = 0;
-elseif separateMulti
+elseif ~multiVariate
     nFits = nY;
 end
 mdls = cell(1, nFits);
 anovas = cell(1, nFits);
 Datasets = cell(1, nFits);
-for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st iteration
+for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     % dependent variable
     myVar = y{iFit};
 
@@ -1142,7 +1145,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         myLink = link{1};
     end
 
-    if nY > 1 && separateMulti % separate univariate analyses of multi-valued dependent variable
+    if nY > 1 && ~multiVariate % separate univariate analyses of multi-valued dependent variable
         idxDesc = (Data.(yVar) == myVar);
         DataOrig = Data;
         Data = Data(idxDesc, :);
@@ -1157,7 +1160,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     fidSummary = fopen(fullfile(outSubDir, 'Summary.txt'), 'w+');
 
     productTerm = strjoin(interact, '*');
-    if nY > 1 && ~separateMulti
+    if nY > 1 && multiVariate
         productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
     end
     xNoInteract = setdiff(x, interact, 'stable');
@@ -1167,7 +1170,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     if ~isempty(id) && length(unique(Data.(id))) > 1
         if randSlopes && ~isempty(union(within, covariate))
             randomEffect = '';
-            if nY > 1 && ~separateMulti
+            if nY > 1 && multiVariate
                 randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), union(within, covariate, 'stable'), 'UniformOutput', false), ' + ');
             else
                 randomSlopes = sprintf('(%s|%s)', strjoin(union(within, covariate, 'stable'), '+'), id);
@@ -1198,7 +1201,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
         terms = [terms, randomSlopes]; %#ok<AGROW>
     end
 
-    if nY > 1 && separateMulti
+    if nY > 1 && ~multiVariate
         formulaOrig = formula;
     end
     if isempty(formula)
@@ -1258,7 +1261,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
             % remove outliers from Data
             Data(postOutliers, :) = [];
             % remove outliers from DataOrig
-            if nY > 1 && separateMulti
+            if nY > 1 && ~multiVariate
                 idxTmp = false(size(DataOrig, 1), 1);
                 idxTmp(idxDesc) =  postOutliers;
                 DataOrig(idxTmp, :) = [];
@@ -1326,7 +1329,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     figName = 'Diagnostics';
     fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
 
-    if nY > 1 && separateMulti
+    if nY > 1 && ~multiVariate
         if strcmp(depVar, yVal)
             sgtitle(sprintf('Diagnostics for %s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
@@ -1406,7 +1409,7 @@ for iFit = 1:nFits % if not separateMulti, this loop is left after the 1st itera
     Datasets{iFit} = Data;
 
     % if separate multi, restore Data and formula
-    if nY > 1 && separateMulti
+    if nY > 1 && ~multiVariate
         Data = DataOrig; % set Data to original Data minus post-fit outliers
         formula = formulaOrig;
     end
@@ -1584,7 +1587,7 @@ for iLevel = 1:nPosthocLevels
 
         % posthoc method
         if strcmp(posthocMethod, 'auto')
-            if nY > 1 && separateMulti && ~strcmp(fitMethod, 'none')
+            if nY > 1 && ~multiVariate && ~strcmp(fitMethod, 'none')
                 posthocMethod = 'emm';
             elseif nY == 1 && ~strcmp(fitMethod, 'none')
                 posthocMethod = 'emm';
@@ -1609,7 +1612,7 @@ for iLevel = 1:nPosthocLevels
 
                         if nY > 1
                             idxDesc = (Data.(yVar) == myVar);
-                            if ~separateMulti
+                            if multiVariate
                                 idxEmm = (emm.table.(yVar) == myVar);
                             else
                                 idxEmm = true(size(emm.table, 1), 1);
@@ -1914,7 +1917,7 @@ for iLevel = 1:nPosthocLevels
             end
             fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
             layout = tiledlayout(nRows, nCols);
-            if nY > 1 && separateMulti
+            if nY > 1 && ~multiVariate
                 if strcmp(depVar, yVal)
                     title(layout, sprintf('%s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
