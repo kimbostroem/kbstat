@@ -684,7 +684,7 @@ end
 if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
-    plotTitle = depVar;
+    plotTitle = capitalize(depVar);
 end
 
 if isfield(options, 'showVarNames') && ~isempty(options.showVarNames)
@@ -1331,12 +1331,12 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
     if nY > 1 && ~multiVariate
         if strcmp(depVar, yVal)
-            sgtitle(sprintf('Diagnostics for %s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            sgtitle(sprintf('Diagnostics for %s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
-            sgtitle(sprintf('Diagnostics for %s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            sgtitle(sprintf('Diagnostics for %s %s %s', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         end
     elseif nY > 1 && strcmp(plotTitle, yVal)
-        sgtitle(sprintf('Diagnostics for multivariate Analysis'), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        sgtitle(sprintf('Diagnostics for %s - multivariate Analysis', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     else
         sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
     end
@@ -1919,12 +1919,12 @@ for iLevel = 1:nPosthocLevels
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
                 if strcmp(depVar, yVal)
-                    title(layout, sprintf('%s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, sprintf('%s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
-                    title(layout, sprintf('%s %s', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, sprintf('%s %s %s', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 end
             elseif nY > 1 && strcmp(plotTitle, yVal)
-                title(layout, sprintf('%s', myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, sprintf('%s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             else
                 title(layout, sprintf('%s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             end
