@@ -1919,14 +1919,14 @@ for iLevel = 1:nPosthocLevels
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
                 if strcmp(depVar, yVal)
-                    title(layout, sprintf('%s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, capitalize(sprintf('%s %s', plotTitle, myName)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
-                    title(layout, sprintf('%s %s %s', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, capitalize(sprintf('%s %s %s', plotTitle, myVar, depVar)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 end
             elseif nY > 1 && strcmp(plotTitle, yVal)
-                title(layout, sprintf('%s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, capitalize(sprintf('%s %s', plotTitle, myName)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             else
-                title(layout, sprintf('%s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, capitalize(sprintf('%s', plotTitle)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             end
 
             % prepare to display variable names and levels
