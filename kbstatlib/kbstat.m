@@ -1114,6 +1114,13 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         myName = yName{1};
     end
 
+    % yLabel
+    if length(yLabel) == nY
+        myLabel = yLabel{iVar};
+    elseif length(yLabel) == 1
+        myLabel = yLabel{1};
+    end
+
     % create output folder
     outSubDir = sprintf('%s/%s', outDir, myVar);
     if ~isfolder(outSubDir)
@@ -1333,9 +1340,9 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
     if nY > 1 && ~multiVariate
         if strcmp(depVar, yVal)
-            sgtitle(sprintf('Diagnostics for %s %s', plotTitle, myName), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            sgtitle(sprintf('Diagnostics for %s (%s)', plotTitle, myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         else
-            sgtitle(sprintf('Diagnostics for %s %s %s', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            sgtitle(sprintf('Diagnostics for %s (%s, %s)', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
         end
     elseif nY > 1 && strcmp(plotTitle, yVal)
         sgtitle(sprintf('Diagnostics for %s - multivariate Analysis', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
@@ -1921,12 +1928,12 @@ for iLevel = 1:nPosthocLevels
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
                 if strcmp(depVar, yVal)
-                    title(layout, capitalize(sprintf('%s %s', plotTitle, myName)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
-                    title(layout, capitalize(sprintf('%s %s %s', plotTitle, myVar, depVar)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, capitalize(sprintf('%s (%s, %s)', plotTitle, myVar, depVar)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 end
             elseif nY > 1 && strcmp(plotTitle, yVal)
-                title(layout, capitalize(sprintf('%s %s', plotTitle, myName)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             else
                 title(layout, capitalize(sprintf('%s', plotTitle)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             end
