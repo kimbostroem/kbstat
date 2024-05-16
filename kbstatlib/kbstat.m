@@ -1663,8 +1663,9 @@ for iLevel = 1:nPosthocLevels
 
                         statsRow.emMean = mean(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(idxEmmMember)));
                         statsRow.emSE = mean(mdl.Link.Inverse(emm.table.SE(idxEmmMember)));
-                        statsRow.emCI95_lower = mean(mdl.Link.Inverse(emm.table.CI_95_0pct(idxEmmMember, 1)));
-                        statsRow.emCI95_upper = mean(mdl.Link.Inverse(emm.table.CI_95_0pct(idxEmmMember, 2)));
+                        emCI95 = mean(mdl.Link.Inverse(emm.table.CI_95_0pct(idxEmmMember, :)), 1);
+                        statsRow.emCI95_lower = min(emCI95);
+                        statsRow.emCI95_upper = max(emCI95);
 
                         vals = Data.(transVar)(idxDescMember);
                         statsRow.N = length(vals(~isnan(vals)));                        
