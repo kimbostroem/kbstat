@@ -1943,13 +1943,13 @@ for iLevel = 1:nPosthocLevels
             switch showVarNames
                 case {2, 3, 'Levels', 'Names_and_Levels'} % capitalize variable names and levels
                     displayMemberVar = string(capitalize(memberVarDisp));
-                    displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', ')), ', '));
+                    displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', '), 'all'), ', '));
                     displayGroupVar = string(capitalize(groupVarDisp));
-                    displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', ')), ', '));
+                    displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', '), 'all'), ', '));
                     displayColVar = string(capitalize(colVarDisp));
-                    displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', ')), ', '));
+                    displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', '), 'all'), ', '));
                     displayRowVar = string(capitalize(rowVarDisp));
-                    displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', ')), ', '));
+                    displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', '), 'all'), ', '));
                 otherwise % use original variable names and levels
                     displayMemberVar = memberVarDisp;
                     displayMembers = members;
