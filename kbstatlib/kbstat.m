@@ -206,7 +206,7 @@ function mdl = kbstat(options)
 %       posthocMain  Flag if also the posthoc main effects should be
 %                       calculated, i.e. the comparison between one
 %                       variable set to 'any'.
-%                       OPTIONAL, default = true.
+%                       OPTIONAL, default = false.
 %
 %       posthocLevel    Indiciate to which level of the independent
 %                       variables the posthoc comparison should be
@@ -556,7 +556,7 @@ end
 if isfield(options, 'posthocMain') && ~isempty(options.posthocMain)
     posthocMain = getValue(options.posthocMain);
 else
-    posthocMain = true;
+    posthocMain = false;
 end
 
 % posthoc comparison level
