@@ -1586,7 +1586,7 @@ for iLevel = 1:nPosthocLevels
         % factors. Continuous variables cannot be
         % included, because then emmeans gives an
         % error
-        emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced');
+        emm = emmeans(mdl, reshape(catVars, 1, []), 'effects', 'unbalanced', {mdl.ResponseName, mdl.Link.Link, mdl.Link.Inverse});
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
