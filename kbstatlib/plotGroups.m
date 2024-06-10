@@ -21,7 +21,7 @@ if nargin < 13
 end
 
 if nargin < 12 || isnan(markerSize)
-    markerSize = 24;
+    markerSize = 12;
 end
 
 if nargin < 11
