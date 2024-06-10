@@ -140,6 +140,9 @@ function mdl = kbstat(options)
 %                       parameter is ignored.
 %                       OPTIONAL, default = false.
 %
+%       randomSlopes    Comma-separated list of random slope variables
+%                       OPTIONAL, default = all independent variables
+%
 %       formula         Formula in Wilkinson Notation. If given, it
 %                       overrides the automatically generated formula
 %                       produced from the provided variables.
@@ -521,13 +524,22 @@ else % option not provided
 end
 
 % random slopes
+if isfield(options, 'randomSlopes') && ~isempty(options.randomSlopes) % option provided and not empty
+    randomSlopes = getList(options.randomSlopes);
+elseif isfield(options, 'randomSlopes') && isempty(options.randomSlopes) % option provided as empty
+    randomSlopes = {};
+else % option not provided
+    randomSlopes = union(x, covariate, 'stable');
+end
+
+% estimate random slopes?
 if isfield(options, 'isRandomSlopes') && ~isempty(options.isRandomSlopes)
     isRandomSlopes = getValue(options.isRandomSlopes);
 else
     isRandomSlopes = true;
 end
 
-% random slopes
+% isRandomInteract
 if isfield(options, 'isRandomInteract') && ~isempty(options.isRandomInteract)
     isRandomInteract = getValue(options.isRandomInteract);
 else
@@ -1188,8 +1200,9 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
     if ~isempty(id) && length(unique(Data.(id))) > 1
-        myRandomSlopes = union(interact, covariate, 'stable');
-        myRandomSlopes = union(myRandomSlopes, within, 'stable');
+        % myRandomSlopes = union(interact, covariate, 'stable');
+        % myRandomSlopes = union(myRandomSlopes, within, 'stable');
+        myRandomSlopes = randomSlopes;
         if isRandomSlopes && ~isempty(myRandomSlopes)
             myRandomIntercept = '';
             if nY > 1 && multiVariate
