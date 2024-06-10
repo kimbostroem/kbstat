@@ -132,8 +132,13 @@ function mdl = kbstat(options)
 %                       statistically corrected for these multiple tests.
 %                       OPTIONAL, default = false.
 %
-%       randSlopes      Flag if random slopes should be estimated.
+%       isRandomSlopes  Flag if random slopes should be estimated.
 %                       OPTIONAL, default = true.
+%
+%       isRandomInteract Flag if the slopes of the interactions should also 
+%                       be estimated. If isRandomSlopes = false, this 
+%                       parameter is ignored.
+%                       OPTIONAL, default = false.
 %
 %       formula         Formula in Wilkinson Notation. If given, it
 %                       overrides the automatically generated formula
@@ -509,10 +514,17 @@ else % option not provided
 end
 
 % random slopes
-if isfield(options, 'randSlopes') && ~isempty(options.randSlopes)
-    randSlopes = getValue(options.randSlopes);
+if isfield(options, 'isRandomSlopes') && ~isempty(options.isRandomSlopes)
+    isRandomSlopes = getValue(options.isRandomSlopes);
 else
-    randSlopes = true;
+    isRandomSlopes = true;
+end
+
+% random slopes
+if isfield(options, 'isRandomInteract') && ~isempty(options.isRandomInteract)
+    isRandomInteract = getValue(options.isRandomInteract);
+else
+    isRandomInteract = false;
 end
 
 % formula
@@ -697,12 +709,6 @@ if isfield(options, 'xName') && ~isempty(options.xName)
     xName = getList(options.xName);
 else
     xName = cellstr(x);
-end
-
-if isfield(options, 'yName') && ~isempty(options.yName)
-    yName = cellstr(options.yName);
-else
-    yName = cellstr(y);
 end
 
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
@@ -1107,13 +1113,6 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     % dependent variable
     myVar = y{iFit};
 
-    % yName
-    if length(yName) == nFits
-        myName = yName{iFit};
-    elseif length(yName) == 1
-        myName = yName{1};
-    end
-
     % yLabel
     if length(yLabel) == nY
         myLabel = yLabel{iVar};
@@ -1175,46 +1174,50 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
     if ~isempty(id) && length(unique(Data.(id))) > 1
-        randomInteract = union(interact, covariate, 'stable');
-        randomInteract = union(randomInteract, within, 'stable');
-        if randSlopes && ~isempty(randomInteract)
-            randomEffect = '';
+        myRandomSlopes = union(interact, covariate, 'stable');
+        myRandomSlopes = union(myRandomSlopes, within, 'stable');
+        if isRandomSlopes && ~isempty(myRandomSlopes)
+            myRandomIntercept = '';
             if nY > 1 && multiVariate
-                randomSlopes = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), randomInteract, 'UniformOutput', false), ' + ');
+                myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), myRandomSlopes, 'UniformOutput', false), ' + ');
             else
-                randomSlopes = sprintf('(%s|%s)', strjoin(randomInteract, '+'), id);
+                if isRandomInteract % estimate random interactions in addition to random slopes
+                    myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '*'), id);
+                else % estimate random slopes (without interactions)
+                    myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '+'), id);
+                end
             end
-        elseif ~randSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
-            randomEffect = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), randomInteract, 'UniformOutput', false), ' + ');
-            randomSlopes = '';
+        elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
+            myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), myRandomSlopes, 'UniformOutput', false), ' + ');
+            myRandomEffects = '';
         else
-            randomEffect = sprintf('(1|%s)', id);
-            randomSlopes = '';
+            myRandomIntercept = sprintf('(1|%s)', id);
+            myRandomEffects = '';
         end
     else
-        randomEffect = '';
-        randomSlopes = '';
+        myRandomIntercept = '';
+        myRandomEffects = '';
     end
 
-    terms = {};
+    myTerms = {};
     if ~isempty(sumTerm)
-        terms = [terms, sumTerm]; %#ok<AGROW>
+        myTerms = [myTerms, sumTerm]; %#ok<AGROW>
     end
     if ~isempty(productTerm)
-        terms = [terms, productTerm]; %#ok<AGROW>
+        myTerms = [myTerms, productTerm]; %#ok<AGROW>
     end
-    if ~isempty(randomEffect)
-        terms = [terms, randomEffect]; %#ok<AGROW>
+    if ~isempty(myRandomIntercept)
+        myTerms = [myTerms, myRandomIntercept]; %#ok<AGROW>
     end
-    if ~isempty(randomSlopes)
-        terms = [terms, randomSlopes]; %#ok<AGROW>
+    if ~isempty(myRandomEffects)
+        myTerms = [myTerms, myRandomEffects]; %#ok<AGROW>
     end
 
     if nY > 1 && ~multiVariate
         formulaOrig = formula;
     end
     if isempty(formula)
-        formula = sprintf('%s ~ %s', transVar, strjoin(terms, ' + '));
+        formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
     end
     fprintf('\t%s\n', formula);
 
@@ -1887,13 +1890,6 @@ for iLevel = 1:nPosthocLevels
         outSubDir = sprintf('%s/%s', outDir, myVar);
         if ~isfolder(outSubDir)
             mkdir(outSubDir);
-        end
-
-        % yName
-        if length(yName) == nY
-            myName = yName{iVar};
-        elseif length(yName) == 1
-            myName = myVar;
         end
 
         % yLabel
