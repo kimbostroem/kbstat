@@ -376,6 +376,13 @@ function mdl = kbstat(options)
 %
 % Author: Kim Joris Boström
 
+%% Switch off specific warnings
+
+% Warning: The 'Reciprocal' and 'Power' links require the linear predictor
+% to be non-negative. However, the model assumes that the linear predictor
+% is unconstrained.
+warning('off','stats:classreg:regr:lmeutils:StandardGeneralizedLinearMixedModel:BadDistLinkCombination1');
+
 %% Get parameters
 
 if ~isstruct(options)
@@ -1125,6 +1132,8 @@ end
 
 %% Fit linear model and perform ANOVA
 
+ticAnova = tic;
+
 % perform nY fits only if multiVariate=false
 nFits = 1;
 if strcmp(fitMethod, 'none')
@@ -1248,6 +1257,9 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     end
     fprintf('\t%s\n', formula);
 
+    fprintf('Fitting the model...');
+    ticFit = tic;
+
     try
         if ~isempty(myLink) && ~strcmp(myLink, 'auto') % link function given -> use it
             if ismember(myDistribution, distributions) && ~strcmp(myLink, canonicalLink(myDistribution))
@@ -1285,6 +1297,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         fprintf('Please try again, using fewer interactions by defining "interact" with only those independent variables whose interaction you want to investigate\n');
         return
     end
+    fprintf('done in %g seconds\n', toc(ticFit));
 
     % remove post-fit outliers and refit model
     nPostOutliers = 0;
@@ -1305,7 +1318,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                 idxTmp(idxDesc) =  postOutliers;
                 DataOrig(idxTmp, :) = [];
             end
-            msg = sprintf('Re-fitting model...\n');
+            msg = sprintf('Re-fitting model...');
             fprintf(msg);
             fprintf(fidSummary, msg);
             try
@@ -2186,7 +2199,11 @@ for iLevel = 1:nPosthocLevels
         saveTable(posthocTable, fileName, {'xlsx'}, outSubDir);
     end
 end
+
+fprintf('DONE in %g seconds\n', toc(ticAnova));
+
 end
+
 
 %% Helper functions %%%%%%%%%%%%%%%%%%%%%%
 
