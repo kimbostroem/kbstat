@@ -65,6 +65,10 @@ function mdl = kbstat(options)
 %       yMult           Factor to multiply (each dimension of) y
 %                       OPTIONAL, default = 1
 %
+%       formula         Formula in Wilkinson Notation. If given, it
+%                       overrides all parameters and variables related to 
+%                       creating the fit model
+%
 %       x               Comma-separated list of independent variables. Up
 %                       to 4 independent variables are supported.
 %                       String-valued variables are considered as
@@ -142,10 +146,6 @@ function mdl = kbstat(options)
 %
 %       randomSlopes    Comma-separated list of random slope variables
 %                       OPTIONAL, default = all independent variables
-%
-%       formula         Formula in Wilkinson Notation. If given, it
-%                       overrides the automatically generated formula
-%                       produced from the provided variables.
 %
 %       fitMethod       Fit method used for the GLM fit.%
 %                       Possible values:
