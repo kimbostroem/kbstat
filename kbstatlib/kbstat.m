@@ -1254,6 +1254,10 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     end
     if isempty(formula)
         formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
+    else
+        parts = strtrim(strsplit(formula, '~'));
+        parts{1} = transVar;
+        formula = strjoin(parts, ' ~ ');
     end
     fprintf('\t%s\n', formula);
 
