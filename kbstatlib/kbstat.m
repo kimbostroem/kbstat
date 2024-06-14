@@ -66,8 +66,10 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = 1
 %
 %       formula         Formula in Wilkinson Notation. If given, it
-%                       overrides all parameters and variables related to
-%                       creating the fit model
+%                       overrides the automatically created formula. The
+%                       script tries to identify relevant variables from
+%                       the given formula, including 'x', 'y', 'id', when
+%                       they are not provided.
 %
 %       x               Comma-separated list of independent variables. Up
 %                       to 4 independent variables are supported.
