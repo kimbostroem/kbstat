@@ -44,7 +44,7 @@ function mdl = kbstat(options)
 %                       treated as a vector-valued dependent variable and a
 %                       multivariate analysis is performed.
 %
-%       yName           Display name of dependent variable appearing in 
+%       yName           Display name of dependent variable appearing in
 %                       tables and plots
 %                       OPTIONAL, default = y
 %
@@ -66,7 +66,7 @@ function mdl = kbstat(options)
 %                       OPTIONAL, default = 1
 %
 %       formula         Formula in Wilkinson Notation. If given, it
-%                       overrides all parameters and variables related to 
+%                       overrides all parameters and variables related to
 %                       creating the fit model
 %
 %       x               Comma-separated list of independent variables. Up
@@ -77,7 +77,7 @@ function mdl = kbstat(options)
 %                       are not considered factors, except they are
 %                       included in the "catVar" list, see below.
 %
-%       xName           Display name of independent variable(s) appearing 
+%       xName           Display name of independent variable(s) appearing
 %                       in tables and plots
 %                       OPTIONAL, default = x
 %
@@ -139,8 +139,8 @@ function mdl = kbstat(options)
 %       isRandomSlopes  Flag if random slopes should be estimated.
 %                       OPTIONAL, default = true.
 %
-%       isRandomInteract Flag if the slopes of the interactions should also 
-%                       be estimated. If isRandomSlopes = false, this 
+%       isRandomInteract Flag if the slopes of the interactions should also
+%                       be estimated. If isRandomSlopes = false, this
 %                       parameter is ignored.
 %                       OPTIONAL, default = false.
 %
@@ -430,17 +430,27 @@ else
 end
 
 % independent variable(s)
-x = getList(options.x);
+if isfield(options, 'x') && ~isempty(options.x)
+    x = getList(options.x);
+else
+    fprintf('No independent variable(s) specified\n');
+    x = '';
+end
 
 %% dependent variable(s)
 
-y = cellstr(options.y);
-nY = length(y);
-for iY = 1:nY
-    myY = y{iY};
-    if ~ismember(myY, tableVars)
-        error('Dependent variable "%s" not found in data table', myY);
+if isfield(options, 'y') && ~isempty(options.y)
+    y = cellstr(options.y);
+    nY = length(y);
+    for iY = 1:nY
+        myY = y{iY};
+        if ~ismember(myY, tableVars)
+            error('Dependent variable "%s" not found in data table', myY);
+        end
     end
+else
+    fprintf('No dependent variable(s) specified\n');
+    y = '';
 end
 
 % multiVar
@@ -556,6 +566,27 @@ end
 % formula
 if isfield(options, 'formula') && ~isempty(options.formula)
     formula = options.formula;
+    eqParts = strtrim(strsplit(formula, '~'));
+    if isempty(y)
+        y = eqParts{1};
+    end
+    xStr = eqParts{2};
+    tokens = regexp(xStr, '(.*)\s*\+\s*\((.*)\|(.*)\)', 'tokens');
+    hits = tokens{:};
+    fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
+    randomSlopeVars = strtrim(strsplit(hits{2}, {'+', '*', ':', '|'}));
+    randomVars = strtrim(strsplit(hits{3}, {'+', '*', ':', '|'}));
+    xVars = unique([fixedVars, randomSlopeVars], 'stable');
+    if isempty(x)
+        x = unique(xVars);
+        x = setdiff(x, covariate, 'stable');
+    end
+    if isempty(id)
+        ids = setdiff(randomVars, x, 'stable');
+        if ~isempty(ids)
+            id = ids{1};
+        end
+    end
 else
     formula = '';
 end
@@ -628,7 +659,7 @@ if isfield(options, 'link') && ~isempty(options.link)
         end
     else
         error('No valid value given for ''link''');
-    end    
+    end
 else % no parameter given
     link = {'auto'};
 end
@@ -914,7 +945,7 @@ if nFactors > 1
     groups = unique(Data.(groupVar), levelOrder);
     nGroups = length(groups);
 else
-    groupVar = '';
+    groupVar = 'none';
     groups = string(factors{1});
     nGroups = 1;
 end
@@ -1127,7 +1158,7 @@ for iVar = 1:nY
         fprintf('Multiplying %s with %g...\n', depVar, myMult);
     end
 
-    
+
 end
 
 %% Fit linear model and perform ANOVA
@@ -1200,64 +1231,69 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     % open summary file for writing
     fidSummary = fopen(fullfile(outSubDir, 'Summary.txt'), 'w+');
 
-    productTerm = strjoin(interact, '*');
-    if nY > 1 && multiVariate
-        productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
-    end
-    xNoInteract = setdiff(x, interact, 'stable');
+    if isempty(formula)
 
-    sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
+        productTerm = strjoin(interact, '*');
+        if nY > 1 && multiVariate
+            productTerm = sprintf('-1 + %s:(%s)', yVar, productTerm);
+        end
+        xNoInteract = setdiff(x, interact, 'stable');
 
-    if ~isempty(id) && length(unique(Data.(id))) > 1
-        % myRandomSlopes = union(interact, covariate, 'stable');
-        % myRandomSlopes = union(myRandomSlopes, within, 'stable');
-        myRandomSlopes = randomSlopes;
-        if isRandomSlopes && ~isempty(myRandomSlopes)
-            myRandomIntercept = '';
-            if nY > 1 && multiVariate
-                myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), myRandomSlopes, 'UniformOutput', false), ' + ');
-            else
-                if isRandomInteract % estimate random interactions in addition to random slopes
-                    myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '*'), id);
-                else % estimate random slopes (without interactions)
-                    myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '+'), id);
+        sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
+
+        if ~isempty(id) && length(unique(Data.(id))) > 1
+            % myRandomSlopes = union(interact, covariate, 'stable');
+            % myRandomSlopes = union(myRandomSlopes, within, 'stable');
+            myRandomSlopes = randomSlopes;
+            if isRandomSlopes && ~isempty(myRandomSlopes)
+                myRandomIntercept = '';
+                if nY > 1 && multiVariate
+                    myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), myRandomSlopes, 'UniformOutput', false), ' + ');
+                else
+                    if isRandomInteract % estimate random interactions in addition to random slopes
+                        myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '*'), id);
+                    else % estimate random slopes (without interactions)
+                        myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '+'), id);
+                    end
                 end
+            elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
+                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), myRandomSlopes, 'UniformOutput', false), ' + ');
+                myRandomEffects = '';
+            else
+                myRandomIntercept = sprintf('(1|%s)', id);
+                myRandomEffects = '';
             end
-        elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
-            myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), myRandomSlopes, 'UniformOutput', false), ' + ');
-            myRandomEffects = '';
         else
-            myRandomIntercept = sprintf('(1|%s)', id);
+            myRandomIntercept = '';
             myRandomEffects = '';
         end
+
+        myTerms = {};
+        if ~isempty(sumTerm)
+            myTerms = [myTerms, sumTerm]; %#ok<AGROW>
+        end
+        if ~isempty(productTerm)
+            myTerms = [myTerms, productTerm]; %#ok<AGROW>
+        end
+        if ~isempty(myRandomIntercept)
+            myTerms = [myTerms, myRandomIntercept]; %#ok<AGROW>
+        end
+        if ~isempty(myRandomEffects)
+            myTerms = [myTerms, myRandomEffects]; %#ok<AGROW>
+        end
+
+        if nY > 1 && ~multiVariate
+            formulaOrig = formula;
+        end
+        if isempty(formula)
+            formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
+        else
+            parts = strtrim(strsplit(formula, '~'));
+            parts{1} = transVar;
+            formula = strjoin(parts, ' ~ ');
+        end
     else
-        myRandomIntercept = '';
-        myRandomEffects = '';
-    end
-
-    myTerms = {};
-    if ~isempty(sumTerm)
-        myTerms = [myTerms, sumTerm]; %#ok<AGROW>
-    end
-    if ~isempty(productTerm)
-        myTerms = [myTerms, productTerm]; %#ok<AGROW>
-    end
-    if ~isempty(myRandomIntercept)
-        myTerms = [myTerms, myRandomIntercept]; %#ok<AGROW>
-    end
-    if ~isempty(myRandomEffects)
-        myTerms = [myTerms, myRandomEffects]; %#ok<AGROW>
-    end
-
-    if nY > 1 && ~multiVariate
         formulaOrig = formula;
-    end
-    if isempty(formula)
-        formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
-    else
-        parts = strtrim(strsplit(formula, '~'));
-        parts{1} = transVar;
-        formula = strjoin(parts, ' ~ ');
     end
     fprintf('\t%s\n', formula);
 
@@ -1531,7 +1567,7 @@ nPosthocLevels = min(posthocLevel, nFactors);
 for iLevel = 1:nPosthocLevels
 
     % define what is member and what are the others
-    memberVar = allVars{iLevel};    
+    memberVar = allVars{iLevel};
     members = allVarLevels{iLevel};
     newIdx = 1:4;
     newIdx([1, iLevel]) = newIdx([iLevel, 1]);
@@ -1676,7 +1712,7 @@ for iLevel = 1:nPosthocLevels
                         else
                             idxDesc = true(size(Data, 1), 1);
                             idxEmm = true(size(emm.table, 1), 1);
-                        end       
+                        end
 
                         % 4th x, if given
                         if nRows > 1
@@ -1715,7 +1751,7 @@ for iLevel = 1:nPosthocLevels
                         statsRow.emCI95_upper = max(mdl.Link.Inverse(emCI95));
 
                         vals = Data.(transVar)(idxDescMember);
-                        statsRow.N = length(vals(~isnan(vals)));                        
+                        statsRow.N = length(vals(~isnan(vals)));
                         statsRow.mean = mean(vals, 'omitnan');
                         statsRow.std = std(vals, 'omitnan');
                         statsRow.SE = statsRow.std / sqrt(statsRow.N);
@@ -1827,7 +1863,7 @@ for iLevel = 1:nPosthocLevels
 
                         case 'emm' % perform post-hoc analysis using emmeans
 
-                            % pairwise comparison                            
+                            % pairwise comparison
                             for iPair = 1:nPairs
                                 pair = pairs(iPair, :);
 
@@ -2105,7 +2141,7 @@ for iLevel = 1:nPosthocLevels
                 if nRows > 1
                     tableRow.(rowVar) = "any";
                 end
-                
+
                 if nCols > 1
                     tableRow.(colVar) = "any";
                 end
