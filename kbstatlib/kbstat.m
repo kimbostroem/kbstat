@@ -1284,18 +1284,13 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
             myTerms = [myTerms, myRandomEffects]; %#ok<AGROW>
         end
 
-        if nY > 1 && ~multiVariate
-            formulaOrig = formula;
-        end
-        if isempty(formula)
-            formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
-        else
-            parts = strtrim(strsplit(formula, '~'));
-            parts{1} = transVar;
-            formula = strjoin(parts, ' ~ ');
-        end
+        formulaOrig = formula;
+        formula = sprintf('%s ~ %s', transVar, strjoin(myTerms, ' + '));
     else
         formulaOrig = formula;
+        parts = strtrim(strsplit(formula, '~'));
+        parts{1} = transVar;
+        formula = strjoin(parts, ' ~ ');
     end
     fprintf('\t%s\n', formula);
 
