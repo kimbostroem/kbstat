@@ -574,10 +574,18 @@ if isfield(options, 'formula') && ~isempty(options.formula)
     end
     xStr = eqParts{2};
     tokens = regexp(xStr, '(.*)\s*\+\s*\((.*)\|(.*)\)', 'tokens');
-    hits = tokens{:};
-    fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
-    randomSlopeVars = strtrim(strsplit(hits{2}, {'+', '*', ':', '|'}));
-    randomVars = strtrim(strsplit(hits{3}, {'+', '*', ':', '|'}));
+    if ~isempty(tokens) % there is a random variable term
+        hits = tokens{:};
+        fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
+        randomSlopeVars = strtrim(strsplit(hits{2}, {'+', '*', ':', '|'}));
+        randomVars = strtrim(strsplit(hits{3}, {'+', '*', ':', '|'}));        
+    else % there is no random variable term
+        tokens = regexp(xStr, '(.*)\s*', 'tokens');
+        hits = tokens{:};
+        fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
+        randomSlopeVars = {};
+        randomVars = {};
+    end
     xVars = unique([fixedVars, randomSlopeVars], 'stable');
     if isempty(x)
         x = unique(xVars);
