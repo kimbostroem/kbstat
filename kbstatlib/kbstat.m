@@ -869,7 +869,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     if any(allIdx)
         Data2 = Data2(allIdx, :);
     else
-        warning('Constraint ''%s'' cannot be fulfilled -> leave data unchanged', constraint);
+        error('Constraint ''%s'' cannot be fulfilled', constraint);
     end
     switch length(unique(Data2.(constraintVar)))
         case 0
