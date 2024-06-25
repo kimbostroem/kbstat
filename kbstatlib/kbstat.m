@@ -1919,50 +1919,83 @@ for iLevel = 1:nPosthocLevels
     %% Statistical correction of posthoc comparisons
     % Holm-Bonferroni correction of all p-values
 
-    bar_pCorr = bar_p; % create array of corrected p-values
-    idxDesc = ~isnan(bar_p(:)); % identify NaN-entries
-    if ~isempty(idxDesc)
-        sizeOrig = size(bar_p); % store original array shape
-        bar_p = bar_p(:); % make column vector
+    if multiVariate
+        nCorrs = 1;
+    else
+        nCorrs = nY;
+    end
 
-        % check for duplicate p-values indicating a severe problem
-        for iP = 1:length(bar_p)
-            pValue = bar_p(iP);
-            if length(setdiff(bar_p, pValue)) < length(bar_p) - 1
-                warning('!!!WARNING!!!! Duplicate p-values found. Something is wrong.');
-                break
+    bar_pCorr = bar_p;
+    main_pCorr = main_p;
+    for iVar = 1:nCorrs
+        if multiVariate
+            myBar_p = bar_p;
+            myBar_pCorr = myBar_p; % create array of corrected p-values
+        else
+            myBar_p = bar_p(:, :, :, :, iVar);
+            myBar_pCorr = myBar_p; % create array of corrected p-values
+        end
+        idxDesc = ~isnan(myBar_p(:)); % identify NaN-entries
+        if ~isempty(idxDesc)
+            sizeOrig = size(myBar_p); % store original array shape
+            myBar_p = myBar_p(:); % make column vector
+
+            % check for duplicate p-values indicating a severe problem
+            for iP = 1:length(myBar_p)
+                pValue = myBar_p(iP);
+                if length(setdiff(myBar_p, pValue)) < length(myBar_p) - 1
+                    warning('!!!WARNING!!!! Duplicate p-values found. Something is wrong.');
+                    break
+                end
+            end
+
+            myBar_pCorr = myBar_pCorr(:); % make column vector
+            switch posthocCorrection
+                case 'none'
+                    % do nothing
+                case 'holm'
+                    [~, myBar_pCorr(idxDesc)] = bonferroni_holm(myBar_p(idxDesc)); % correct p-values, omitting NaNs
+                case {'bonf', 'sidak'}
+                    nTests = sum(idxDesc);
+                    myBar_pCorr(idxDesc) = sidak_corr(myBar_pCorr(idxDesc), nTests);
+            end
+            % myBar_pCorr(idxDesc) = sidak_corr(myBar_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
+            myBar_pCorr(idxDesc) = sidak_corr(myBar_pCorr(idxDesc), correctForN); % correct for custom number of tests
+            myBar_pCorr = reshape(myBar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
+            if multiVariate
+                bar_pCorr = myBar_pCorr;
+            else
+                bar_pCorr(:, :, :, :, iVar) = myBar_pCorr;
             end
         end
 
-        bar_pCorr = bar_pCorr(:); % make column vector
-        switch posthocCorrection
-            case 'none'
-                % do nothing
-            case 'holm'
-                [~, bar_pCorr(idxDesc)] = bonferroni_holm(bar_p(idxDesc)); % correct p-values, omitting NaNs
-            case {'bonf', 'sidak'}
-                nTests = sum(idxDesc);
-                bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nTests);
+        % statistical correction of main posthoc p-Values
+        if posthocMain && nGroups * nRows * nCols * nPairs > 1            
+            if multiVariate
+                myMain_p = main_p;
+                myMain_pCorr = myMain_p; % create array of corrected p-values
+            else
+                myMain_p = main_p(:, :, :, iVar);
+                myMain_pCorr = myMain_p; % create array of corrected p-values
+            end
+
+            idxDesc = ~isnan(myMain_p(:)); % identify NaN-entries
+            if ~isempty(idxDesc)
+                sizeOrig = size(myMain_p); % store original array shape
+                myMain_p = myMain_p(:); % make column vector
+                myMain_pCorr = myMain_pCorr(:); % make column vector
+                [~, myMain_pCorr(idxDesc)] = bonferroni_holm(myMain_p(idxDesc)); % correct p-values, omitting NaNs
+                % myMain_pCorr(idxDesc) = sidak_corr(myMain_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
+                myMain_pCorr(idxDesc) = sidak_corr(myMain_pCorr(idxDesc), correctForN); % correct for custom number of tests
+                myMain_pCorr = reshape(myMain_pCorr, sizeOrig); % restore original dimensions of p-value array
+            end
+            if multiVariate
+                main_pCorr = myMain_pCorr;
+            else
+                main_pCorr(:, :, :, iVar) = myMain_pCorr;
+            end
         end
-        % bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
-        bar_pCorr(idxDesc) = sidak_corr(bar_pCorr(idxDesc), correctForN); % correct for custom number of tests
-        bar_p = reshape(bar_p, sizeOrig); % restore original dimensions of p-value array
-        bar_pCorr = reshape(bar_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-    end
-    % statistical correction of main posthoc p-Values
-    if posthocMain && nGroups * nRows * nCols * nPairs > 1
-        main_pCorr = main_p;
-        idxDesc = ~isnan(main_p(:)); % identify NaN-entries
-        if ~isempty(idxDesc)
-            sizeOrig = size(main_p); % store original array shape
-            main_p = main_p(:); % make column vector
-            main_pCorr = main_pCorr(:); % make column vector
-            [~, main_pCorr(idxDesc)] = bonferroni_holm(main_p(idxDesc)); % correct p-values, omitting NaNs
-            % main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), nPosthocLevels); % correct for posthoc levels
-            main_pCorr(idxDesc) = sidak_corr(main_pCorr(idxDesc), correctForN); % correct for custom number of tests
-            main_p = reshape(main_p, sizeOrig); % restore original dimensions of p-value array
-            main_pCorr = reshape(main_pCorr, sizeOrig); % bring corrected p-value array into the same shape as p-value array
-        end
+
     end
 
     %% Loop over dependent variables
