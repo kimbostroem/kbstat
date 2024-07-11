@@ -164,7 +164,7 @@ function mdl = kbstat(options)
 %                       'REMPL'                 Restricted maximum pseudo likelihood
 %                       'Laplace'               Maximum likelihood using Laplace approximation
 %                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
-%                       OPTIONAL, default = 'REMPL'.
+%                       OPTIONAL, default = 'MPL'.
 %
 %       distribution    Distribution used for the GLM fit.
 %                       If y has more than one component, then this
@@ -679,7 +679,7 @@ end
 if isfield(options, 'fitMethod') && ~isempty(options.fitMethod)
     fitMethod = options.fitMethod;
 else
-    fitMethod = 'REMPL';
+    fitMethod = 'MPL';
 end
 
 % posthoc method
