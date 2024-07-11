@@ -657,6 +657,9 @@ else % no formula given or empty
         randomVars = union(randomVars, {trial}, 'stable');
     end
 
+    % fixed effect variables
+    fixedVars = x;
+
     % factors are all given IVs
     xFactors = x;
 
@@ -1755,7 +1758,7 @@ for iLevel = 1:nPosthocLevels
         % factors. Continuous variables cannot be
         % included, because then emmeans gives an
         % error
-        emm = emmeans(mdl, reshape(catVars, 1, []), dummyCoding, 'unbalanced', {mdl.ResponseName, mdl.Link.Link, mdl.Link.Inverse});
+        emm = emmeans(mdl, reshape(fixedVars, 1, []), dummyCoding, 'unbalanced', {mdl.ResponseName, mdl.Link.Link, mdl.Link.Inverse});
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
