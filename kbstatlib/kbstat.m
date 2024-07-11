@@ -68,7 +68,7 @@ function mdl = kbstat(options)
 %       formula         Formula in Wilkinson Notation. If given, it
 %                       overrides the automatically created formula. The
 %                       script tries to identify relevant variables from
-%                       the given formula, including 'x', 'y', 'id', when
+%                       the given formula, including 'x', 'y', 'subject', when
 %                       they are not provided.
 %
 %       x               Comma-separated list of independent variables. Up
@@ -88,7 +88,11 @@ function mdl = kbstat(options)
 %                       they have numerical values.
 %                       OPTIONAL, default = '';
 %
-%       id              Name of the subject variable.
+%       subject         Name of the subject variable.
+%                       OPTIONAL, default = ''.
+%
+%       id              LEGACY: Name of subject variable (still recognized 
+%                       alternative to 'subject').
 %                       OPTIONAL, default = ''.
 %
 %       trial           Name of the trial variable that is nested within 
@@ -104,7 +108,7 @@ function mdl = kbstat(options)
 %                       subset of "x", or else its members are added to
 %                       "x".
 %                       Example:
-%                       options.id = 'subject'
+%                       options.subject = 'subject'
 %                       options.x = 'time, age, sex'
 %                       options.within = 'dose'.
 %                       OPTIONAL, default = ''.
@@ -115,7 +119,7 @@ function mdl = kbstat(options)
 %                       not set, all members of x are assumed to mutually
 %                       interact.
 %                       Example:
-%                       options.id = 'subject'
+%                       options.subject = 'subject'
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
@@ -373,7 +377,7 @@ function mdl = kbstat(options)
 %   options.y = 'jointEfficiency';
 %   options.yUnits = '1';
 %   options.x = 'shoe, speed, sex, joint';
-%   options.id = 'subject';
+%   options.subject = 'subject';
 %   options.within = 'shoe, speed, joint';
 %   options.interact = 'shoe, speed';
 %   options.distribution = 'gamma';
@@ -515,10 +519,13 @@ else
 end
 
 % subject variable
-if isfield(options, 'id') && ~isempty(options.id)
-    id = options.id;
+if isfield(options, 'subject') && ~isempty(options.subject)
+    subject = options.subject;
+elseif isfield(options, 'id') && ~isempty(options.id)
+    % LEGACY subject variable (alternative to 'subject')
+    subject = options.id;
 else
-    id = '';
+    subject = '';
 end
 
 % trial variable
@@ -628,9 +635,9 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
     randomVars = setdiff(randomVars, x, 'stable');
 
     % set subject variable to 1st extracted random variable, if not given
-    if isempty(id)
+    if isempty(subject)
         if ~isempty(randomVars)
-            id = randomVars{1};
+            subject = randomVars{1};
         end
     end
 
@@ -646,15 +653,15 @@ else % no formula given or empty
     xFactors = x;
 
     % if subject variable is given, add to IVs
-    if ~isempty(id)
-        xFactors = union(xFactors, {id}, 'stable');
+    if ~isempty(subject)
+        xFactors = union(xFactors, {subject}, 'stable');
     end
 
     % if trial variable is given, add to IVs
     if ~isempty(trial)
         xFactors = union(xFactors, {trial}, 'stable');
     end
-    
+
     % for safety, set formula to empty
     formula = '';
 end
@@ -956,8 +963,8 @@ end
 Data = table;
 
 % subject variable
-if ~isempty(id)
-    Data.(id) = string(string(Data2.(id))); % make categorical
+if ~isempty(subject)
+    Data.(subject) = string(string(Data2.(subject))); % make categorical
 end
 
 % make catVar variables string
@@ -1309,16 +1316,16 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
         sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
-        if ~isempty(id) && length(unique(Data.(id))) > 1
+        if ~isempty(subject) && length(unique(Data.(subject))) > 1
             if isRandomSlopes && ~isempty(randomSlopes)
                 myRandomIntercept = '';
                 if nY > 1 && multiVariate
-                    myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), randomSlopes, 'UniformOutput', false), ' + ');
+                    myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, subject), randomSlopes, 'UniformOutput', false), ' + ');
                 else
                     if ~isempty(trial)
-                        randVar = sprintf('%s:%s', id, trial);
+                        randVar = sprintf('%s:%s', subject, trial);
                     else
-                        randVar = id;
+                        randVar = subject;
                     end
                     if isRandomInteract % estimate random interactions in addition to random slopes
                         myRandomEffects = sprintf('(%s|%s)', strjoin(randomSlopes, '*'), randVar);
@@ -1327,13 +1334,13 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                     end
                 end
             elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
-                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), randomSlopes, 'UniformOutput', false), ' + ');
+                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, subject), randomSlopes, 'UniformOutput', false), ' + ');
                 myRandomEffects = '';
             else
                 if ~isempty(trial)
-                    myRandomIntercept = sprintf('(1|%s:%s)', id, trial);
+                    myRandomIntercept = sprintf('(1|%s:%s)', subject, trial);
                 else
-                    myRandomIntercept = sprintf('(1|%s)', id);
+                    myRandomIntercept = sprintf('(1|%s)', subject);
                 end                
                 myRandomEffects = '';
             end
