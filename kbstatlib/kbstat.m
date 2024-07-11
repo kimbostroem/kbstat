@@ -91,6 +91,10 @@ function mdl = kbstat(options)
 %       id              Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
+%       trial           Name of the trial variable that is nested within 
+%                       the subject variable.
+%                       OPTIONAL, default = ''.
+%
 %       within          Comma-separated list of within-subject variables.
 %                       Within-subject variables are nested within the
 %                       subject variable, i.e. they vary for each subject.
@@ -517,6 +521,13 @@ else
     id = '';
 end
 
+% trial variable
+if isfield(options, 'trial') && ~isempty(options.trial)
+    trial = options.trial;
+else
+    trial = '';
+end
+
 % within-subject variables
 if isfield(options, 'within') && ~isempty(options.within) % option provided and not empty
     within = getList(options.within);
@@ -566,7 +577,8 @@ else
 end
 
 % formula
-if isfield(options, 'formula') && ~isempty(options.formula)
+if isfield(options, 'formula') && ~isempty(options.formula) % formula is given and not empty
+
     formula = options.formula;
     eqParts = strtrim(strsplit(formula, '~'));
 
@@ -604,24 +616,46 @@ if isfield(options, 'formula') && ~isempty(options.formula)
     randomVars = reshape(randomVars, 1, []); % make horizontal array
    
     % independent variables are all fixed and random variables
-    xVars = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
+    xFactors = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
 
     % analyzed factors are IVs except covariates
     if isempty(x)
-        x = unique(xVars);
+        x = unique(xFactors);
         x = setdiff(x, covariate, 'stable');
     end
 
-    % set random variable to extracted random variables, if not given
-    % ONLY takes 1st random variable in formula!
+    % just for safety, remove any potential fixed variables from set of random variables
+    randomVars = setdiff(randomVars, x, 'stable');
+
+    % set subject variable to 1st extracted random variable, if not given
     if isempty(id)
-        ids = setdiff(randomVars, x, 'stable');
-        if ~isempty(ids)
-            id = ids{1};
+        if ~isempty(randomVars)
+            id = randomVars{1};
         end
     end
-else
-    xVars = x;
+
+    % set trial variable to 2nd extracted random variable, if not given
+    if isempty(trial)
+        if length(randomVars) > 1
+            trial = randomVars{2};
+        end
+    end
+else % no formula given or empty
+
+    % factors are all given IVs
+    xFactors = x;
+
+    % if subject variable is given, add to IVs
+    if ~isempty(id)
+        xFactors = union(xFactors, {id}, 'stable');
+    end
+
+    % if trial variable is given, add to IVs
+    if ~isempty(trial)
+        xFactors = union(xFactors, {trial}, 'stable');
+    end
+    
+    % for safety, set formula to empty
     formula = '';
 end
 
@@ -933,7 +967,7 @@ for iVar = 1:length(catVar)
 end
 
 % get independent variables
-IVs = union(xVars, covariate, 'stable');
+IVs = union(xFactors, covariate, 'stable');
 catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
@@ -1276,25 +1310,31 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         sumTerm = strjoin(union(xNoInteract, covariate, 'stable'), ' + ');
 
         if ~isempty(id) && length(unique(Data.(id))) > 1
-            % myRandomSlopes = union(interact, covariate, 'stable');
-            % myRandomSlopes = union(myRandomSlopes, within, 'stable');
-            myRandomSlopes = randomSlopes;
-            if isRandomSlopes && ~isempty(myRandomSlopes)
+            if isRandomSlopes && ~isempty(randomSlopes)
                 myRandomIntercept = '';
                 if nY > 1 && multiVariate
-                    myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), myRandomSlopes, 'UniformOutput', false), ' + ');
+                    myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, id), randomSlopes, 'UniformOutput', false), ' + ');
                 else
+                    if ~isempty(trial)
+                        randVar = sprintf('%s:%s', id, trial);
+                    else
+                        randVar = id;
+                    end
                     if isRandomInteract % estimate random interactions in addition to random slopes
-                        myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '*'), id);
+                        myRandomEffects = sprintf('(%s|%s)', strjoin(randomSlopes, '*'), randVar);
                     else % estimate random slopes (without interactions)
-                        myRandomEffects = sprintf('(%s|%s)', strjoin(myRandomSlopes, '+'), id);
+                        myRandomEffects = sprintf('(%s|%s)', strjoin(randomSlopes, '+'), randVar);
                     end
                 end
             elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
-                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), myRandomSlopes, 'UniformOutput', false), ' + ');
+                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, id), randomSlopes, 'UniformOutput', false), ' + ');
                 myRandomEffects = '';
             else
-                myRandomIntercept = sprintf('(1|%s)', id);
+                if ~isempty(trial)
+                    myRandomIntercept = sprintf('(1|%s:%s)', id, trial);
+                else
+                    myRandomIntercept = sprintf('(1|%s)', id);
+                end                
                 myRandomEffects = '';
             end
         else
