@@ -583,7 +583,9 @@ else
     isRandomInteract = false;
 end
 
-% formula
+% extract variables from formula, if given
+randomSlopeVars = {};
+randomVars = {};
 if isfield(options, 'formula') && ~isempty(options.formula) % formula is given and not empty
 
     formula = options.formula;
@@ -597,9 +599,7 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
     xStr = eqParts{2};
 
     % separate between fixed and random effects
-    fixedStop = regexp(xStr, '\s*\+\s*\(.*?\)');
-    randomSlopeVars = {};
-    randomVars = {};
+    fixedStop = regexp(xStr, '\s*\+\s*\(.*?\)');    
     if ~isempty(fixedStop) % there is a random variable term
         xStrFixed = xStr(1:fixedStop(1));
         fixedVars = strtrim(strsplit(xStrFixed, {'+', '*', ':', '|'}));
@@ -648,6 +648,14 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
         end
     end
 else % no formula given or empty
+
+    % random variable(s)
+    if ~isempty(subject)
+        randomVars = {subject};
+    end
+    if ~isempty(trial)
+        randomVars = union(randomVars, {trial}, 'stable');
+    end
 
     % factors are all given IVs
     xFactors = x;
@@ -974,7 +982,9 @@ for iVar = 1:length(catVar)
 end
 
 % get independent variables
-IVs = union(xFactors, covariate, 'stable');
+IVs = xFactors;
+IVs = union(IVs, covariate, 'stable');
+IVs = union(IVs, randomVars, 'stable');
 catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
