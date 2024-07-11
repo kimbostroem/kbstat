@@ -569,16 +569,30 @@ end
 if isfield(options, 'formula') && ~isempty(options.formula)
     formula = options.formula;
     eqParts = strtrim(strsplit(formula, '~'));
+
+    % lefthand side of formula
     if isempty(y)
         y = eqParts{1};
     end
+    % righthand side of formula
     xStr = eqParts{2};
-    tokens = regexp(xStr, '(.*)\s*\+\s*\((.*)\|(.*)\)', 'tokens');
-    if ~isempty(tokens) % there is a random variable term
-        hits = tokens{:};
-        fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
-        randomSlopeVars = strtrim(strsplit(hits{2}, {'+', '*', ':', '|'}));
-        randomVars = strtrim(strsplit(hits{3}, {'+', '*', ':', '|'}));        
+
+    % separate between fixed and random effects
+    fixedStop = regexp(xStr, '\s*\+\s*\(.*?\)');
+    randomSlopeVars = {};
+    randomVars = {};
+    if ~isempty(fixedStop) % there is a random variable term
+        xStrFixed = xStr(1:fixedStop(1));
+        fixedVars = strtrim(strsplit(xStrFixed, {'+', '*', ':', '|'}));
+        xStrRand = xStr(fixedStop(1):end);
+        tokens = regexp(xStrRand, '\((.*?)\)', 'tokens');
+        nTokens = length(tokens);
+        for iToken = 1:nTokens
+            token = tokens{iToken}{1};
+            hits = strsplit(token, '|');
+            randomSlopeVars = union(randomSlopeVars, strtrim(strsplit(hits{1}, {'+', '*', ':', '|'})), 'stable');
+            randomVars = union(randomVars, strtrim(strsplit(hits{2}, {'+', '*', ':', '|'})), 'stable');
+        end
     else % there is no random variable term
         tokens = regexp(xStr, '(.*)\s*', 'tokens');
         hits = tokens{:};
@@ -586,11 +600,20 @@ if isfield(options, 'formula') && ~isempty(options.formula)
         randomSlopeVars = {};
         randomVars = {};
     end
+    randomSlopeVars = reshape(randomSlopeVars, 1, []); % make horizontal array
+    randomVars = reshape(randomVars, 1, []); % make horizontal array
+   
+    % independent variables are all fixed and random variables
     xVars = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
+
+    % analyzed factors are IVs except covariates
     if isempty(x)
         x = unique(xVars);
         x = setdiff(x, covariate, 'stable');
     end
+
+    % set random variable to extracted random variables, if not given
+    % ONLY takes 1st random variable in formula!
     if isempty(id)
         ids = setdiff(randomVars, x, 'stable');
         if ~isempty(ids)
