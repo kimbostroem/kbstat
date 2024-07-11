@@ -586,7 +586,7 @@ if isfield(options, 'formula') && ~isempty(options.formula)
         randomSlopeVars = {};
         randomVars = {};
     end
-    xVars = unique([fixedVars, randomSlopeVars], 'stable');
+    xVars = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
     if isempty(x)
         x = unique(xVars);
         x = setdiff(x, covariate, 'stable');
@@ -598,6 +598,7 @@ if isfield(options, 'formula') && ~isempty(options.formula)
         end
     end
 else
+    xVars = x;
     formula = '';
 end
 
@@ -909,7 +910,7 @@ for iVar = 1:length(catVar)
 end
 
 % get independent variables
-IVs = union(x, covariate, 'stable');
+IVs = union(xVars, covariate, 'stable');
 catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
