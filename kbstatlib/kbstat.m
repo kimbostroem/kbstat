@@ -91,13 +91,17 @@ function mdl = kbstat(options)
 %       subject         Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
-%       id              LEGACY: Name of subject variable (still recognized 
-%                       alternative to 'subject').
+%       id              Same as 'subject'.
+%
+%       trial           Name of the trial variable nested with subjects.
 %                       OPTIONAL, default = ''.
 %
-%       trial           Name of the trial variable that is nested within 
-%                       the subject variable.
+%       nested          Same as 'trial'.
+%
+%       stimulus        Name of stimulus variable crossed with subjects.
 %                       OPTIONAL, default = ''.
+%
+%       crossed         Same as 'stimulus'.
 %
 %       within          Comma-separated list of within-subject variables.
 %                       Within-subject variables are nested within the
@@ -518,21 +522,31 @@ else
     transform = '';
 end
 
-% subject variable
+% subject variable for random effects
 if isfield(options, 'subject') && ~isempty(options.subject)
     subject = options.subject;
 elseif isfield(options, 'id') && ~isempty(options.id)
-    % LEGACY subject variable (alternative to 'subject')
     subject = options.id;
 else
     subject = '';
 end
 
-% trial variable
+% trial variable nested in subjects
 if isfield(options, 'trial') && ~isempty(options.trial)
     trial = options.trial;
+elseif isfield(options, 'nested') && ~isempty(options.nested)
+    trial = options.nested;
 else
     trial = '';
+end
+
+% stimulus variable crossed with subjects
+if isfield(options, 'stimulus') && ~isempty(options.stimulus)
+    stimulus = options.stimulus;
+elseif isfield(options, 'crossed') && ~isempty(options.crossed)
+    stimulus = options.crossed;
+else
+    stimulus = '';
 end
 
 % within-subject variables
@@ -656,6 +670,9 @@ else % no formula given or empty
     if ~isempty(trial)
         randomVars = union(randomVars, {trial}, 'stable');
     end
+    if ~isempty(stimulus)
+        randomVars = union(randomVars, {stimulus}, 'stable');
+    end
 
     % fixed effect variables
     fixedVars = x;
@@ -671,6 +688,10 @@ else % no formula given or empty
     % if trial variable is given, add to IVs
     if ~isempty(trial)
         xFactors = union(xFactors, {trial}, 'stable');
+    end
+    % if stimulus variable is given, add to IVs
+    if ~isempty(stimulus)
+        xFactors = union(xFactors, {stimulus}, 'stable');
     end
 
     % for safety, set formula to empty
@@ -1344,11 +1365,18 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                     end
 
                     % determine if trial variable is given, and compose random effect terms
+                    myRandomEffectTerms = {sprintf('(%s|%s)', randomSlopesTerm, subject)};
                     if ~isempty(trial)
-                        myRandomEffects = sprintf('(%s|%s) + (%s|%s:%s)', randomSlopesTerm, subject, randomSlopesTerm, subject, trial);
-                    else
-                        myRandomEffects = sprintf('(%s|%s)', randomSlopesTerm, subject);
+                        myRandomEffectTerms = [myRandomEffectTerms, {sprintf('(%s|%s:%s)', randomSlopesTerm, subject, trial)}]; %#ok<AGROW>
                     end
+
+                    % determine if stimulus variable is given, and compose random effect terms
+                    if ~isempty(stimulus)
+                        myRandomEffectTerms = [myRandomEffectTerms, {sprintf('(%s|%s)', randomSlopesTerm, stimulus)}]; %#ok<AGROW>
+                    end
+
+                    % compose random effects string
+                    myRandomEffects = strjoin(myRandomEffectTerms, ' + ');
                 end
             elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
                 myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, subject), randomSlopes, 'UniformOutput', false), ' + ');
