@@ -1331,19 +1331,23 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
         if ~isempty(subject) && length(unique(Data.(subject))) > 1
             if isRandomSlopes && ~isempty(randomSlopes)
+
                 myRandomIntercept = '';
                 if nY > 1 && multiVariate
                     myRandomEffects = strjoin(cellfun(@(x) sprintf('(%s|%s:%s)', x, yVar, subject), randomSlopes, 'UniformOutput', false), ' + ');
                 else
-                    if ~isempty(trial)
-                        randVar = sprintf('%s:%s', subject, trial);
-                    else
-                        randVar = subject;
-                    end
+                    % determine if random slopes or not and choose operator
                     if isRandomInteract % estimate random interactions in addition to random slopes
-                        myRandomEffects = sprintf('(%s|%s)', strjoin(randomSlopes, '*'), randVar);
+                        randomSlopesTerm = strjoin(randomSlopes, '*');
                     else % estimate random slopes (without interactions)
-                        myRandomEffects = sprintf('(%s|%s)', strjoin(randomSlopes, '+'), randVar);
+                        randomSlopesTerm = strjoin(randomSlopes, '+');
+                    end
+
+                    % determine if trial variable is given, and compose random effect terms
+                    if ~isempty(trial)
+                        myRandomEffects = sprintf('(%s|%s) + (%s|%s:%s)', randomSlopesTerm, subject, randomSlopesTerm, subject, trial);
+                    else
+                        myRandomEffects = sprintf('(%s|%s)', randomSlopesTerm, subject);
                     end
                 end
             elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
