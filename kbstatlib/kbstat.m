@@ -208,7 +208,7 @@ function mdl = kbstat(options)
 %                                   with multiVariate=false, 'ttest' if
 %                                   distribution='normal', and 'utest'
 %                                   otherwise.
-%                       OPTIONAL, default = 'utest'.
+%                       OPTIONAL, default = 'emm'.
 %
 %       posthocCorrection   Method to correct the multiple comparisons
 %                       Possible values:
@@ -622,7 +622,7 @@ end
 if isfield(options, 'posthocMethod') && ~isempty(options.posthocMethod)
     posthocMethod = options.posthocMethod;
 else
-    posthocMethod = 'utest';
+    posthocMethod = 'emm';
 end
 
 % posthoc correction
