@@ -336,7 +336,7 @@ function mdl = kbstat(options)
 %                       'sorted'    sorted alphanumerically
 %                       'stable'    sorted in the order of occurrence in
 %                                   the data table
-%                       OPTIONAL, default = 'sorted'
+%                       OPTIONAL, default = 'stable'
 %
 %       plotStyle       The style with which the data are plotted.
 %                       Possible values:
@@ -767,7 +767,7 @@ end
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
-    levelOrder = 'sorted';
+    levelOrder = 'stable';
 end
 
 % plot style
