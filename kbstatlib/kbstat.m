@@ -624,6 +624,7 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
             token = tokens{iToken}{1};
             hits = strsplit(token, '|');
             randomSlopeVars = union(randomSlopeVars, strtrim(strsplit(hits{1}, {'+', '*', ':', '|'})), 'stable');
+            randomSlopeVars = setdiff(randomSlopeVars, '1'); % remove intercept
             randomVars = union(randomVars, strtrim(strsplit(hits{2}, {'+', '*', ':', '|'})), 'stable');
         end
     else % there is no random variable term
