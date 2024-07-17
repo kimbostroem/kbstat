@@ -1787,11 +1787,12 @@ for iLevel = 1:nPosthocLevels
         myVar = y{iVar};
         mdl = mdls{iVar};
 
-        % Calc estimated marginal means of all
-        % factors. Continuous variables cannot be
-        % included, because then emmeans gives an
-        % error
-        emm = emmeans(mdl, reshape(fixedVars, 1, []), dummyCoding, 'unbalanced', {mdl.ResponseName, mdl.Link.Link, mdl.Link.Inverse});
+        % Calc estimated marginal means of all analyzed factors. Continuous
+        % variables cannot be included, because then emmeans gives an
+        % error. We only include the analyzed factors as given by 'x',
+        % which may deviate from the list of all fixed effect variables
+        % occurring in the formula, when explicitly specified by the user.
+        emm = emmeans(mdl, reshape(x, 1, []), dummyCoding, 'unbalanced', {mdl.ResponseName, mdl.Link.Link, mdl.Link.Inverse});
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
