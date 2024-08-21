@@ -925,14 +925,28 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
-        constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
-        constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
-        [num, isNum] = str2num(constraintVal);
-        if isNum
-            constraintVal = num;
-        else
+        if startsWith(constraintVal, '"')
+            constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
             constraintVal = string(constraintVal);
+        elseif startsWith(constraintVal, '''')
+            constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
+            constraintVal = string(constraintVal);
+        else
+            [num, isNum] = str2num(constraintVal);
+            if isNum
+                constraintVal = num;
+            else
+                constraintVal = string(constraintVal);
+            end
         end
+        % constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
+        % constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
+        % [num, isNum] = str2num(constraintVal);
+        % if isNum
+        %     constraintVal = num;
+        % else
+        %     constraintVal = string(constraintVal);
+        % end
         compVar = strtrim(matches{1});
         if ~ismember(constraintVar, Data2.Properties.VariableNames)
             auxVar = constraintVar;
