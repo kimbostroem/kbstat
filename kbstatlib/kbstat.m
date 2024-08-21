@@ -2133,6 +2133,8 @@ for iLevel = 1:nPosthocLevels
             myLabel = yLabel{iVar};
         elseif length(yLabel) == 1
             myLabel = yLabel{1};
+        else
+            error('The number of dependent variables does not match the number of their labels');
         end
 
         % yUnits
