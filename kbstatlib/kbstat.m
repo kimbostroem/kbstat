@@ -925,8 +925,8 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
-        % constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
-        % constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
+        constraintVal = strrep(constraintVal, '''', ''); % remove single quotes
+        constraintVal = strrep(constraintVal, '"', ''); % remove double quotes
         [num, isNum] = str2num(constraintVal);
         if isNum
             constraintVal = num;
