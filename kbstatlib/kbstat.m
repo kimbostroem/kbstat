@@ -988,6 +988,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     end
     if any(allIdx)
         Data2 = Data2(allIdx, :);
+        fprintf('Constraints removed %d of %d observations (%.2f%%)\n', sum(~allIdx), length(allIdx), sum(~allIdx)/length(allIdx)*100);
     else
         error('Constraint ''%s'' cannot be fulfilled', constraint);
     end
