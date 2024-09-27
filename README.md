@@ -20,4 +20,4 @@ In MATLAB, change to the `demo` folder and run the `kbstat_demo` script. The dem
 
 When using this script in your publications, cite it using the following APA citation or its equivalent:
 
-Bostroem, K. J. (2024). *Kbstat* (Version 1.0) [MATLAB]. https://github.com/kimbostroem/kbstat.git.
+Bostroem, K. J. (2024). kbstat (Version 1.0.0) [Computer software]. https://github.com/kimbostroem/kbstat
