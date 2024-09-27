@@ -1,0 +1,37 @@
+Formula:
+	Distance ~ Chocolate*Gender + (1|Subject)
+	
+Generalized linear mixed-effects model fit by PL
+
+Model information:
+    Number of observations             500
+    Fixed effects coefficients           4
+    Random effects coefficients        250
+    Covariance parameters                2
+    Distribution                    Normal
+    Link                            Identity
+    FitMethod                       MPL   
+
+Formula:
+    Distance ~ 1 + Chocolate*Gender + (1 | Subject)
+
+Model fit statistics:
+    AIC        BIC        LogLikelihood    Deviance
+    -1221.1    -1195.9    616.57           -1233.1 
+
+Fixed effects coefficients (95% CIs):
+    Name                                     Estimate      SE            tStat      DF     pValue         Lower          Upper     
+    {'(Intercept)'                  }            7.1074      0.023254     305.64    496              0         7.0617        7.1531
+    {'Chocolate_without'            }        0.00047421    0.00044534     1.0648    496        0.28747    -0.00040077     0.0013492
+    {'Gender_male'                  }             0.701      0.023254     30.145    496    3.3405e-114        0.65531       0.74669
+    {'Chocolate_without:Gender_male'}        -0.0052837    0.00044534    -11.864    496     9.3651e-29     -0.0061586    -0.0044087
+
+Random effects covariance parameters:
+Group: Subject (250 Levels)
+    Name1                  Name2                  Type           Estimate
+    {'(Intercept)'}        {'(Intercept)'}        {'std'}        0.36019 
+
+Group: Error
+    Name                        Estimate 
+    {'sqrt(Dispersion)'}        0.0097568
+Performing post-hoc comparison using method 'emm'

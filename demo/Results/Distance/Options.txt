@@ -1,0 +1,8 @@
+options.formula = "Distance ~ Chocolate*Gender + (1|Subject)";
+options.id = "Subject";
+options.inFile = "Chocolate.csv";
+options.outDir = "Results";
+options.within = "Chocolate";
+options.x = "Chocolate, Gender";
+options.y = "Distance";
+options.yUnits = "m";
