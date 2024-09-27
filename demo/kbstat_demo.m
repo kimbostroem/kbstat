@@ -38,29 +38,33 @@ restoredefaultpath;
 addpath(genpath('../../kbstat'));
 
 % Provide options
-options = struct;
-options.inFile = 'Chocolate.csv';
-options.outDir = 'Results';
+options = struct; % Init empty structure
+options.inFile = 'Chocolate.csv'; % Input file in long format as CSV table
+options.outDir = 'Results'; % Output folder relative to current working directory
 
-options.y = 'Distance';
-options.yUnits = 'm';
+% For the linear model, either provide model variables explicitly, or
+% provide a Wilkinson formula instead.
 
-options.x = 'Chocolate, Gender';
-options.id = 'Subject';
-options.within = 'Chocolate';
+% Option 1: Explicit variables (comment-out if you want to use the Wilkinson formula below)
+options.y = 'Distance'; % Dependent variable of model
+options.yUnits = 'm'; % Units of dependent variable
+options.x = 'Chocolate, Gender'; % Independent variables of model
+options.id = 'Subject'; % Random variable of model
+options.within = 'Chocolate'; % Use this independent variable as within-subject variable
 
-options.formula = 'Distance ~ Chocolate*Gender + (Chocolate*Gender|Subject)';
+% % Option 2: Wilkinson formula (if uncommented, overwrites the model definition above)
+% options.formula = 'Distance ~ Chocolate*Gender + (1|Subject)';
 
-% The following options are optional. If not provided, defaults are taken.
+% The following options are entirely optional.
 % See kbstat header for more information.
 %
-% options.interact = 'Chocolate, Gender';
-% options.distribution = 'gamma';
-% options.link = 'log';
-% options.fitMethod = 'MPL';
-% options.outlierMethod = 'quartiles';
-% options.showVarNames = 'Levels';
+% options.interact = 'Chocolate, Gender'; % Analyse interaction between these variables
+% options.distribution = 'gamma'; % Distribution family of GLM
+% options.link = 'log'; % Link function of GLM
+% options.fitMethod = 'MPL'; % Fitting method of GLM
+% options.outlierMethod = 'quartiles'; % Remove outliers using this function 
+% options.showVarNames = 'Levels'; % Write levels with capitalized first letter
 
 
-% Call main script
+% Call main script with the given options
 kbstat(options);
