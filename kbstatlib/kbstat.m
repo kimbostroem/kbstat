@@ -1,8 +1,9 @@
 function mdl = kbstat(options)
-%% Analyze data using generalized linear mixed-model fit.
-% The result is a fit summary, a diagnostic plot, a data bar plot, a
+%% Perform statistical analysis based on a generalized linear mixed model.
+% The result is a model fit summary, diagnostic plots, a data bar plot, a
 % descriptive statistics table, an ANOVA table, and a posthoc pairwise
-% comparison table.
+% comparison table for selected variables. For more information see the
+% README file and the demo subfolder.
 %
 % REMARK: This function can do multivariate analysis which can be done in
 % either one of two possible ways: 1) Declare a dependent variable
@@ -16,6 +17,14 @@ function mdl = kbstat(options)
 % options.multiVariate=true. However, the posthoc test then only works
 % when options.posthocMethod='ttest' instead of 'emm', due to limitations
 % of the external package 'emmeans'.
+%
+% DISCLAIMER: This library come without any warranty and is for free use
+% only. See the LICENSE file in the root folder. The library uses an
+% adaptation of Bastian Bechtold's Violin plot library, available at
+% https://github.com/bastibe/Violinplot-Matlab, for plotting and John
+% Hartman's emmeans library, available at
+% https://de.mathworks.com/matlabcentral/fileexchange/71970-emmeans, for
+% post-hoc analysis.
 %
 % SYNTAX
 %   kbstat(in, options)
@@ -377,24 +386,30 @@ function mdl = kbstat(options)
 %       mdl             (Generalized linear mixed-effects model) Result
 %                       from linear model fit
 %
-% EXAMPLE
-%   options.y = 'jointEfficiency';
-%   options.yUnits = '1';
-%   options.x = 'shoe, speed, sex, joint';
-%   options.subject = 'subject';
-%   options.within = 'shoe, speed, joint';
-%   options.interact = 'shoe, speed';
-%   options.distribution = 'gamma';
-%	options.constraint = 'speed < 2 & joint == "ankle_joint"'
-%   kbstat('path/to/Data.xlsx', options);
+% EXAMPLE (for more info see demo files)
+% options = struct; % Init empty structure
+% options.inFile = 'Chocolate.csv'; % Input file in long format as CSV table
+% options.outDir = 'Results'; % Output folder relative to current working directory
+% options.y = 'Distance'; % Dependent variable of model
+% options.yUnits = 'm'; % Units of dependent variable
+% options.x = 'Chocolate, Gender'; % Independent variables of model
+% options.id = 'Subject'; % Random variable of model
+% options.within = 'Chocolate'; % Use this independent variable as within-subject variable
 %
-% Author: Kim Joris Boström
+% Version 1.0, available at https://github.com/kimbostroem/kbstat
+% (c) 2024 by Kim Joris Boström
+% Website: http://www.kim-bostroem.de
 
-%% Switch off specific warnings
+%% Switch off specific warning
 
+% The following warning occurs when distributions such as 'gamma' are
+% chosen, which require the data to be strictly nonnegative, even if they
+% are in fact nonnegative, making the warning pointless.
+%
 % Warning: The 'Reciprocal' and 'Power' links require the linear predictor
 % to be non-negative. However, the model assumes that the linear predictor
 % is unconstrained.
+
 warning('off','stats:classreg:regr:lmeutils:StandardGeneralizedLinearMixedModel:BadDistLinkCombination1');
 
 %% Get parameters

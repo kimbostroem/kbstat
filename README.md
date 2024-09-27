@@ -4,7 +4,7 @@ A highly configurable statistical library to perform generalised linear model an
 
 ## Disclaimer
 
-This library come without warranty and is for free use only. See the LICENSE file in the root folder.
+This library come without any warranty and is for free use only. See the LICENSE file in the root folder.
 
 The library uses an adaptation of Bastian Bechtold's Violin plot library, available at https://github.com/bastibe/Violinplot-Matlab, for plotting and John Hartman's emmeans library, available at https://de.mathworks.com/matlabcentral/fileexchange/71970-emmeans, for post-hoc analysis. 
 
@@ -14,4 +14,10 @@ Analysis is performed by calling the script `kbstat` with an `options` structure
 
 ## Example
 
-In MATLAB, change to the `demo' folder and run the `kbstat_demo' script. The demo script illustrates the GLM analysis of artificially generated data from the fictional scenario of athletes performing long jumps with and without having eaten chocolate beforehand. The results are stored in a folder called `Chocolate`, which is created if it does not exist, otherwise its contents are overwritten. 
+In MATLAB, change to the `demo` folder and run the `kbstat_demo` script. The demo script illustrates the GLM analysis of artificially generated data for the fictional scenario of male and female athletes performing long jumps with and without having eaten chocolate beforehand. The results are stored in a folder called `Results`, which is created if it does not exist, otherwise its contents are overwritten. 
+
+## How to cite
+
+When using this script in your publications, cite it using the following APA citation or its equivalent:
+
+Boström, K. J. (2024). *Kbstat* (Version 1.0) [MATLAB]. https://github.com/kimbostroem/kbstat.git.
