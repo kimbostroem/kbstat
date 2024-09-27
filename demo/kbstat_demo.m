@@ -1,5 +1,8 @@
-%% Initilization
-
+%% Demo for using the kbstat library
+% For more information, see the header of kbstat.m. For most options there
+% is a default, so they do not all have to be provided. Here are the
+% available options for chosing the distribution and link function.
+%
 %       distribution    Distribution used for the GLM fit.
 %                       OPTIONAL, default = 'Normal'.
 %                       Possible values:
@@ -24,30 +27,40 @@
 
 fprintf('Initializing...\n');
 
-% clear workspace
+% Clear workspace and close open figures
 clear
 close all
 
-% restore default path
+% Restore default path
 restoredefaultpath;
 
-% add library and subfolders to path
+% Add library and subfolders to path
 addpath(genpath('../../kbstat'));
-resultsDir = 'Results';
 
+% Provide options
 options = struct;
 options.inFile = 'Chocolate.csv';
+options.outDir = 'Results';
+
 options.y = 'Distance';
 options.yUnits = 'm';
+
 options.x = 'Chocolate, Gender';
 options.id = 'Subject';
 options.within = 'Chocolate';
-options.interact = 'Chocolate, Gender';
-options.distribution = 'gamma';
-options.fitMethod = 'MPL';
-options.posthocMethod = 'emm';
-options.posthocLevel = 1;
-options.preOutlierMethod = 'quartiles';
-options.postOutlierMethod = 'none';
-options.showVarNames = 'Levels';
+
+options.formula = 'Distance ~ Chocolate*Gender + (Chocolate*Gender|Subject)';
+
+% The following options are optional. If not provided, defaults are taken.
+% See kbstat header for more information.
+%
+% options.interact = 'Chocolate, Gender';
+% options.distribution = 'gamma';
+% options.link = 'log';
+% options.fitMethod = 'MPL';
+% options.outlierMethod = 'quartiles';
+% options.showVarNames = 'Levels';
+
+
+% Call main script
 kbstat(options);

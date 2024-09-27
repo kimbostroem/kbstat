@@ -1277,10 +1277,14 @@ for iVar = 1:nY
     if nY > 1 % multiple dependent variables or multivariate dependent variable
         idxDesc = (Data.(yVar) == myVar);
         Data.(transVar)(idxDesc) = myMult * Data.(transVar)(idxDesc);
-        fprintf('Multiplying %s with %g...\n', myVar, myMult);
+        if myMult ~= 1
+            fprintf('Multiplying %s with %g...\n', myVar, myMult);
+        end
     else % one dependent variable
         Data.(transVar) = myMult * Data.(transVar);
-        fprintf('Multiplying %s with %g...\n', depVar, myMult);
+        if myMult ~= 1
+            fprintf('Multiplying %s with %g...\n', depVar, myMult);
+        end
     end
 
 
