@@ -8,3 +8,5 @@ title: "kbstat"
 version: 1.0.0
 date-released: 2024-09-27
 url: "https://github.com/kimbostroem/kbstat"
+programming-languages: 
+	- matlab
