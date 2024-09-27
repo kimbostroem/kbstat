@@ -1,4 +1,3 @@
-options.formula = "Distance ~ Chocolate*Gender + (1|Subject)";
 options.id = "Subject";
 options.inFile = "Chocolate.csv";
 options.outDir = "Results";
