@@ -481,31 +481,6 @@ else
     multiVarLevels = '';
 end
 
-if nY > 1
-    yVar = 'yVar';
-    yVal = 'Y';
-    Data2 = stack(Data1, y, 'NewDataVariableName', yVal, 'IndexVariableName', yVar);
-    Data2.(yVar) = string(string(Data2.(yVar)));
-    depVar = yVal; % set dependent variable to y
-elseif ~isempty(multiVar)
-    yVar = multiVar;
-    yVal = y{1};
-    if isempty(multiVarLevels)
-        Data2 = Data1;
-    else
-        idxDesc = ismember(string(Data1.(yVar)), string(multiVarLevels));
-        Data2 = Data1(idxDesc, :);
-    end
-    depVar = y{1}; % set dependent variable to y
-    Data2.(yVar) = string(string(Data2.(yVar)));
-    y = cellstr(unique(Data2.(yVar)));
-    nY = length(y);
-else
-    Data2 = Data1;
-    depVar = y{1};
-    yVal = y{1};
-end
-
 %% more variables
 
 % correctForN
@@ -607,7 +582,8 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
 
     % lefthand side of formula
     if isempty(y)
-        y = eqParts{1};
+        y = eqParts(1);
+        nY = 1;
     end
     % righthand side of formula
     xStr = eqParts{2};
@@ -697,6 +673,31 @@ else % no formula given or empty
 
     % for safety, set formula to empty
     formula = '';
+end
+
+if nY > 1
+    yVar = 'yVar';
+    yVal = 'Y';
+    Data2 = stack(Data1, y, 'NewDataVariableName', yVal, 'IndexVariableName', yVar);
+    Data2.(yVar) = string(string(Data2.(yVar)));
+    depVar = yVal; % set dependent variable to y
+elseif ~isempty(multiVar)
+    yVar = multiVar;
+    yVal = y{1};
+    if isempty(multiVarLevels)
+        Data2 = Data1;
+    else
+        idxDesc = ismember(string(Data1.(yVar)), string(multiVarLevels));
+        Data2 = Data1(idxDesc, :);
+    end
+    depVar = y{1}; % set dependent variable to y
+    Data2.(yVar) = string(string(Data2.(yVar)));
+    y = cellstr(unique(Data2.(yVar)));
+    nY = length(y);
+else
+    Data2 = Data1;
+    depVar = y{1};
+    yVal = y{1};
 end
 
 % multiVariate
