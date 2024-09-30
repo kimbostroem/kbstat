@@ -631,9 +631,10 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
     % independent variables are all fixed and random variables
     xFactors = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
 
-    % analyzed factors are IVs except covariates
+    % analyzed factors are IVs except random variables and covariates
     if isempty(x)
         x = unique(xFactors);
+        x = setdiff(x, randomVars, 'stable');
         x = setdiff(x, covariate, 'stable');
     end
 
