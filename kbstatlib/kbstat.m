@@ -349,7 +349,7 @@ function mdl = kbstat(options)
 %                       'sorted'    sorted alphanumerically
 %                       'stable'    sorted in the order of occurrence in
 %                                   the data table
-%                       OPTIONAL, default = 'stable'
+%                       OPTIONAL, default = 'sorted'
 %
 %       plotStyle       The style with which the data are plotted.
 %                       Possible values:
@@ -372,11 +372,20 @@ function mdl = kbstat(options)
 %                       3, 'Names_and_Levels'   = display capitalized names and levels.
 %                       OPTIONAL, default = 1.
 %
-%       xOrder          Ordering of the items on the x axis in data plots.
-%                       Overrides ordering of the level names of the 1st
-%                       independent variable.
-%                       OPTIONAL, default = [].
-%                       Example: options.xOrder = '[1 3 2]'
+%       xOrder          Ordering of the items of the 1st x-variable on the 
+%                       x-axis in data plots, based on the order of the
+%                       level names defined by 'levelOrder'. 
+%                       OPTIONAL, default = []. 
+%                       Example: options.xOrder = '1 3 2'
+%
+%       xOrder<n>       Ordering of the items of the n-th x-variable (with 
+%                       respect to the provided list) on the x-axis in data
+%                       plots, based on the order of the level names
+%                       defined by 'levelOrder'.
+%                       OPTIONAL, default = []. 
+%                       Example: 
+%                       options.xOrder1 = '1 4 3 2'
+%                       options.xOrder2 = '2 1'
 %
 %       plotLines      Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding
@@ -817,7 +826,7 @@ end
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
-    levelOrder = 'stable';
+    levelOrder = 'sorted';
 end
 
 % plot style
@@ -919,9 +928,29 @@ else
 end
 
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
-    xOrder = getValue(options.xOrder);
+    xOrder1 = getValue(options.xOrder);
+elseif isfield(options, 'xOrder1') && ~isempty(options.xOrder1)
+    xOrder1 = getValue(options.xOrder1);
 else
-    xOrder = [];
+    xOrder1 = [];
+end
+
+if isfield(options, 'xOrder2') && ~isempty(options.xOrder2)
+    xOrder2 = getValue(options.xOrder2);
+else
+    xOrder2 = [];
+end
+
+if isfield(options, 'xOrder3') && ~isempty(options.xOrder3)
+    xOrder3 = getValue(options.xOrder3);
+else
+    xOrder3 = [];
+end
+
+if isfield(options, 'xOrder4') && ~isempty(options.xOrder44)
+    xOrder4 = getValue(options.xOrder4);
+else
+    xOrder4 = [];
 end
 
 if isfield(options, 'plotLines') && ~isempty(options.plotLines)
@@ -1076,10 +1105,6 @@ options.Data = Data;
 memberVar = factors{1};
 members = unique(Data.(memberVar), levelOrder);
 nMembers = length(members);
-% apply potential re-ordering
-if ~isempty(xOrder)
-    members = members(xOrder);
-end
 
 % 2nd factor = group variable
 if nFactors > 1
@@ -1112,6 +1137,20 @@ else
     rowVar = 'none';
     rows = "";
     nRows = 1;
+end
+
+% apply potential re-ordering
+if ~isempty(xOrder1)
+    members = members(xOrder1);
+end
+if ~isempty(xOrder2)
+    groups = groups(xOrder2);
+end
+if ~isempty(xOrder3)
+    cols = cols(xOrder3);
+end
+if ~isempty(xOrder4)
+    rows = rows(xOrder4);
 end
 
 %% Apply data transformation, if given
