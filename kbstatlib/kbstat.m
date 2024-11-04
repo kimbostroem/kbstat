@@ -1828,6 +1828,12 @@ for iLevel = 1:nPosthocLevels
     bar_eff = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_diff = nan(nGroups, nPairs, nRows, nCols, nY);
     bar_diffpct = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_emm_1 = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_CI95low_1 = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_CI95up_1 = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_emm_2 = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_CI95low_2 = nan(nGroups, nPairs, nRows, nCols, nY);
+    bar_CI95up_2 = nan(nGroups, nPairs, nRows, nCols, nY);
 
     % create (nPairs x nY) arrays of main effects data
     main_p = nan(nPairs, nRows, nCols, nY);
@@ -1838,6 +1844,12 @@ for iLevel = 1:nPosthocLevels
     main_eff = nan(nPairs, nRows, nCols, nY);
     main_diff = nan(nPairs, nRows, nCols, nY);
     main_diffpct = nan(nPairs, nRows, nCols, nY);
+    main_emm_1 = nan(nPairs, nRows, nCols, nY);
+    main_CI95low_1 = nan(nPairs, nRows, nCols, nY);
+    main_CI95up_1 = nan(nPairs, nRows, nCols, nY);
+    main_emm_2 = nan(nPairs, nRows, nCols, nY);
+    main_CI95low_2 = nan(nPairs, nRows, nCols, nY);
+    main_CI95up_2 = nan(nPairs, nRows, nCols, nY);
 
     maxNValues = 0;
     for iVar = 1:nY
@@ -2080,6 +2092,12 @@ for iLevel = 1:nPosthocLevels
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
                                 bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
+                                bar_emm_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L1);
+                                bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 1);
+                                bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 2);
+                                bar_emm_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L2);
+                                bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 1);
+                                bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 2);
 
                                 % calc main contrasts
                                 if posthocMain && nGroups * nRows * nCols * nPairs > 1
@@ -2095,6 +2113,12 @@ for iLevel = 1:nPosthocLevels
                                     main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
                                     main_diff(iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
                                     main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
+                                    main_emm_1(iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L1);
+                                    main_CI95low_1(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 1);
+                                    main_CI95up_1(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 2);
+                                    main_emm_2(iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L2);
+                                    main_CI95low_2(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 1);
+                                    main_CI95up_2(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 2);
                                 end
                             end
                     end
@@ -2389,10 +2413,18 @@ for iLevel = 1:nPosthocLevels
 
                 tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                 tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+                tableRow.emmCI_1 = string(sprintf('%.2f (%.2f, %.2f)', main_emm_1(iPair, iRow, iCol, iVar), main_CI95low_1(iPair, iRow, iCol, iVar), main_CI95up_1(iPair, iRow, iCol, iVar)));
+                tableRow.emmCI_2 = string(sprintf('%.2f (%.2f, %.2f)', main_emm_2(iPair, iRow, iCol, iVar), main_CI95low_2(iPair, iRow, iCol, iVar), main_CI95up_2(iPair, iRow, iCol, iVar)));
+                % tableRow.emm_1 = main_emm_1(iPair, iRow, iCol, iVar);
+                % tableRow.CI95low_1 = main_CI95low_1(iPair, iRow, iCol, iVar);
+                % tableRow.CI95up_1 = main_CI95up_1(iPair, iRow, iCol, iVar);
+                % tableRow.emm_2 = main_emm_2(iPair, iRow, iCol, iVar);
+                % tableRow.CI95low_2 = main_CI95low_2(iPair, iRow, iCol, iVar);
+                % tableRow.CI95up_2 = main_CI95up_2(iPair, iRow, iCol, iVar);
                 tableRow.p = main_p(iPair, iRow, iCol, iVar);
                 tableRow.pCorr = main_pCorr(iPair, iRow, iCol, iVar);
                 tableRow.diff = main_diff(iPair, iRow, iCol, iVar);
-                tableRow.diffpct = main_diffpct(iPair, iRow, iCol, iVar);
+                tableRow.diffpct = main_diffpct(iPair, iRow, iCol, iVar);                
                 switch posthocMethod
                     case 'ttest'
                         tableRow.t = main_test(iPair, iRow, iCol, iVar);
@@ -2437,6 +2469,14 @@ for iLevel = 1:nPosthocLevels
 
                         tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+                        tableRow.emmCI_1 = string(sprintf('%.2f (%.2f, %.2f)', bar_emm_1(iGroup, iPair, iRow, iCol, iVar), bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar), bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar)));
+                        tableRow.emmCI_2 = string(sprintf('%.2f (%.2f, %.2f)', bar_emm_2(iGroup, iPair, iRow, iCol, iVar), bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar), bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar)));
+                        % tableRow.emm_1 = bar_emm_1(iGroup, iPair, iRow, iCol, iVar);
+                        % tableRow.CI95low_1 = bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar);
+                        % tableRow.CI95up_1 = bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar);
+                        % tableRow.emm_2 = bar_emm_2(iGroup, iPair, iRow, iCol, iVar);
+                        % tableRow.CI95low_2 = bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar);
+                        % tableRow.CI95up_2 = bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.p = bar_p(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.pCorr = bar_pCorr(iGroup, iPair, iRow, iCol, iVar);
                         tableRow.diff = bar_diff(iGroup, iPair, iRow, iCol, iVar);
