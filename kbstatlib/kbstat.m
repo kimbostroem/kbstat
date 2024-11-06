@@ -430,6 +430,9 @@ end
 inDir = '.';
 inName = '';
 
+% tolerance for differences between real numbers
+tol = 1e-12;
+
 % load Data
 if isfield(options, 'inFile') && isfile(options.inFile)
     inFile = options.inFile;
@@ -2164,8 +2167,13 @@ for iLevel = 1:nPosthocLevels
             % check for duplicate p-values indicating a severe problem
             for iP = 1:length(myBar_p)
                 pValue = myBar_p(iP);
-                if length(setdiff(myBar_p, pValue)) < length(myBar_p) - 1
-                    warning('!!!WARNING!!!! Duplicate p-values found. Something is wrong.');
+                % Problem: When there are very small p-values, they count as "same" in
+                % certain algorithms such as setdiff, which we use to decide if there are
+                % duplicate p-values. So, we forcus on p-values sufficiently greater
+                % than zero.
+                myBar_p_nonzero = myBar_p(myBar_p > tol);
+                if length(setdiff(myBar_p_nonzero, pValue)) < length(myBar_p_nonzero) - 1
+                    warning('Duplicate p-values found -> GLM fit is not good.');
                     break
                 end
             end
