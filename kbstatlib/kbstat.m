@@ -555,8 +555,6 @@ end
 if isfield(options, 'within') && ~isempty(options.within) % option provided and not empty
     within = getList(options.within);
     x = union(x, within, 'stable'); % add within-subject variables to independent variables
-else % option not provided or empty
-    within = {};
 end
 
 % interaction variables
@@ -640,10 +638,10 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
     randomSlopeVars = reshape(randomSlopeVars, 1, []); % make horizontal array
     randomVars = reshape(randomVars, 1, []); % make horizontal array
    
-    % independent variables are all fixed and random variables
+    % x-factors are all IVs that are fixed-effect or random-effect variables
     xFactors = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
 
-    % analyzed factors are IVs except random variables and covariates
+    % fixed-effect variables are IVs except random variables and covariates
     if isempty(x)
         x = unique(xFactors);
         x = setdiff(x, randomVars, 'stable');
@@ -679,22 +677,22 @@ else % no formula given or empty
         randomVars = union(randomVars, {stimulus}, 'stable');
     end
 
-    % fixed effect variables
-    fixedVars = x;
+    % Collect x-factors, which are all IVs that are fixed-effect or random-effect variables
 
-    % factors are all given IVs
-    xFactors = x;
+    % start with fixed-effect variables
+    xFactors = x; 
 
-    % if subject variable is given, add to IVs
+    % include subject variable, if given
     if ~isempty(subject)
         xFactors = union(xFactors, {subject}, 'stable');
     end
 
-    % if trial variable is given, add to IVs
+    % include trial variable, if given
     if ~isempty(trial)
         xFactors = union(xFactors, {trial}, 'stable');
     end
-    % if stimulus variable is given, add to IVs
+
+    % include stimulus variable, if given
     if ~isempty(stimulus)
         xFactors = union(xFactors, {stimulus}, 'stable');
     end
@@ -1064,21 +1062,29 @@ if ~isempty(subject)
     Data.(subject) = string(string(Data2.(subject))); % make categorical
 end
 
-% make catVar variables string
+% make catVar variables categorical by converting them to string
 for iVar = 1:length(catVar)
     myVar = catVar{iVar};
     Data2.(myVar) = string(Data2.(myVar));
 end
 
-% get independent variables
-IVs = xFactors;
-IVs = union(IVs, covariate, 'stable');
-IVs = union(IVs, randomVars, 'stable');
+% x-factors (fixed-effect factors) that are not categorical give an error in emmeans.
+% So, make them categorical by converting them to string
+for iVar = 1:length(xFactors)
+    myVar = xFactors{iVar};
+    Data2.(myVar) = string(Data2.(myVar));
+end
+
+% collect all independent variables
+IVs = xFactors; % include x-factors
+IVs = union(IVs, covariate, 'stable'); % include covariates
+IVs = union(IVs, randomVars, 'stable'); % include random variables
 catVars = {};
 factors = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
     myLevels = unique(Data2.(myIV));
+    % make all IVs categorical that are not entirely numeric or are in catVars
     if ismember(myIV, catVar) || ~all(isnumeric(myLevels))
         Data.(myIV) = string(string(Data2.(myIV)));
         catVars = union(catVars, myIV, 'stable');
