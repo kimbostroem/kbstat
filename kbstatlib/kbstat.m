@@ -112,20 +112,6 @@ function mdl = kbstat(options)
 %
 %       crossed         Same as 'stimulus'.
 %
-%       within          Comma-separated list of within-subject variables.
-%                       Within-subject variables are nested within the
-%                       subject variable, i.e. they vary for each subject.
-%                       Variables that are not declared as within-subject,
-%                       are considered between-subject, i.e. they vary only
-%                       between, not within, subjects. "within" can be a
-%                       subset of "x", or else its members are added to
-%                       "x".
-%                       Example:
-%                       options.subject = 'subject'
-%                       options.x = 'time, age, sex'
-%                       options.within = 'dose'.
-%                       OPTIONAL, default = ''.
-%
 %       interact        Comma-separated list of variables whose interaction
 %                       with each other is to be analyzed. Can be a subset
 %                       of "x", or else its members are added to "x". When
@@ -403,7 +389,6 @@ function mdl = kbstat(options)
 % options.yUnits = 'm'; % Units of dependent variable
 % options.x = 'Chocolate, Gender'; % Independent variables of model
 % options.id = 'Subject'; % Random variable of model
-% options.within = 'Chocolate'; % Use this independent variable as within-subject variable
 %
 % Version 1.0, available at https://github.com/kimbostroem/kbstat
 % (c) 2024 by Kim Joris Boström
@@ -549,12 +534,6 @@ elseif isfield(options, 'crossed') && ~isempty(options.crossed)
     stimulus = options.crossed;
 else
     stimulus = '';
-end
-
-% within-subject variables
-if isfield(options, 'within') && ~isempty(options.within) % option provided and not empty
-    within = getList(options.within);
-    x = union(x, within, 'stable'); % add within-subject variables to independent variables
 end
 
 % interaction variables
@@ -1463,7 +1442,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                     % compose random effects string
                     myRandomEffects = strjoin(myRandomEffectTerms, ' + ');
                 end
-            elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no within variables and no covariates
+            elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no interaction-effect variables and no covariates
                 myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, subject), randomSlopes, 'UniformOutput', false), ' + ');
                 myRandomEffects = '';
             else

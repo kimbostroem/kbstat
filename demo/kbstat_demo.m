@@ -48,9 +48,8 @@ options.outDir = 'Results'; % Output folder relative to current working director
 % Option 1: Explicit variables (comment-out if you want to use the Wilkinson formula below)
 options.y = 'Distance'; % Dependent variable of model
 options.yUnits = 'm'; % Units of dependent variable
-options.x = 'Chocolate, Gender'; % Independent variables of model
-options.id = 'Subject'; % Random variable of model
-options.within = 'Chocolate'; % Use this independent variable as within-subject variable
+options.x = 'Chocolate, Gender'; % Fixed-effect variables
+options.id = 'Subject'; % Random-effect variable
 
 % % Option 2: Wilkinson formula (if uncommented, overwrites the model definition above)
 % options.formula = 'Distance ~ Chocolate*Gender + (1|Subject)';
