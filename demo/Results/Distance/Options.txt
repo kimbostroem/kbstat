@@ -1,9 +1,8 @@
 options.distribution = "gamma";
 options.fitMethod = "MPL";
-options.formula = "Distance ~ Chocolate*Gender + (1|Subject)";
+options.formula = "Distance ~ Chocolate*Gender + (Chocolate+Gender|Subject)";
 options.id = "Subject";
 options.inFile = "Chocolate.csv";
-options.interact = "Chocolate, Gender";
 options.link = "log";
 options.outDir = "Results";
 options.outlierMethod = "quartiles";

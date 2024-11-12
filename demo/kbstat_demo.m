@@ -42,17 +42,17 @@ restoredefaultpath;
 
 %% Add library and subfolders to path
 
-addpath(genpath('../../kbstat'));
+addpath(genpath('../../kbstat')); % Location of kbstat library relative to current working directory
 
 %% Provide basic options
 
 options = struct; % Init empty structure
-options.inFile = 'Chocolate.csv'; % Input file in long format as CSV table
-options.outDir = 'Results'; % Output folder relative to current working directory
+options.inFile = 'Chocolate.csv'; % Relative path to input file in long format as CSV table
+options.outDir = 'Results'; % Relative path to output folder
 options.distribution = 'gamma'; % Distribution family of GLM
 options.link = 'log'; % Link function of GLM
 options.fitMethod = 'MPL'; % Fitting method of GLM
-options.outlierMethod = 'quartiles'; % Remove outliers using this function 
+options.outlierMethod = 'quartiles'; % Remove outliers using this method 
 options.showVarNames = 'Levels'; % Write levels with capitalized first letter
 
 %% Alternative 1: Explicitly define variable types
@@ -61,19 +61,20 @@ options.showVarNames = 'Levels'; % Write levels with capitalized first letter
 options.y = 'Distance'; % Dependent variable of model
 options.yUnits = 'm'; % Units of dependent variable
 options.x = 'Chocolate, Gender'; % Fixed-effect variables
-options.interact = 'Chocolate, Gender'; % Analyse interaction between these variables
 options.id = 'Subject'; % Random-effect variable
+
 %% 
 % Call main script with the given options
 
 kbstat(options);
 
 %% Alternative 2: Provide Wilkinson formula
-% The Wilkinson formula uniquely defines all variables and their role. If it 
-% is provided, then it overrides any explicitly defined variables.
+% The Wilkinson formula uniquely defines all variables and their role. If
+% provided, it overrides any explicitly defined variables. The following
+% Wilkinson formula produces the same results as Alternative 1
 
 options.formula = 'Distance ~ Chocolate*Gender + (1|Subject)';
-options.yUnits = 'm'; % Units of dependent variable
+
 %% 
 % Call main script with the given options
 
