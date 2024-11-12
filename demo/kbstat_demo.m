@@ -53,7 +53,7 @@ options.distribution = 'gamma'; % Distribution family of GLM
 options.link = 'log'; % Link function of GLM
 options.fitMethod = 'MPL'; % Fitting method of GLM
 options.outlierMethod = 'quartiles'; % Remove outliers using this method 
-options.showVarNames = 'Levels'; % Write levels with capitalized first letter
+options.showVarNames = 'Names_and_levels'; % Display names and levels, capitalize first letter of names
 
 %% Alternative 1: Explicitly define variable types
 % Define model variables and their roles explicitly
