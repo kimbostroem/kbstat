@@ -1,6 +1,6 @@
 # kbstat
 
-A highly configurable statistical library to perform generalised linear model analysis and post-hoc testing. Results, including diagnostic plots, are saved as Excel and CSV tables, MATLAB, PNG and PDF figures and TXT files to a directory of choice.
+A highly configurable statistical library to perform script-based generalised linear model analysis and post-hoc testing. Results and diagnostic plots are saved as Excel and CSV tables, MATLAB, PNG and PDF figures and TXT files to a directory of choice.
 
 ## Disclaimer
 
@@ -15,6 +15,27 @@ Analysis is performed by calling the script `kbstat` with an `options` structure
 ## Example
 
 In MATLAB, change to the `demo` folder and run the `kbstat_demo` script. The demo script illustrates the GLM analysis of artificially generated data for the fictional scenario of male and female athletes performing long jumps with and without having eaten chocolate beforehand. The results are stored in a folder called `Results`, which is created if it does not exist, otherwise its contents are overwritten. 
+
+Here is a minimal example:
+
+```matlab
+options = struct; % Init empty structure
+options.inFile = 'Data.csv'; % Relative path to input file in long format as CSV table
+options.outDir = 'Results'; % Relative path to output folder
+options.y = 'Distance'; % Dependent variable of model
+options.yUnits = 'm'; % Units of dependent variable
+options.x = 'Factor1, Factor2'; % Fixed-effect variables
+options.id = 'Subject'; % Random-effect variable
+kbstat(options); % Call main script with the given options
+```
+
+The demo script produces several files, in particular the data plot,
+
+![DataPlots](/Users/kbostroem/Git/kbstat/demo/Results/Distance/DataPlots.png)
+
+and the diagnostic plot
+
+![Diagnostics](/Users/kbostroem/Git/kbstat/demo/Results/Distance/Diagnostics.png)
 
 ## How to cite
 
