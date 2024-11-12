@@ -31,11 +31,11 @@ kbstat(options); % Call main script with the given options
 
 The demo script produces several files, in particular the data plot,
 
-![DataPlots](/Users/kbostroem/Git/kbstat/demo/Results/Distance/DataPlots.png)
+![DataPlots](demo/Results/Distance/DataPlots.png)
 
 and the diagnostic plot
 
-![Diagnostics](/Users/kbostroem/Git/kbstat/demo/Results/Distance/Diagnostics.png)
+![Diagnostics](demo/Results/Distance/Diagnostics.png)
 
 ## How to cite
 
