@@ -35,10 +35,9 @@ if nargin < 9
     plotStyle = 'violin';
 end
 
-switch showVarNames
-    case {1, 3, 'names_and_levels', 'Names_and_Levels'} % display variable names and levels
-        members = strcat(memberName, {' = '}, cellstr(members));
-        groups = strcat(groupName, {' = '}, cellstr(groups));
+if strcmpi(showVarNames, 'names_and_levels') % display variable names and levels
+    members = strcat(memberName, {' = '}, cellstr(members));
+    groups = strcat(groupName, {' = '}, cellstr(groups));
 end
 
 members = string(members);

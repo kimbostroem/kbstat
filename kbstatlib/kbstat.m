@@ -350,13 +350,15 @@ function mdl = kbstat(options)
 %
 %       title           Title for plots
 %
-%       showVarNames    Flag how variables and levels are displayed in data
+%       showVarNames    Flag how variable names and levels are displayed in data
 %                       plots.
-%                       0, 'levels'             = display variable levels
-%                       1, 'names_and_levels'   = display variable names and levels
-%                       2, 'Levels'             = display capitalized levels
-%                       3, 'Names_and_Levels'   = display capitalized names and levels.
-%                       OPTIONAL, default = 1.
+%                       'levels'              = display levels as given in the data
+%                       'names_and_levels'    = display names and levels as given in the data
+%                       'Levels'              = display capitalized levels only
+%                       'Names_and_levels'    = display names and levels, capitalize names
+%                       'names_and_Levels'    = display names and levels, capitalize levels
+%                       'Names_and_Levels'    = display names and levels, capitalize both
+%                       OPTIONAL, default = 'levels'.
 %
 %       xOrder          Ordering of the items of the 1st x-variable on the 
 %                       x-axis in data plots, based on the order of the
@@ -948,7 +950,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
     auxVars = {};
     for iCond = 1:length(conds)
         cond = strtrim(conds{iCond});
-        [parts, matches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
+        [parts, splitmatches] = strsplit(cond, {'=', '==', '~=', '<', '<=', '>', '>='});
         constraintVar = strtrim(parts{1});
         constraintVal = strtrim(parts{2});
         if startsWith(constraintVal, '"')
@@ -973,7 +975,7 @@ if isfield(options, 'constraint') && ~isempty(options.constraint)
         % else
         %     constraintVal = string(constraintVal);
         % end
-        compVar = strtrim(matches{1});
+        compVar = strtrim(splitmatches{1});
         if ~ismember(constraintVar, Data2.Properties.VariableNames)
             auxVar = constraintVar;
             Data2.(constraintVar) = DataRaw.(constraintVar);
@@ -2267,26 +2269,29 @@ for iLevel = 1:nPosthocLevels
             end
 
             % prepare to display variable names and levels
-            switch showVarNames
-                case {2, 3, 'Levels', 'Names_and_Levels'} % capitalize variable names and levels
-                    displayMemberVar = string(capitalize(memberVarDisp));
-                    displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', '), 'all'), ', '));
-                    displayGroupVar = string(capitalize(groupVarDisp));
-                    displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', '), 'all'), ', '));
-                    displayColVar = string(capitalize(colVarDisp));
-                    displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', '), 'all'), ', '));
-                    displayRowVar = string(capitalize(rowVarDisp));
-                    displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', '), 'all'), ', '));
-                otherwise % use original variable names and levels
-                    displayMemberVar = memberVarDisp;
-                    displayMembers = members;
-                    displayGroupVar = groupVarDisp;
-                    displayGroups = groups;
-                    displayColVar = colVarDisp;
-                    displayCols = cols;
-                    displayRowVar = rowVarDisp;
-                    displayRows = rows;
+            displayMemberVar = memberVarDisp;
+            displayMembers = members;
+            displayGroupVar = groupVarDisp;
+            displayGroups = groups;
+            displayColVar = colVarDisp;
+            displayCols = cols;
+            displayRowVar = rowVarDisp;
+            displayRows = rows;
+            % capitalize names and/or levels, if needed
+            if contains(showVarNames, 'Names')
+                displayMemberVar = string(capitalize(memberVarDisp));
+                displayGroupVar = string(capitalize(groupVarDisp));
+                displayColVar = string(capitalize(colVarDisp));
+                displayRowVar = string(capitalize(rowVarDisp));
             end
+            if contains(showVarNames, 'Levels')
+                displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', '), 'all'), ', '));
+                displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', '), 'all'), ', '));
+                displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', '), 'all'), ', '));
+                displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', '), 'all'), ', '));
+            end
+            
+            % plot grouped data
             for iRow = 1:nRows
 
                 for iCol = 1:nCols
@@ -2308,27 +2313,26 @@ for iLevel = 1:nPosthocLevels
                         yLabelStr = sprintf('%s [%s]', myLabel, myUnits);
                     end
 
-                    switch showVarNames
-                        case {1, 3, 'names_and_levels', 'Names_and_Levels'} % display variable names and levels
-                            if length(cols) > 1 && length(rows) > 1
-                                panelTitle = sprintf('%s = %s, %s = %s', displayRowVar, displayRows(iRow), displayColVar, displayCols(iCol));
-                            elseif length(rows) > 1
-                                panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
-                            elseif length(cols) > 1
-                                panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
-                            else
-                                panelTitle = '';
-                            end
-                        otherwise % display variable levels
-                            if length(cols) > 1 && length(rows) > 1
-                                panelTitle = sprintf('%s, %s', displayRows(iRow), displayCols(iCol));
-                            elseif length(rows) > 1
-                                panelTitle = sprintf('%s', displayRows(iRow));
-                            elseif length(cols) > 1
-                                panelTitle = sprintf('%s', displayCols(iCol));
-                            else
-                                panelTitle = '';
-                            end
+                    if strcmpi(showVarNames, 'names_and_levels') % display variable names and levels
+                        if length(cols) > 1 && length(rows) > 1
+                            panelTitle = sprintf('%s = %s, %s = %s', displayRowVar, displayRows(iRow), displayColVar, displayCols(iCol));
+                        elseif length(rows) > 1
+                            panelTitle = sprintf('%s = %s', displayRowVar, displayRows(iRow));
+                        elseif length(cols) > 1
+                            panelTitle = sprintf('%s = %s', displayColVar, displayCols(iCol));
+                        else
+                            panelTitle = '';
+                        end
+                    else % display only levels
+                        if length(cols) > 1 && length(rows) > 1
+                            panelTitle = sprintf('%s, %s', displayRows(iRow), displayCols(iCol));
+                        elseif length(rows) > 1
+                            panelTitle = sprintf('%s', displayRows(iRow));
+                        elseif length(cols) > 1
+                            panelTitle = sprintf('%s', displayCols(iCol));
+                        else
+                            panelTitle = '';
+                        end
                     end
 
                     myDataPoints = DataPoints(:, :, :, iRow, iCol, iVar);
