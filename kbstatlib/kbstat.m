@@ -1668,11 +1668,8 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
 
     % save figure
-    set(fig, 'PaperPositionMode', 'auto');
-    set(fig, 'PaperUnits', 'points');
-    set(fig, 'PaperSize', [figWidth figHeight]);
-    print(fig, fullfile(outSubDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-
+    kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
+    
     % close figure
     close(fig);
 
@@ -2374,12 +2371,7 @@ for iLevel = 1:nPosthocLevels
             end
 
             % save figure
-            set(fig, 'PaperPositionMode', 'auto');
-            set(fig, 'PaperUnits', 'points');
-            set(fig, 'PaperSize', [figWidth figHeight]);
-            print(fig, fullfile(outSubDir, sprintf('%s.pdf', figName)), '-fillpage', '-dpdf', sprintf('-r%.0f', 300));
-            print(fig, fullfile(outSubDir, sprintf('%s.png', figName)), '-dpng', sprintf('-r%.0f', 300));
-            saveas(fig, fullfile(outSubDir, sprintf('%s.fig', figName)));
+            kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
             close(fig);
         end
 
