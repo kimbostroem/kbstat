@@ -1,4 +1,4 @@
-function mdl = kbstat(options)
+function results = kbstat(options)
 %% Perform statistical analysis based on a generalized linear mixed model.
 % The result is a model fit summary, diagnostic plots, a data bar plot, a
 % descriptive statistics table, an ANOVA table, and a posthoc pairwise
@@ -313,10 +313,11 @@ function mdl = kbstat(options)
 %                                   'log(x)'
 %                                   'atanh(x)'
 %
-%       outDir          Output folder for generated files.
-%                       OPTIONAL, defaults to the parent folder of the
-%                       input file. If the input is a data table, the
-%                       output folder defaults to the local folder.
+%       outDir          Output folder for generated files, relative to the 
+%                       working directory where the main script is called.
+%                       If not defined or set to empty, no output files are
+%                       generated. 
+%                       OPTIONAL, default = '' (nothing is saved)                      
 %
 %       isPlot          Plot data as grouped bars with significance brackets
 %
@@ -379,6 +380,10 @@ function mdl = kbstat(options)
 %                       a horizontal line in the color of the corresponding
 %                       dataset.
 %
+%       closeFigures    Flag if the figures created during the analysis
+%                       should be closed or left open.
+%                       OPTIONAL, default = false
+%
 % OUTPUT
 %       mdl             (Generalized linear mixed-effects model) Result
 %                       from linear model fit
@@ -395,6 +400,11 @@ function mdl = kbstat(options)
 % Version 1.0, available at https://github.com/kimbostroem/kbstat
 % (c) 2024 by Kim Joris Boström
 % Website: http://www.kim-bostroem.de
+
+%% Init
+
+% Initialize output argument
+results = struct;
 
 %% Switch off specific warning
 
@@ -414,16 +424,12 @@ if ~isstruct(options)
     error('Input argument must be a struct');
 end
 
-inDir = '.';
-inName = '';
-
 % tolerance for differences between real numbers
 tol = 1e-12;
 
 % load Data
 if isfield(options, 'inFile') && isfile(options.inFile)
     inFile = options.inFile;
-    [inDir, inName, ~] = fileparts(inFile);
     DataRaw = readtable(inFile, 'Format', 'auto');
 elseif isfield(options, 'DataRaw')
     DataRaw = options.DataRaw;
@@ -866,10 +872,12 @@ end
 % output folder
 if isfield(options, 'outDir') && ~isempty(options.outDir)
     outDir = options.outDir;
+    isSave = true;
 else
-    outDir = fullfile(inDir, inName);
+    outDir = '';
+    isSave = false;
 end
-if ~isfolder(outDir)
+if isSave && ~isfolder(outDir)
     mkdir(outDir);
 end
 
@@ -939,6 +947,13 @@ if isfield(options, 'plotLines') && ~isempty(options.plotLines)
     plotLines = getValue(options.plotLines);
 else
     plotLines = false;
+end
+
+% close figures
+if isfield(options, 'closeFigures') && ~isempty(options.closeFigures)
+    isCloseFigures = getValue(options.closeFigures);
+else
+    isCloseFigures = false;
 end
 
 %% Apply constraint, if given
@@ -1185,7 +1200,7 @@ if ~isempty(transform)
             otherwise % any other expression
                 tokens = regexp(transform, '[q,p](\d+)(?:[q,p]?)(\d+)?', 'tokens', 'once');
                 tokens(cellfun(@isempty, tokens)) = [];
-                if length(tokens) == 1 % upper percentile given in the form 'q%d' or 'p%d'
+                if isscalar(tokens) % upper percentile given in the form 'q%d' or 'p%d'
                     upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
                     transformFcn = @(x) x/upperThresh;
                 elseif length(tokens) == 2 % lower and upper percentile given in the form 'q%dq%d' or 'p%dp%d'
@@ -1357,28 +1372,40 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     % yLabel
     if length(yLabel) == nY
         myLabel = yLabel{iVar};
-    elseif length(yLabel) == 1
+    elseif isscalar(yLabel)
         myLabel = yLabel{1};
     end
 
     % create output folder
     outSubDir = sprintf('%s/%s', outDir, myVar);
-    if ~isfolder(outSubDir)
-        mkdir(outSubDir);
+    if isSave
+        if ~isfolder(outSubDir)
+            mkdir(outSubDir);
+        end
     end
 
-    % save options
-    fpath = fullfile(outSubDir, 'Options.txt');
-    fidOptions = fopen(fpath, 'w+');
+    % prepare options for output
     fields = fieldnames(options);
     fields = setdiff(fields, 'Data', 'stable'); % remove "Data" from options
     fields = setdiff(fields, 'DataRaw', 'stable'); % remove "DataRaw" from options
     paramFields = sort(fields); % sort fields alphabetically
+
+    % add options to results
     for iField = 1:length(paramFields)
         field = paramFields{iField};
-        fprintf(fidOptions, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+        results.options.(field) = mat2str(string(options.(field)));
     end
-    fclose(fidOptions);
+
+    % save options to file
+    if isSave
+        fpath = fullfile(outSubDir, 'Options.txt');
+        fidOptions = fopen(fpath, 'w+');
+        for iField = 1:length(paramFields)
+            field = paramFields{iField};
+            fprintf(fidOptions, 'options.%s = %s;\n', field, mat2str(string(options.(field))));
+        end
+        fclose(fidOptions);
+    end
 
     if length(distribution) >= nFits
         myDistribution = distribution{iFit};
@@ -1404,7 +1431,11 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     end
 
     % open summary file for writing
-    fidSummary = fopen(fullfile(outSubDir, 'Summary.txt'), 'w+');
+    if isSave
+        fidSummary = fopen(fullfile(outSubDir, 'Summary.txt'), 'w+');
+    else
+        fidSummary = 2; % screen
+    end
 
     if isempty(formula)
 
@@ -1580,17 +1611,29 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     if ~isempty(transform)
         fprintf(fidSummary, 'Data have been transformed using f(x) = %s\n', transform);
     end
-    fclose(fidSummary);
+
+    % close file
+    if isSave
+        fclose(fidSummary);
+    end
 
     % report outlier removal to file
-    fidOutliers = fopen(fullfile(outSubDir, 'Outliers.txt'), 'w+');
+    if isSave
+        fidOutliers = fopen(fullfile(outSubDir, 'Outliers.txt'), 'w+');
+    else
+        fidOutliers = 2; % screen
+    end
     msg = sprintf('Removed %d pre-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPreOutliers, nPreObs, nPreOutliers/nPreObs*100, outlierRemoval);
     fprintf(msg);
     fprintf(fidOutliers, msg);
     msg = sprintf('Removed %d post-fit outlier(s) from %d observations (%.1f %%%%) using removal method ''%s''\n', nPostOutliers, nPostObs, nPostOutliers/nPostObs*100, postOutlierMethod);
     fprintf(msg);
     fprintf(fidOutliers, msg);
-    fclose(fidOutliers);
+
+    % close file
+    if isSave
+        fclose(fidOutliers);
+    end
 
     %% Plot diagnostics
 
@@ -1634,7 +1677,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     resFit = fitdist(mdlResiduals, 'Normal');
     xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
     ylims = ylim;
-    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0 0.2], 'EdgeColor', 'none');
+    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeColor', 'none');
     title('Histogram of residuals');
     xlabel('Residuals');
 
@@ -1668,12 +1711,15 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     subplot(nPanelRows, nPanelCols,iPanel);
     plotResiduals(mdl, 'lagged', 'ResidualType', 'Pearson');
 
-
     % save figure
-    kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
-    
+    if isSave
+        kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
+    end
+
     % close figure
-    close(fig);
+    if isCloseFigures
+        close(fig);
+    end
 
     % store GLM fit
     mdls{iFit} = mdl;
@@ -1689,6 +1735,11 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         Data = DataOrig; % set Data to original Data minus post-fit outliers
         formula = formulaOrig;
     end
+
+    % add model fit and stuff to results
+    results.(myVar).formula = formula;
+    results.(myVar).mdl = mdl;
+    results.(myVar).anovaResult = anovaResult;
 end
 
 %% Statistically correct ANOVA tables
@@ -1709,12 +1760,9 @@ for iFit = 1:nFits
 
     % create output folder
     outSubDir = sprintf('%s/%s', outDir, myVar);
-    if ~isfolder(outSubDir)
+    if isSave && ~isfolder(outSubDir)
         mkdir(outSubDir);
     end
-
-    % retrieve GLM fit
-    mdl = mdls{iFit};
 
     % retrieve anova results
     anovaResult = anovas{iFit};
@@ -1731,15 +1779,23 @@ for iFit = 1:nFits
     anovaTable.effectSize = string(effprint(anovaTable.etaSqp, 'eta2'));
     anovaTable.significance = string(sigprint(anovaTable.p));
 
-    % save Data
-    saveTable(Datasets{iFit}, 'Data', {'csv'}, outSubDir);
+    % add data to results
+    results.(myVar).Data = Datasets{iFit};
+    results.(myVar).DataRaw = DataRaw;
+    results.(myVar).anovaTable = anovaTable;
 
-    % save raw Data table
-    saveTable(DataRaw, 'DataRaw', {'csv'}, outSubDir);
+    % Save tables
+    if isSave
+        % save Data
+        saveTable(Datasets{iFit}, 'Data', {'csv'}, outSubDir);
+        % save raw Data table
+        saveTable(DataRaw, 'DataRaw', {'csv'}, outSubDir);
+        % save ANOVA table
+        saveTable(anovaTable, 'Anova', {'xlsx'}, outSubDir);
+    end
 
-    % save ANOVA table
-    saveTable(anovaTable, 'Anova', {'xlsx'}, outSubDir);
-    disp(anovaTable) % display table
+    % display table
+    disp(anovaTable)
 end
 
 %% Plot data and make posthoc comparisons
@@ -1872,7 +1928,7 @@ for iLevel = 1:nPosthocLevels
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
-        if ~isfolder(outSubDir)
+        if isSave && ~isfolder(outSubDir)
             mkdir(outSubDir);
         end
 
@@ -2115,12 +2171,17 @@ for iLevel = 1:nPosthocLevels
 
         %% Save descriptive statistics
 
-        % dispaly and save statistics (only necessary for 1st posthoc level)
+        % display and save statistics (only necessary for 1st posthoc level)
         if iLevel == 1
             % descriptive statistics
             disp(StatsTable);
-            fileName = 'Statistics';
-            saveTable(StatsTable, fileName, {'xlsx'}, outSubDir);
+            tableName = 'Statistics';
+            % add table to results
+            results.(myVar).(tableName) = StatsTable;
+            % save table to file
+            if isSave                
+                saveTable(StatsTable, tableName, {'xlsx'}, outSubDir);
+            end
         end
     end
 
@@ -2219,14 +2280,14 @@ for iLevel = 1:nPosthocLevels
 
         % create output folder
         outSubDir = sprintf('%s/%s', outDir, myVar);
-        if ~isfolder(outSubDir)
+        if isSave && ~isfolder(outSubDir)
             mkdir(outSubDir);
         end
 
         % yLabel
         if length(yLabel) == nY
             myLabel = yLabel{iVar};
-        elseif length(yLabel) == 1
+        elseif isscalar(yLabel)
             myLabel = yLabel{1};
         else
             error('The number of dependent variables does not match the number of their labels');
@@ -2235,7 +2296,7 @@ for iLevel = 1:nPosthocLevels
         % yUnits
         if length(yUnits) == nY
             myUnits = yUnits{iVar};
-        elseif length(yUnits) == 1
+        elseif isscalar(yUnits)
             myUnits = yUnits{1};
         end
 
@@ -2375,8 +2436,14 @@ for iLevel = 1:nPosthocLevels
             end
 
             % save figure
-            kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
-            close(fig);
+            if isSave
+                kbsaveFigure(fig, fullfile(outSubDir, figName), {'.pdf', '.png', '.fig'});
+            end
+
+            % close figure
+            if isCloseFigures
+                close(fig);
+            end
         end
 
         %% Post-hoc table
@@ -2498,13 +2565,19 @@ for iLevel = 1:nPosthocLevels
         % display table
         disp(posthocTable);
 
-        % save table
         if nPosthocLevels > 1
-            fileName = sprintf('Posthoc_%d', iLevel);
+            tableName = sprintf('Posthoc_%d', iLevel);
         else
-            fileName = 'Posthoc';
+            tableName = 'Posthoc';
         end
-        saveTable(posthocTable, fileName, {'xlsx'}, outSubDir);
+
+        % add table to results
+        results.(myVar).(tableName) = posthocTable;
+
+        % save table
+        if isSave            
+            saveTable(posthocTable, tableName, {'xlsx'}, outSubDir);
+        end
     end
 end
 
