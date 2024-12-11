@@ -952,6 +952,8 @@ end
 % close figures
 if isfield(options, 'closeFigures') && ~isempty(options.closeFigures)
     isCloseFigures = getValue(options.closeFigures);
+elseif isSave
+    isCloseFigures = true;
 else
     isCloseFigures = false;
 end
@@ -2582,6 +2584,7 @@ for iLevel = 1:nPosthocLevels
 end
 
 fprintf('DONE in %g seconds\n', toc(ticAnova));
+fprintf('Results saved in %s\n', outDir);
 
 end
 
