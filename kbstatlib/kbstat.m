@@ -589,6 +589,15 @@ randomSlopeVars = {};
 randomVars = {};
 if isfield(options, 'formula') && ~isempty(options.formula) % formula is given and not empty
 
+    % remove provided variables
+    x = {};
+    subject = '';
+    interact = {};
+    covariate = {};
+    randomSlopes = {};
+    isRandomInteract = 0;
+    isRandomSlopes = 0;
+
     formula = options.formula;
     eqParts = strtrim(strsplit(formula, '~'));
 
