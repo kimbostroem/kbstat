@@ -890,7 +890,7 @@ end
 if isfield(options, 'showVarNames') && ~isempty(options.showVarNames)
     showVarNames = getValue(options.showVarNames);
 else
-    showVarNames = 1;
+    showVarNames = 'levels';
 end
 
 if isfield(options, 'xName') && ~isempty(options.xName)
@@ -2376,7 +2376,7 @@ for iLevel = 1:nPosthocLevels
                         yLabelStr = sprintf('%s [%s]', myLabel, myUnits);
                     end
 
-                    if strcmpi(showVarNames, 'names_and_levels') % display variable names and levels
+                    if contains(showVarNames, 'names', 'IgnoreCase', true) && contains(showVarNames, 'levels', 'IgnoreCase', true) % display variable names and levels
                         if length(cols) > 1 && length(rows) > 1
                             panelTitle = sprintf('%s = %s, %s = %s', displayRowVar, displayRows(iRow), displayColVar, displayCols(iCol));
                         elseif length(rows) > 1
