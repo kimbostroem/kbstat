@@ -1,4 +1,4 @@
-function tableLong = tableWide2long(tableWide, groups, groupNames, groupLevels, levelVar)
+function longTable = tableWide2long(wideTable, groups, groupNames, groupLevels, levelVar)
 %% Convert table to long format by grouping selected variables
 %
 % SYNTAX
@@ -19,7 +19,7 @@ function tableLong = tableWide2long(tableWide, groups, groupNames, groupLevels, 
 % tableLong = tableWide2long(tableWide, {{'a_x', 'a_y', 'a_z'}, {'b_x', 'b_y', 'b_z'}}, {'A', 'B'}, {'x', 'y', 'z'}, 'Component')
 
 
-tableLong = stack(tableWide,groups, 'NewDataVariableName', groupNames, 'IndexVariableName', levelVar);
-tableLong.(levelVar) = string(categorical(tableLong.(levelVar), unique(tableLong.(levelVar)), groupLevels));
+longTable = stack(wideTable,groups, 'NewDataVariableName', groupNames, 'IndexVariableName', levelVar);
+longTable.(levelVar) = string(categorical(longTable.(levelVar), unique(longTable.(levelVar)), groupLevels));
 
 end
