@@ -1,5 +1,5 @@
 function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idColumn)
-% LONG2WIDE_MULTI Converts a long-format table to wide format with multiple factors.
+%% Convert a long-format table to wide format with multiple factors.
 %
 % INPUTS:
 %   longTable     - Input table in long format.
@@ -15,7 +15,7 @@ function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idCol
 %   longTable = table([1; 1; 2; 2], {'A'; 'A'; 'B'; 'B'}, {'X'; 'Y'; 'X'; 'Y'}, [10; 20; 30; 40], ...
 %                     'VariableNames', {'ID', 'Category', 'SubCategory', 'Value'});
 %   % Convert to wide format
-%   wideTable = long2wide_multi(longTable, {'Category', 'SubCategory'}, 'Value', 'ID');
+%   wideTable = tableLong2wide(longTable, {'Category', 'SubCategory'}, 'Value', 'ID');
 
 % Generate unique combinations of factor levels
 uniqueFactors = unique(longTable(:, factorColumns), 'rows');

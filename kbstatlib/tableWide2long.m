@@ -1,5 +1,5 @@
 function longTable = tableWide2long(wideTable, groups, groupNames, groupLevels, levelVar)
-%% Convert table to long format by grouping selected variables
+%% Convert table from wide format to long format by grouping selected variables
 %
 % SYNTAX
 %   tableLong = tableWide2long(tableWide, groups, groupNames, groupLevels, levelVar)
