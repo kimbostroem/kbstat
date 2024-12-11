@@ -354,11 +354,11 @@ function results = kbstat(options)
 %       showVarNames    Flag how variable names and levels are displayed in data
 %                       plots.
 %                       'levels'              = display levels as given in the data
-%                       'names_and_levels'    = display names and levels as given in the data
+%                       'names_levels'    = display names and levels as given in the data
 %                       'Levels'              = display capitalized levels only
-%                       'Names_and_levels'    = display names and levels, capitalize names
-%                       'names_and_Levels'    = display names and levels, capitalize levels
-%                       'Names_and_Levels'    = display names and levels, capitalize both
+%                       'Names_levels'    = display names and levels, capitalize names
+%                       'names_Levels'    = display names and levels, capitalize levels
+%                       'Names_Levels'    = display names and levels, capitalize both
 %                       OPTIONAL, default = 'levels'.
 %
 %       xOrder          Ordering of the items of the 1st x-variable on the 
