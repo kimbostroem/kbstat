@@ -1,8 +1,9 @@
 function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idColumn)
 %% Convert a long-format table to wide format with multiple factors.
+% If 1st argument is a file path, the table is imported from there.
 %
 % INPUTS:
-%   longTable     - Input table in long format.
+%   longTable     - Input table in long format, or file path to such table.
 %   factorColumns - Cell array of column names (strings) to use as grouping factors for wide headers.
 %   valueColumn   - The name (as a string) of the column containing the values.
 %   idColumn      - The name (as a string) of the column to use as row identifiers in the wide table.
@@ -16,6 +17,14 @@ function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idCol
 %                     'VariableNames', {'ID', 'Category', 'SubCategory', 'Value'});
 %   % Convert to wide format
 %   wideTable = tableLong2wide(longTable, {'Category', 'SubCategory'}, 'Value', 'ID');
+
+isPath = false;
+if (isstring(longTable)||ischar(longTable)) && isfile(longTable)
+    isPath = true;
+    fpath = longTable;
+    [fdir, fname, fext] = fileparts(fpath);
+    longTable = readtable(fpath);
+end
 
 % Generate unique combinations of factor levels
 uniqueFactors = unique(longTable(:, factorColumns), 'rows');
@@ -62,6 +71,23 @@ for iID = 1:numel(uniqueIDs)
                 wideTable{iID, remHeaders(iRem)} = longTable{valueMask, remHeaders(iRem)};
             end
         end
+    end
+end
+
+if isPath
+    myFname = sprintf('%s_wide', fname);
+    myFext = fext;
+    switch myFext
+        case '.xlsx'
+            % save as Excel table
+            outpath = fullfile(fdir, [myFname, myFext]);
+            writetable(myTable, outpath, 'WriteMode', 'replacefile');
+        case '.csv'
+            % save as CSV table
+            outpath = fullfile(fdir, [myFname, myFext]);
+            writetable(myTable, outpath, 'WriteMode', 'overwrite', 'Delimiter', ';', 'QuoteStrings', 'all');
+        otherwise
+            error('Unknown format %s', myFext);
     end
 end
 end
