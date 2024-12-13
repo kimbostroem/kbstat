@@ -1,12 +1,14 @@
-function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idColumn)
+function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idColumn, newVarPrefix)
 %% Convert a long-format table to wide format with multiple factors.
 % If 1st argument is a file path, the table is imported from there.
 %
 % INPUTS:
-%   longTable     - Input table in long format, or file path to such table.
-%   factorColumns - Cell array of column names (strings) to use as grouping factors for wide headers.
-%   valueColumn   - The name (as a string) of the column containing the values.
-%   idColumn      - The name (as a string) of the column to use as row identifiers in the wide table.
+%   longTable       - Input table in long format, or file path to such table.
+%   factorColumns   - Cell array of column names (strings) to use as grouping factors for wide headers.
+%   valueColumn     - The name (as a string) of the column containing the values.
+%   idColumn        - The name (as a string) of the column to use as row identifiers in the wide table.
+%   newVarPrefix    - Prefix for the name of the new column header
+%                     OPTIONAL, default = ''
 %
 % OUTPUT:
 %   wideTable     - Output table in wide format.
@@ -18,6 +20,10 @@ function wideTable = tableLong2wide(longTable, factorColumns, valueColumn, idCol
 %   % Convert to wide format
 %   wideTable = tableLong2wide(longTable, {'Category', 'SubCategory'}, 'Value', 'ID');
 
+if nargin < 5
+    newVarPrefix = '';
+end
+
 isPath = false;
 if (isstring(longTable)||ischar(longTable)) && isfile(longTable)
     isPath = true;
@@ -26,18 +32,24 @@ if (isstring(longTable)||ischar(longTable)) && isfile(longTable)
     longTable = readtable(fpath);
 end
 
+factorColumns = cellstr(factorColumns);
+
 % Generate unique combinations of factor levels
 uniqueFactors = unique(longTable(:, factorColumns), 'rows');
 nWide = size(uniqueFactors, 1);
 
 % Remaining column headers and their factors
 remHeaders = string(setdiff(longTable.Properties.VariableNames, [factorColumns, valueColumn, idColumn]));
-remTypes = varfun(@class,longTable(:, remHeaders),'OutputFormat','cell');
+remTypes = varfun(@class, longTable(:, remHeaders), 'OutputFormat', 'cell');
 
 % Create wide-format column headers from the unique factor combinations
 wideHeaders = strings(1, size(uniqueFactors, 1));
 for iWide = 1:nWide
-    wideHeaders(iWide) = strjoin([valueColumn, string(uniqueFactors{iWide, :})], '_');
+    if ~isempty(newVarPrefix)
+        wideHeaders(iWide) = strjoin([newVarPrefix, string(uniqueFactors{iWide, :})], '_');
+    else
+        wideHeaders(iWide) = strjoin(string(uniqueFactors{iWide, :}), '_');
+    end
 end
 
 % Get unique identifiers for rows
@@ -55,18 +67,32 @@ wideTable = table('Size', [numel(uniqueIDs), nHeaders + 1], ...
 wideTable.(idColumn) = uniqueIDs;
 
 % Initialize all data columns with NaN
+wideTypes = varfun(@class, wideTable, 'OutputFormat', 'cell');
 for iWide = 2:width(wideTable)
-    wideTable{:, iWide} = NaN;
+    if isnumeric(wideTypes{iWide})
+        wideTable{:, iWide} = NaN;
+    end
 end
 
 % Populate the table
 for iID = 1:numel(uniqueIDs)
-    id = uniqueIDs(iID);
+    id = string(uniqueIDs(iID));
     for iWide = 1:numel(wideHeaders)
         mask = ismember(longTable(:, factorColumns), uniqueFactors(iWide, :), 'rows');
         valueMask = mask & (longTable.(idColumn) == id);
         if any(valueMask)
-            wideTable{iID, wideHeaders(iWide)} = longTable{valueMask, valueColumn};
+            entries = longTable{valueMask, valueColumn};
+            nEntries = length(entries);
+            if nEntries > 1
+                fprintf('Subject %s has %d entries for %s -> averaging\n', string(id), nEntries, wideHeaders(iWide));
+                entry = mean(entries);
+            elseif nEntries == 0
+                fprintf('Subject %s has missing data for %s\n', string(id), wideHeaders(iWide));
+                entry = NaN;
+            else
+                entry = entries;
+            end
+            wideTable{iID, wideHeaders(iWide)} = entry;
             for iRem = 1:numel(remHeaders)
                 wideTable{iID, remHeaders(iRem)} = longTable{valueMask, remHeaders(iRem)};
             end
@@ -74,7 +100,9 @@ for iID = 1:numel(uniqueIDs)
     end
 end
 
+% write table to disk if desired
 if isPath
+    myTable = wideTable;
     myFname = sprintf('%s_wide', fname);
     myFext = fext;
     switch myFext

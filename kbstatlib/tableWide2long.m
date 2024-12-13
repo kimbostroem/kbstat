@@ -27,10 +27,30 @@ if (isstring(wideTable)||ischar(wideTable)) && isfile(wideTable)
     wideTable = readtable(fpath);
 end
 
+groupNames = cellstr(groupNames);
+
 longTable = stack(wideTable,groups, 'NewDataVariableName', groupNames, 'IndexVariableName', levelVar);
 longTable.(levelVar) = string(categorical(longTable.(levelVar), unique(longTable.(levelVar)), groupLevels));
 
+% Remove rows containing missing data
+idxMissing = false(size(longTable, 1), 1);
+for iGroup = 1:numel(groupNames)
+    group = groupNames{iGroup};
+    values = longTable.(group);
+    if isnumeric(values)
+        idxMissing = idxMissing | isnan(values);
+    else
+        idxMissing = idxMissing | strcmp(values, '');
+    end
+end
+nMissing = sum(idxMissing);
+if nMissing > 0
+    fprintf('Removing %d rows containing missing data\n', nMissing);
+    longTable(idxMissing, :) = [];
+end
+
 if isPath
+    myTable = longTable;
     myFname = sprintf('%s_long', fname);
     myFext = fext;
     switch myFext
