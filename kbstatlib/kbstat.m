@@ -566,8 +566,8 @@ if isfield(options, 'randomSlopes') && ~isempty(options.randomSlopes) % option p
     randomSlopes = getList(options.randomSlopes);
 elseif isfield(options, 'randomSlopes') && isempty(options.randomSlopes) % option provided as empty
     randomSlopes = {};
-else % option not provided
-    randomSlopes = union(x, covariate, 'stable');
+else % option not provided -> use all IVs except covariates
+    randomSlopes = x;
 end
 
 % estimate random slopes?
