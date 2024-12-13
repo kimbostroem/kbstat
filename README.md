@@ -28,14 +28,13 @@ options.x = 'Factor1, Factor2'; % Fixed-effect variables
 options.id = 'Subject'; % Random-effect variable
 kbstat(options); % Call main script with the given options
 ```
-
 The demo script produces several files, in particular the data plot,
 
 ![DataPlots](demo/Results/Distance/DataPlots.png)
 
 and the diagnostic plot
 
-![Diagnostics](demo/Results/Distance/Diagnostics.png)
+![Diagnostics](https://github.com/user-attachments/assets/b2eff0d3-5c07-42c6-bcf7-3e0da77d6d6e)
 
 ## How to cite
 
