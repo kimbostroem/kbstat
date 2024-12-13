@@ -55,6 +55,6 @@ end
 if ~strcmpi(outext, '.csv')
     outFile = fullfile(outdir, [outname, '.csv']);
 end
-writetable(T, outFile, 'WriteMode', 'overwrite');
+writetable(T, outFile, 'WriteMode', 'overwrite', 'Delimiter', ';');
 
 end
