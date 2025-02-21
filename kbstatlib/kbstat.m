@@ -893,7 +893,7 @@ end
 if isfield(options, 'title') && ~isempty(options.title)
     plotTitle = options.title;
 else
-    plotTitle = capitalize(depVar);
+    plotTitle = '';
 end
 
 if isfield(options, 'showVarNames') && ~isempty(options.showVarNames)
@@ -1382,7 +1382,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
     % yLabel
     if length(yLabel) == nY
-        myLabel = yLabel{iVar};
+        myLabel = yLabel{iFit};
     elseif isscalar(yLabel)
         myLabel = yLabel{1};
     end
@@ -1664,14 +1664,30 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
     if nY > 1 && ~multiVariate
         if strcmp(depVar, yVal)
-            sgtitle(sprintf('Diagnostics for %s (%s)', plotTitle, myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            if isempty(plotTitle)
+                sgtitle(sprintf('Diagnostics for %s', myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            else
+                sgtitle(sprintf('Diagnostics for %s (%s)', plotTitle, myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            end
         else
-            sgtitle(sprintf('Diagnostics for %s (%s, %s)', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            if isempty(plotTitle)
+                sgtitle(sprintf('Diagnostics for %s (%s)', myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            else
+                sgtitle(sprintf('Diagnostics for %s (%s, %s)', plotTitle, myVar, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+            end
         end
-    elseif nY > 1 && strcmp(plotTitle, yVal)
-        sgtitle(sprintf('Diagnostics for %s - multivariate Analysis', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+    elseif nY > 1
+        if isempty(plotTitle)
+            sgtitle(sprintf('Diagnostics for %s - multivariate Analysis', depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        else
+            sgtitle(sprintf('Diagnostics for %s (%s) - multivariate Analysis', plotTitle, depVar), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        end
     else
-        sgtitle(sprintf('Diagnostics for %s', plotTitle), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        if isempty(plotTitle)
+            sgtitle(sprintf('Diagnostics for %s', myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        else
+            sgtitle(sprintf('Diagnostics for %s (%s)', plotTitle, myLabel), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+        end
     end
 
     iPanel = 0;
@@ -2329,15 +2345,17 @@ for iLevel = 1:nPosthocLevels
             fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
-                if strcmp(depVar, yVal)
-                    title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                if isempty(plotTitle)
+                    title(layout, capitalize(sprintf('%s', myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 else
-                    title(layout, capitalize(sprintf('%s (%s, %s)', plotTitle, myVar, depVar)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                    title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
                 end
-            elseif nY > 1 && strcmp(plotTitle, yVal)
-                title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
             else
-                title(layout, capitalize(sprintf('%s', plotTitle)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                if isempty(plotTitle)
+                    title(layout, capitalize(sprintf('%s', myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                else
+                    title(layout, capitalize(sprintf('%s (%s)', plotTitle, myLabel)), 'interpreter', 'none', 'FontWeight', 'bold', 'FontSize', 14);
+                end
             end
 
             % prepare to display variable names and levels
