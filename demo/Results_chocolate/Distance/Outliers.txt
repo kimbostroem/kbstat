@@ -1,0 +1,2 @@
+Removed 6 pre-fit outlier(s) from 500 observations (1.2 %) using removal method 'quartiles'
+Removed 0 post-fit outlier(s) from 494 observations (0.0 %) using removal method 'none'
