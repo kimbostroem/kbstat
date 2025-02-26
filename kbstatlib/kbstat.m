@@ -590,7 +590,7 @@ randomVars = {};
 if isfield(options, 'formula') && ~isempty(options.formula) % formula is given and not empty
 
     % remove provided variables
-    x = {};
+    % x = {};
     subject = '';
     interact = {};
     covariate = {};
