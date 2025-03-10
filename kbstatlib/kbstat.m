@@ -336,6 +336,8 @@ function results = kbstat(options)
 %                       'sorted'    sorted alphanumerically
 %                       'stable'    sorted in the order of occurrence in
 %                                   the data table
+%                       'ascend'    sorted by ascending value
+%                       'descend'   sorted by descending value
 %                       OPTIONAL, default = 'sorted'
 %
 %       plotStyle       The style with which the data are plotted.
@@ -823,6 +825,11 @@ end
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
     levelOrder = options.levelOrder;
 else
+    levelOrder = 'sorted';
+end
+sortValues = '';
+if ismember(levelOrder,{'ascend', 'descend'})
+    sortValues = levelOrder;
     levelOrder = 'sorted';
 end
 
@@ -2444,7 +2451,7 @@ for iLevel = 1:nPosthocLevels
                         otherwise
                             myBarType = barType;
                     end
-                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines);
+                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues);
                 end
             end
 

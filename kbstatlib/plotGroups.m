@@ -1,4 +1,8 @@
-function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines)
+function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues)
+
+if nargin < 18
+    sortValues = '';
+end
 
 if nargin < 17
     plotLines = false;
@@ -87,6 +91,19 @@ for iGroup = 1:nGroups
                 barTop(iGroup, iMember) = ci(2,1);
             end
     end
+
+    switch sortValues
+        case {'ascend', 'descend'}
+            [barCenter(iGroup, :), sortIdx] = sort(barCenter(iGroup, :), sortValues);
+            barBottom(iGroup, :) = barBottom(iGroup, sortIdx);
+            barTop(iGroup, :) = barTop(iGroup, sortIdx);
+            values(iGroup,:,:) = values(iGroup, sortIdx, :);
+            barPositions(iGroup, sortIdx) = barPositions(iGroup, :);
+            members = members(sortIdx);
+        otherwise
+            % do nothing
+    end
+
     switch lower(plotStyle)
 
         case 'violin'
