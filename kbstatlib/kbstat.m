@@ -80,22 +80,12 @@ function results = kbstat(options)
 %                       the given formula, including 'x', 'y', 'subject', when
 %                       they are not provided.
 %
-%       x               Comma-separated list of independent variables. Up
-%                       to 4 independent variables are supported.
-%                       String-valued variables are considered as
-%                       categorical, i.e. as factors. Only factors are
-%                       included in the barplot chart. Numerical variables
-%                       are not considered factors, except they are
-%                       included in the "catVar" list, see below.
+%       x               Comma-separated list of categorical independent variables to be included 
+%                       in the analysis as factors.
 %
 %       xName           Display name of independent variable(s) appearing
 %                       in tables and plots
 %                       OPTIONAL, default = x
-%
-%       catVar          Comma-separated list of (dependent or independent)
-%                       variables that are taken as categorical, even if
-%                       they have numerical values.
-%                       OPTIONAL, default = '';
 %
 %       subject         Name of the subject variable.
 %                       OPTIONAL, default = ''.
@@ -458,13 +448,6 @@ for iVar = 1:length(tableVars)
     end
 end
 
-% catVar
-if isfield(options, 'catVar') && ~isempty(options.catVar)
-    catVar = getList(options.catVar);
-else
-    catVar = {};
-end
-
 % independent variable(s)
 if isfield(options, 'x') && ~isempty(options.x)
     x = getList(options.x);
@@ -587,18 +570,8 @@ else
 end
 
 % extract variables from formula, if given
-randomSlopeVars = {};
 randomVars = {};
 if isfield(options, 'formula') && ~isempty(options.formula) % formula is given and not empty
-
-    % remove provided variables
-    % x = {};
-    subject = '';
-    interact = {};
-    covariate = {};
-    randomSlopes = {};
-    isRandomInteract = 0;
-    isRandomSlopes = 0;
 
     formula = options.formula;
     eqParts = strtrim(strsplit(formula, '~'));
@@ -622,32 +595,22 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
         for iToken = 1:nTokens
             token = tokens{iToken}{1};
             hits = strsplit(token, '|');
-            randomSlopeVars = union(randomSlopeVars, strtrim(strsplit(hits{1}, {'+', '*', ':', '|'})), 'stable');
-            randomSlopeVars = setdiff(randomSlopeVars, '1'); % remove intercept
             randomVars = union(randomVars, strtrim(strsplit(hits{2}, {'+', '*', ':', '|'})), 'stable');
         end
     else % there is no random variable term
         tokens = regexp(xStr, '(.*)\s*', 'tokens');
         hits = tokens{:};
         fixedVars = strtrim(strsplit(hits{1}, {'+', '*', ':', '|'}));
-        randomSlopeVars = {};
         randomVars = {};
     end
-    randomSlopeVars = reshape(randomSlopeVars, 1, []); % make horizontal array
     randomVars = reshape(randomVars, 1, []); % make horizontal array
    
-    % x-factors are all IVs that are fixed-effect or random-effect variables
-    xFactors = unique([fixedVars, randomSlopeVars, randomVars], 'stable');
-
-    % fixed-effect variables are IVs except random variables and covariates
+    % x variables are all fixed-effect IVs except random variables and covariates
     if isempty(x)
-        x = unique(xFactors);
+        x = fixedVars;
         x = setdiff(x, randomVars, 'stable');
         x = setdiff(x, covariate, 'stable');
     end
-
-    % just for safety, remove any potential fixed variables from set of random variables
-    randomVars = setdiff(randomVars, x, 'stable');
 
     % set subject variable to 1st extracted random variable, if not given
     if isempty(subject)
@@ -673,26 +636,6 @@ else % no formula given or empty
     end
     if ~isempty(stimulus)
         randomVars = union(randomVars, {stimulus}, 'stable');
-    end
-
-    % Collect x-factors, which are all IVs that are fixed-effect or random-effect variables
-
-    % start with fixed-effect variables
-    xFactors = x; 
-
-    % include subject variable, if given
-    if ~isempty(subject)
-        xFactors = union(xFactors, {subject}, 'stable');
-    end
-
-    % include trial variable, if given
-    if ~isempty(trial)
-        xFactors = union(xFactors, {trial}, 'stable');
-    end
-
-    % include stimulus variable, if given
-    if ~isempty(stimulus)
-        xFactors = union(xFactors, {stimulus}, 'stable');
     end
 
     % for safety, set formula to empty
@@ -1076,40 +1019,21 @@ if ~isempty(subject)
     Data.(subject) = string(string(Data2.(subject))); % make categorical
 end
 
-% make catVar variables categorical by converting them to string
-for iVar = 1:length(catVar)
-    myVar = catVar{iVar};
-    Data2.(myVar) = string(Data2.(myVar));
+% make fixed-effect IVs categorical by converting them to string
+for iVar = 1:length(x)
+    myVar = x{iVar};
+    Data2.(myVar) = string(string(Data2.(myVar)));
 end
-
-% x-factors (fixed-effect factors) that are not categorical give an error in emmeans.
-% So, make them categorical by converting them to string
-for iVar = 1:length(xFactors)
-    myVar = xFactors{iVar};
-    Data2.(myVar) = string(Data2.(myVar));
-end
+nFactors = length(x);
 
 % collect all independent variables
-IVs = xFactors; % include x-factors
+IVs = x; % start with fixed-effect IVs
 IVs = union(IVs, covariate, 'stable'); % include covariates
 IVs = union(IVs, randomVars, 'stable'); % include random variables
-catVars = {};
-factors = {};
 for iIV = 1:length(IVs)
     myIV = IVs{iIV};
-    myLevels = unique(Data2.(myIV));
-    % make all IVs categorical that are not entirely numeric or are in catVars
-    if ismember(myIV, catVar) || ~all(isnumeric(myLevels))
-        Data.(myIV) = string(string(Data2.(myIV)));
-        catVars = union(catVars, myIV, 'stable');
-        if ismember(myIV, x)
-            factors = union(factors, myIV, 'stable');
-        end
-    else % data are not in catVars and they are numerical
-        Data.(myIV) = Data2.(myIV); % keep continuous values
-    end
+    Data.(myIV) = Data2.(myIV);
 end
-nFactors = length(factors);
 
 % multivariate variable
 if nY > 1
@@ -1125,24 +1049,24 @@ options.Data = Data;
 %% Create variables
 
 % 1st factor = member variable
-memberVar = factors{1};
+memberVar = x{1};
 members = unique(Data.(memberVar), levelOrder);
 nMembers = length(members);
 
 % 2nd factor = group variable
 if nFactors > 1
-    groupVar = factors{2};
+    groupVar = x{2};
     groups = unique(Data.(groupVar), levelOrder);
     nGroups = length(groups);
 else
     groupVar = 'none';
-    groups = string(factors{1});
+    groups = string(x{1});
     nGroups = 1;
 end
 
 % 3rd factor = column variable
 if nFactors > 2
-    colVar = factors{3};
+    colVar = x{3};
     cols = unique(Data.(colVar), levelOrder);
     nCols = length(cols);
 else
@@ -1153,7 +1077,7 @@ end
 
 % 4th factors = row variable
 if nFactors > 3
-    rowVar = factors{4};
+    rowVar = x{4};
     rows = unique(Data.(rowVar), levelOrder);
     nRows = length(rows);
 else
