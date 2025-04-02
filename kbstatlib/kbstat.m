@@ -1159,6 +1159,12 @@ else
     transVar = depVar;
 end
 
+%% Check if y-data is numeric
+
+if ~all(isnumeric(Data.(transVar)))
+    outlierRemoval = 'none';
+end
+
 %% Remove pre-fit outliers
 
 nPreOutliers = 0;
@@ -1734,6 +1740,7 @@ for iFit = 1:nFits
     anovaTable.F = anovaResult.FStat;
     anovaTable.p = anovaResult.pValue;
     anovaTable.etaSqp = f2etaSqp(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
+    anovaTable.SMD = f2smd(anovaTable.F, anovaTable.DF1, anovaTable.DF2);
     anovaTable.effectSize = string(effprint(anovaTable.etaSqp, 'eta2'));
     anovaTable.significance = string(sigprint(anovaTable.p));
 
