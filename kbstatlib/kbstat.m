@@ -275,11 +275,15 @@ function results = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = ''.
 %
-%       transform       Choose how to transform the dependent variable.
-%                       The linear model is fit on the transformed data,
-%                       but the data are plotted using the original data.
+%       transform       Choose how to transform the dependent variable prior to analysis.
+%                       The linear model is fit on the transformed data, for the plots the data are
+%                       back-transformed to the original domain. Also the statistics tables show the
+%                       back-transformed data.
 %                       OPTIONAL, default = ''.
 %                       Possible values:
+%                       f(x)        Arbitrary function of x. Examples:
+%                                   'log(x)'
+%                                   '1/x'
 %                       'mean'      Divide by mean
 %                       'std'       Divide by standard deviation
 %                       'Z'         Z-transform to zero-centered
@@ -299,9 +303,6 @@ function results = kbstat(options)
 %                       'MADmax'
 %                       'max'
 %                       'minmax'
-%                       'f(x)'      Arbitrary function of x. Examples:
-%                                   'log(x)'
-%                                   'atanh(x)'
 %
 %       outDir          Output folder for generated files, relative to the 
 %                       working directory where the main script is called.
@@ -1112,51 +1113,79 @@ if ~isempty(transform)
         end
         switch transform
             case 'mean'
-                transformFcn = @(x) x/mean(x, 'omitnan');
+                meanX = mean(x, 'omitnan');
+                transform = sprintf('x / %f', meanX);
+                % transFcn = @(x) x / mean(x, 'omitnan');
             case 'std'
-                transformFcn = @(x) x/std(x, 'omitnan');
+                stdX = std(x, 'omitnan');
+                transform = sprintf('x / %f', stdX);
+                % transFcn = @(x) x/std(x, 'omitnan');
             case 'Z'
-                transformFcn = @(x) (x - mean(x, 'omitnan'))/std(x, 'omitnan');
+                meanX = mean(x, 'omitnan');
+                stdX = std(x, 'omitnan');
+                transform = sprintf('(x - %f) / %f', meanX, stdX);
+                % transFcn = @(x) (x - mean(x, 'omitnan'))/std(x, 'omitnan');
             case {'median'}
                 upperThresh = quantile(Data.(depVar)(idxDesc), 0.5);
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('x / %f', upperThresh);
+                % transFcn = @(x) x/upperThresh;
             case 'IQR'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
+                transform = sprintf('x / (%f - %f)', upperThresh, lowerThresh);
+                % transFcn = @(x) x/(upperThresh - lowerThresh);
             case 'IQRmax'
                 [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('x / %f', upperThresh);
+                % transFcn = @(x) x/upperThresh;
             case 'MAD'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+                transform = sprintf('(x - %f) / (%f - %f)', lowerThresh, upperThresh, lowerThresh);
+                % transFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
             case 'MADmax'
                 [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('x / %f', upperThresh);
+                % transFcn = @(x) x/upperThresh;
             case 'max'
                 upperThresh = max(Data.(depVar)(idxDesc));
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('x / %f', upperThresh);
+                % transFcn = @(x) x/upperThresh;
             case 'minmax'
                 lowerThresh = min(Data.(depVar)(idxDesc));
                 upperThresh = max(Data.(depVar)(idxDesc));
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
+                transform = sprintf('x / (%f - %f)', upperThresh, lowerThresh);
+                % transFcn = @(x) x/(upperThresh - lowerThresh);
             otherwise % any other expression
                 tokens = regexp(transform, '[q,p](\d+)(?:[q,p]?)(\d+)?', 'tokens', 'once');
                 tokens(cellfun(@isempty, tokens)) = [];
                 if isscalar(tokens) % upper percentile given in the form 'q%d' or 'p%d'
                     upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
-                    transformFcn = @(x) x/upperThresh;
+                    transform = sprintf('x / %f', upperThresh);
+                    % transFcn = @(x) x/upperThresh;
                 elseif length(tokens) == 2 % lower and upper percentile given in the form 'q%dq%d' or 'p%dp%d'
                     lowerThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
                     upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{2}));
-                    transformFcn = @(x) x/(upperThresh - lowerThresh);
+                    transform = sprintf('x / (%f - %f)', upperThresh, lowerThresh);
+                    % transFcn = @(x) x/(upperThresh - lowerThresh);
                 else % any other function given in the form 'f(x)'
-                    transformFcn = eval(sprintf('@(x) %s', transform));
+                    % do nothing, transform is already given
+                    % transFcn = eval(sprintf('@(x) %s', transform));
                 end
+                % convert transform into symbolic function
+                syms X %#ok<NASGU>
+                transform = strrep(transform, 'x', 'X');
+                transformF = eval(transform);
+                % calc inverse
+                backF = finverse(transformF);
+                % convert both to anonymous functions
+                transformFcn = matlabFunction(transformF);
+                backFcn = matlabFunction(backF);
+                clear X;
         end
         Data.(transVar)(idxDesc) = transformFcn(Data.(depVar)(idxDesc));
     end
 else
     transVar = depVar;
+    backFcn = @(x) x;
 end
 
 %% Check if y-data is numeric
@@ -1964,27 +1993,32 @@ for iLevel = 1:nPosthocLevels
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
                         statsRow.(memberVarDisp) = string(member);
 
-                        emMean = mean(emm.table.Estimated_Marginal_Mean(idxEmmMember));
-                        statsRow.emMean = mdl.Link.Inverse(emMean);
-                        emCI95 = mean(emm.table.CI_95_0pct(idxEmmMember, :), 1);
-                        statsRow.emCI95_lower = min(mdl.Link.Inverse(emCI95));
-                        statsRow.emCI95_upper = max(mdl.Link.Inverse(emCI95));
+                        % calc values in original domain
+
+                        % mdl.Link.Inverse = @(x) backFcn(mdl.Link.Inverse(x));
+                        
+                        emMean = backFcn(mean(emm.table.Estimated_Marginal_Mean(idxEmmMember)));
+                        statsRow.emMean = emMean;
+                        emCI95 = backFcn(mean(emm.table.CI_95_0pct(idxEmmMember, :), 1));
+                        statsRow.emCI95_lower = min(emCI95);
+                        statsRow.emCI95_upper = max(emCI95);
 
                         vals = Data.(transVar)(idxDescMember);
                         statsRow.N = length(vals(~isnan(vals)));
                         statsRow.mean = mean(vals, 'omitnan');
-                        statsRow.std = std(vals, 'omitnan');
+                        statsRow.std = abs(backFcn(statsRow.mean + std(vals, 'omitnan')) - backFcn(statsRow.mean - std(vals, 'omitnan')));
                         statsRow.SE = statsRow.std / sqrt(statsRow.N);
-                        statsRow.median = median(vals, 'omitnan');
-                        statsRow.q25 = quantile(vals, 0.25);
-                        statsRow.q75 = quantile(vals, 0.75);
+                        statsRow.median = backFcn(median(vals, 'omitnan'));
+                        iqr = [quantile(vals, 0.25), quantile(vals, 0.75)];
+                        statsRow.q25 = backFcn(min(iqr));
+                        statsRow.q75 = backFcn(max(iqr));
                         tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
                         ci95 = statsRow.mean + tci95 * statsRow.SE;
-                        statsRow.CI95_lower = ci95(1);
-                        statsRow.CI95_upper = ci95(2);
+                        statsRow.CI95_lower = backFcn(min(ci95));
+                        statsRow.CI95_upper = backFcn(max(ci95));
                         StatsTable = [StatsTable; statsRow]; %#ok<AGROW>
 
-                        DataPoints(iGroup, iMember, 1:length(vals), iRow, iCol, iVar) = vals;
+                        DataPoints(iGroup, iMember, 1:length(vals), iRow, iCol, iVar) = backFcn(vals);
                         emmCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.emMean;
                         emmBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_lower;
                         emmTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_upper;
@@ -2098,14 +2132,14 @@ for iLevel = 1:nPosthocLevels
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_smd(iGroup, iPair, iRow, iCol, iVar) = f2smd(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-                                bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
-                                bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
-                                bar_emm_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L1);
-                                bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 1);
-                                bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 2);
-                                bar_emm_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L2);
-                                bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 1);
-                                bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 2);
+                                bar_diff(iGroup, iPair, iRow, iCol, iVar) = backFcn(mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))));
+                                bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = backFcn(bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)))) * 100;
+                                bar_emm_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.Estimated_Marginal_Mean(L1));
+                                bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.CI_95_0pct(L1, 1));
+                                bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.CI_95_0pct(L1, 2));
+                                bar_emm_2(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.Estimated_Marginal_Mean(L2));
+                                bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.CI_95_0pct(L2, 1));
+                                bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar) =  backFcn(emm.table.CI_95_0pct(L2, 2));
 
                                 % calc main contrasts
                                 if posthocMain && nGroups * nRows * nCols * nPairs > 1
