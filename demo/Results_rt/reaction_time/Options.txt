@@ -1,0 +1,12 @@
+options.distribution = "normal";
+options.fitMethod = "MPL";
+options.id = "participant_id";
+options.inFile = "reaction_time.csv";
+options.link = "identity";
+options.outDir = "Results_rt";
+options.outlierMethod = "quartiles";
+options.showVarNames = "Names_and_levels";
+options.transform = "log(1+x)";
+options.x = "A, B";
+options.y = "reaction_time";
+options.yUnits = "ms";
