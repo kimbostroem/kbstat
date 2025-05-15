@@ -46,17 +46,15 @@ addpath(genpath('../../kbstat')); % Location of kbstat library relative to curre
 
 %% Define method of analysis
 
-% 1 = use link function, 2 = use variable transformation
-analyzeMethod = 1;
-
 %% Provide basic options
 
 options = struct; % Init empty structure
 options.inFile = 'reaction_time.csv'; % Relative path to input file in long format as CSV table
-options.outDir = 'Results_rt'; % Relative path to output folder
+topOutDir = 'Results_rt'; % Relative path to output folder containing both analysis methods
 options.fitMethod = 'MPL'; % Fitting method of GLM
 options.outlierMethod = 'quartiles'; % Remove outliers using this method
 options.showVarNames = 'Names_and_levels'; % Display names and levels, capitalize first letter of names
+options.posthocLevel = 2; % Post-hoc comparison between the levels of both factors
 
 % Define model variables and their roles explicitly
 options.y = 'rt'; % Dependent variable of model
@@ -72,19 +70,23 @@ options.id = 'id'; % Random-effect variable
 
 options.formula = 'rt ~ A*B + (A+B|id)';
 
-switch analyzeMethod
+%% Alternative 1 (recommmended): Use link function
 
-    case 1 % Alternative 1 (recommmended): Use link function
-        fprintf('Analyze using link function\n');
-        options.distribution = 'gamma'; % Distribution family of GLM
-        options.link = 'log'; % Link function of GLM
-    
-    case 2 % Alternative 2: Use data transformation
-        fprintf('Analyze using data transformation\n');
-        options.transform = 'log(1+x)'; % transformation of dependent variable
-        options.distribution = 'gamma'; % Distribution family of GLM
-        options.link = 'log'; % Link function of GLM
-end
+fprintf('Analyze using link function\n');
+options.outDir = fullfile(topOutDir, 'link');
+options.distribution = 'gamma'; % Distribution family of GLM
+options.link = 'log'; % Link function of GLM
+
+% Perform analysis with the given options
+kbstat(options);
+
+%% Alternative 2: Use data transformation
+
+fprintf('Analyze using data transformation\n');
+options.outDir = fullfile(topOutDir, 'transform');
+options.transform = 'log(1+x)'; % transformation of dependent variable
+options.distribution = 'gamma'; % Distribution family of GLM
+options.link = 'log'; % Link function of GLM
 
 % Perform analysis with the given options
 kbstat(options);

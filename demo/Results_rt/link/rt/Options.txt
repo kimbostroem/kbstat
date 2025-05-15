@@ -1,0 +1,13 @@
+options.distribution = "gamma";
+options.fitMethod = "MPL";
+options.formula = "rt ~ A*B + (A+B|id)";
+options.id = "id";
+options.inFile = "reaction_time.csv";
+options.link = "log";
+options.outDir = "Results_rt/link";
+options.outlierMethod = "quartiles";
+options.posthocLevel = "2";
+options.showVarNames = "Names_and_levels";
+options.x = "A, B";
+options.y = "rt";
+options.yUnits = "ms";
