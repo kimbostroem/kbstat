@@ -275,11 +275,16 @@ function results = kbstat(options)
 %						double quotes, as in 'bla = "bli"'.
 %                       OPTIONAL, default = ''.
 %
-%       transform       Choose how to transform the dependent variable.
-%                       The linear model is fit on the transformed data,
-%                       but the data are plotted using the original data.
+%       transform       Choose how to transform the dependent variable prior to analysis.
+%                       The linear model is fit on the transformed data, for the plots the data are
+%                       back-transformed to the original domain. Also the statistics tables show the
+%                       back-transformed data.
 %                       OPTIONAL, default = ''.
 %                       Possible values:
+%                       f(y)        Arbitrary function of the dependent variable y. 
+%                                   Examples:
+%                                   'log(y)'
+%                                   '1/y'
 %                       'mean'      Divide by mean
 %                       'std'       Divide by standard deviation
 %                       'Z'         Z-transform to zero-centered
@@ -299,9 +304,6 @@ function results = kbstat(options)
 %                       'MADmax'
 %                       'max'
 %                       'minmax'
-%                       'f(x)'      Arbitrary function of x. Examples:
-%                                   'log(x)'
-%                                   'atanh(x)'
 %
 %       outDir          Output folder for generated files, relative to the 
 %                       working directory where the main script is called.
@@ -1019,12 +1021,26 @@ if ~isempty(subject)
     Data.(subject) = string(string(Data2.(subject))); % make categorical
 end
 
-% make fixed-effect IVs categorical by converting them to string
-for iVar = 1:length(x)
-    myVar = x{iVar};
-    Data2.(myVar) = string(string(Data2.(myVar)));
-end
+% number of fixed effects (factors)
 nFactors = length(x);
+
+if nFactors > 4
+    error('Only up to 4 factors can be analyzed');
+end
+
+% Make fixed-effect IVs categorical by converting them to string
+% This apparently has to be done otherwise emmeans yields an error or flawed results
+prefixes = {'a', 'b', 'c', 'd'}; % possible prefixes for all of the maximally 4 factors
+for iVar = 1:nFactors
+    myVar = x{iVar};
+    prefix = prefixes{iVar};
+    col = Data2.(myVar);
+    strVal = string(col); % Convert to string (handles char, string, numeric, etc.)
+    numVals = cellfun(@str2double, strVal); % Try to convert to numeric
+    if any(~isnan(numVals)) % Check if the conversion was successful (not NaN) at least once
+        Data2.(myVar) = prefix + string(strVal); % Prepend the variable name and store it as a string
+    end
+end
 
 % collect all independent variables
 IVs = x; % start with fixed-effect IVs
@@ -1112,46 +1128,63 @@ if ~isempty(transform)
         end
         switch transform
             case 'mean'
-                transformFcn = @(x) x/mean(x, 'omitnan');
+                meanX = mean(x, 'omitnan');
+                transform = sprintf('Y / %f', meanX);
             case 'std'
-                transformFcn = @(x) x/std(x, 'omitnan');
+                stdX = std(x, 'omitnan');
+                transform = sprintf('Y / %f', stdX);
             case 'Z'
-                transformFcn = @(x) (x - mean(x, 'omitnan'))/std(x, 'omitnan');
+                meanX = mean(x, 'omitnan');
+                stdX = std(x, 'omitnan');
+                transform = sprintf('(Y - %f) / %f', meanX, stdX);
             case {'median'}
                 upperThresh = quantile(Data.(depVar)(idxDesc), 0.5);
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('Y / %f', upperThresh);
             case 'IQR'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
+                transform = sprintf('Y / (%f - %f)', upperThresh, lowerThresh);
             case 'IQRmax'
                 [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'quartiles');
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('Y / %f', upperThresh);
             case 'MAD'
                 [~, lowerThresh, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
-                transformFcn = @(x) (x - lowerThresh)/(upperThresh - lowerThresh);
+                transform = sprintf('(Y - %f) / (%f - %f)', lowerThresh, upperThresh, lowerThresh);
             case 'MADmax'
                 [~, ~, upperThresh, ~] = isoutlier(Data.(depVar)(idxDesc), 'median');
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('Y / %f', upperThresh);
             case 'max'
                 upperThresh = max(Data.(depVar)(idxDesc));
-                transformFcn = @(x) x/upperThresh;
+                transform = sprintf('Y / %f', upperThresh);
             case 'minmax'
                 lowerThresh = min(Data.(depVar)(idxDesc));
                 upperThresh = max(Data.(depVar)(idxDesc));
-                transformFcn = @(x) x/(upperThresh - lowerThresh);
+                transform = sprintf('Y / (%f - %f)', upperThresh, lowerThresh);
             otherwise % any other expression
                 tokens = regexp(transform, '[q,p](\d+)(?:[q,p]?)(\d+)?', 'tokens', 'once');
                 tokens(cellfun(@isempty, tokens)) = [];
                 if isscalar(tokens) % upper percentile given in the form 'q%d' or 'p%d'
                     upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
-                    transformFcn = @(x) x/upperThresh;
+                    transform = sprintf('Y / %f', upperThresh);
                 elseif length(tokens) == 2 % lower and upper percentile given in the form 'q%dq%d' or 'p%dp%d'
                     lowerThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{1}));
                     upperThresh = prctile(Data.(depVar)(idxDesc), str2double(tokens{2}));
-                    transformFcn = @(x) x/(upperThresh - lowerThresh);
+                    transform = sprintf('Y / (%f - %f)', upperThresh, lowerThresh);
                 else % any other function given in the form 'f(x)'
-                    transformFcn = eval(sprintf('@(x) %s', transform));
+                    % do nothing, transform is already given
+                    % transFcn = eval(sprintf('@(x) %s', transform));
                 end
+                % define symbolic variable 'Y' so that transform can be interpreted symbolically
+                syms Y %#ok<NASGU>
+                % for backwards compatibility replace potential standalone occurrences of 'x', 'X', or 'y' with
+                % dependent variable 'Y'
+                transform = regexprep(transform, '\<([xXy])\>', 'Y');
+                transformF = eval(transform); % create symbolic transform function
+                % calc inverse of symbolic transform function
+                backF = finverse(transformF);
+                % convert both symbolic functions to anonymous functions
+                transformFcn = matlabFunction(transformF);
+                backFcn = matlabFunction(backF);
+                clear Y; % clear symbolic variable
         end
         Data.(transVar)(idxDesc) = transformFcn(Data.(depVar)(idxDesc));
     end
@@ -2176,13 +2209,12 @@ for iLevel = 1:nPosthocLevels
 
             % check for duplicate p-values indicating a severe problem
             for iP = 1:length(myBar_p)
-                pValue = myBar_p(iP);
                 % Problem: When there are very small p-values, they count as "same" in
                 % certain algorithms such as setdiff, which we use to decide if there are
                 % duplicate p-values. So, we forcus on p-values sufficiently greater
                 % than zero.
                 myBar_p_nonzero = myBar_p(myBar_p > tol);
-                if length(setdiff(myBar_p_nonzero, pValue)) < length(myBar_p_nonzero) - 1
+                if checkDuplicatesTol(myBar_p_nonzero) % check for duplicates with maximal precision
                     warning('Duplicate p-values found -> GLM fit is not good.');
                     break
                 end
