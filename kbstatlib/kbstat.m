@@ -1173,23 +1173,24 @@ if ~isempty(transform)
                     % do nothing, transform is already given
                     % transFcn = eval(sprintf('@(x) %s', transform));
                 end
-                % define symbolic variable 'Y' so that transform can be interpreted symbolically
-                syms Y %#ok<NASGU>
+                % define symbolic variable 'Y_' so that transform can be interpreted symbolically
+                syms Y_ %#ok<NASGU>
                 % for backwards compatibility replace potential standalone occurrences of 'x', 'X', or 'y' with
                 % dependent variable 'Y'
-                transform = regexprep(transform, '\<([xXy])\>', 'Y');
+                transform = regexprep(transform, '\<([xXyY])\>', 'Y_');
                 transformF = eval(transform); % create symbolic transform function
                 % calc inverse of symbolic transform function
                 backF = finverse(transformF);
                 % convert both symbolic functions to anonymous functions
                 transformFcn = matlabFunction(transformF);
                 backFcn = matlabFunction(backF);
-                clear Y; % clear symbolic variable
+                clear Y_; % clear symbolic variable
         end
         Data.(transVar)(idxDesc) = transformFcn(Data.(depVar)(idxDesc));
     end
 else
     transVar = depVar;
+    backFcn = @(y_) y_;
 end
 
 %% Check if y-data is numeric
@@ -1998,26 +1999,34 @@ for iLevel = 1:nPosthocLevels
                         statsRow.(memberVarDisp) = string(member);
 
                         emMean = mean(emm.table.Estimated_Marginal_Mean(idxEmmMember));
-                        statsRow.emMean = mdl.Link.Inverse(emMean);
+                        statsRow.emMean = backFcn(mdl.Link.Inverse(emMean));
                         emCI95 = mean(emm.table.CI_95_0pct(idxEmmMember, :), 1);
-                        statsRow.emCI95_lower = min(mdl.Link.Inverse(emCI95));
-                        statsRow.emCI95_upper = max(mdl.Link.Inverse(emCI95));
+                        emCI95_back = backFcn(mdl.Link.Inverse(emCI95));
+                        statsRow.emCI95_lower = min(emCI95_back);
+                        statsRow.emCI95_upper = max(emCI95_back);
 
                         vals = Data.(transVar)(idxDescMember);
                         statsRow.N = length(vals(~isnan(vals)));
-                        statsRow.mean = mean(vals, 'omitnan');
-                        statsRow.std = std(vals, 'omitnan');
-                        statsRow.SE = statsRow.std / sqrt(statsRow.N);
-                        statsRow.median = median(vals, 'omitnan');
-                        statsRow.q25 = quantile(vals, 0.25);
-                        statsRow.q75 = quantile(vals, 0.75);
+                        valMean = mean(vals, 'omitnan');
+                        valStd = std(vals, 'omitnan');
+                        valSE = valStd / sqrt(statsRow.N);
+                        statsRow.mean = backFcn(valMean);
+                        statsRow.std = valStd;
+                        statsRow.std = abs(backFcn(valMean + 0.5*valStd) - backFcn(valMean - 0.5*valStd));
+                        statsRow.SE = abs(backFcn(valMean + 0.5*valSE) - backFcn(valMean - 0.5*valSE));
+                        valMedian = median(vals, 'omitnan');
+                        valIQR = [quantile(vals, 0.25), quantile(vals, 0.75)];
+                        statsRow.median = backFcn(valMedian);
+                        statsRow.q25 = backFcn(min(valIQR));
+                        statsRow.q75 = backFcn(max(valIQR));
                         tci95 = tinv([0.025 0.975], statsRow.N-1); % 95% of t-Distribution
-                        ci95 = statsRow.mean + tci95 * statsRow.SE;
-                        statsRow.CI95_lower = ci95(1);
-                        statsRow.CI95_upper = ci95(2);
+                        valCI95 = valMean + tci95 * valSE;
+                        CI95 = backFcn(valCI95);
+                        statsRow.CI95_lower = min(CI95);
+                        statsRow.CI95_upper = max(valCI95);
                         StatsTable = [StatsTable; statsRow]; %#ok<AGROW>
 
-                        DataPoints(iGroup, iMember, 1:length(vals), iRow, iCol, iVar) = vals;
+                        DataPoints(iGroup, iMember, 1:length(vals), iRow, iCol, iVar) = backFcn(vals);
                         emmCenter(iGroup, iMember, iRow, iCol, iVar) = statsRow.emMean;
                         emmBottom(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_lower;
                         emmTop(iGroup, iMember, iRow, iCol, iVar) = statsRow.emCI95_upper;
