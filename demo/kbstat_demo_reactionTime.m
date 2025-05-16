@@ -60,7 +60,7 @@ options.posthocLevel = 2; % Post-hoc comparison between the levels of both facto
 options.y = 'rt'; % Dependent variable of model
 options.yUnits = 'ms'; % Units of dependent variable
 options.x = 'A, B'; % Fixed-effect variables
-options.id = 'id'; % Random-effect variable
+options.id = 'id'; % Random-effect variable representing subjects
 
 %% Optional: Provide explicit Wilkinson formula
 
