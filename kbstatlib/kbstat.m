@@ -1031,14 +1031,21 @@ end
 % Make fixed-effect IVs categorical by converting them to string
 % This apparently has to be done otherwise emmeans yields an error or flawed results
 prefixes = {'a', 'b', 'c', 'd'}; % possible prefixes for all of the maximally 4 factors
+nRows = size(Data2, 1);
+oldVals = strings(nRows, nFactors);
+newVals = strings(nRows, nFactors);
 for iVar = 1:nFactors
     myVar = x{iVar};
     prefix = prefixes{iVar};
     col = Data2.(myVar);
-    strVal = string(col); % Convert to string (handles char, string, numeric, etc.)
-    numVals = cellfun(@str2double, strVal); % Try to convert to numeric
-    if any(~isnan(numVals)) % Check if the conversion was successful (not NaN) at least once
-        Data2.(myVar) = prefix + string(strVal); % Prepend the variable name and store it as a string
+    strCol = string(col); % Convert to string (handles char, string, numeric, etc.)
+    strVals = unique(strCol, levelOrder);
+    for iVal = 1:length(strVals)
+        strVal = strVals(iVal);
+        idx = (Data2.(myVar) == strVal);
+        oldVals(idx, iVar) = Data2{idx, myVar};
+        newVals(idx, iVar) = (prefix + string(num2str(iVal)) + "_") + oldVals(idx, iVar);
+        Data2{idx, myVar} = newVals(idx, iVar);
     end
 end
 
@@ -1973,7 +1980,8 @@ for iLevel = 1:nPosthocLevels
                             row = rows(iRow);
                             idxDesc = idxDesc & Data.(rowVar) == row;
                             idxEmm = idxEmm & (emm.table.(rowVar) == row);
-                            statsRow.(rowVarDisp) = string(row);
+                            % remove prefix added further above
+                            statsRow.(rowVarDisp) = string(regexprep(row, '^[^_]*_', ''));
                         end
 
                         % 3rd x, if given
@@ -1981,7 +1989,8 @@ for iLevel = 1:nPosthocLevels
                             col = cols(iCol);
                             idxDesc = idxDesc & Data.(colVar) == col;
                             idxEmm = idxEmm & (emm.table.(colVar) == col);
-                            statsRow.(colVarDisp) = string(col);
+                            % remove prefix added further above
+                            statsRow.(colVarDisp) = string(regexprep(col, '^[^_]*_', ''));
                         end
 
                         % 2nd x, if given
@@ -1989,14 +1998,16 @@ for iLevel = 1:nPosthocLevels
                             group = groups(iGroup);
                             idxDesc = idxDesc & (Data.(groupVar) == group);
                             idxEmm = idxEmm & (emm.table.(groupVar) == group);
-                            statsRow.(groupVarDisp) = string(group);
+                            % remove prefix added further above
+                            statsRow.(groupVarDisp) = string(regexprep(group, '^[^_]*_', ''));
                         end
 
                         % 1st x
                         member = members(iMember);
                         idxDescMember = idxDesc & (Data.(memberVar) == member);
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
-                        statsRow.(memberVarDisp) = string(member);
+                        % remove prefix added further above
+                        statsRow.(memberVarDisp) = string(regexprep(member, '^[^_]*_', ''));
 
                         emMean = mean(emm.table.Estimated_Marginal_Mean(idxEmmMember));
                         statsRow.emMean = backFcn(mdl.Link.Inverse(emMean));
@@ -2339,13 +2350,13 @@ for iLevel = 1:nPosthocLevels
 
             % prepare to display variable names and levels
             displayMemberVar = memberVarDisp;
-            displayMembers = members;
+            displayMembers = regexprep(members, '^[^_]*_', ''); % remove prefix added further above
             displayGroupVar = groupVarDisp;
-            displayGroups = groups;
+            displayGroups = regexprep(groups, '^[^_]*_', ''); % remove prefix added further above
             displayColVar = colVarDisp;
-            displayCols = cols;
+            displayCols = regexprep(cols, '^[^_]*_', ''); % remove prefix added further above
             displayRowVar = rowVarDisp;
-            displayRows = rows;
+            displayRows = regexprep(rows, '^[^_]*_', ''); % remove prefix added further above
             % capitalize names and/or levels, if needed
             if contains(showVarNames, 'Names')
                 displayMemberVar = string(capitalize(memberVarDisp));
@@ -2354,10 +2365,10 @@ for iLevel = 1:nPosthocLevels
                 displayRowVar = string(capitalize(rowVarDisp));
             end
             if contains(showVarNames, 'Levels')
-                displayMembers = string(strsplit(capitalize(strjoin(cellstr(members), ', '), 'all'), ', '));
-                displayGroups = string(strsplit(capitalize(strjoin(cellstr(groups), ', '), 'all'), ', '));
-                displayCols = string(strsplit(capitalize(strjoin(cellstr(cols), ', '), 'all'), ', '));
-                displayRows = string(strsplit(capitalize(strjoin(cellstr(rows), ', '), 'all'), ', '));
+                displayMembers = string(strsplit(capitalize(strjoin(cellstr(displayMembers), ', '), 'all'), ', '));
+                displayGroups = string(strsplit(capitalize(strjoin(cellstr(displayGroups), ', '), 'all'), ', '));
+                displayCols = string(strsplit(capitalize(strjoin(cellstr(displayCols), ', '), 'all'), ', '));
+                displayRows = string(strsplit(capitalize(strjoin(cellstr(displayRows), ', '), 'all'), ', '));
             end
             
             % plot grouped data
@@ -2520,16 +2531,22 @@ for iLevel = 1:nPosthocLevels
                         tableRow = table;
 
                         if nRows > 1
-                            tableRow.(rowVar) = string(rows(iRow));
+                            % remove prefix added further above
+                            tableRow.(rowVar) = string(regexprep(rows(iRow), '^[^_]*_', ''));
                         end
 
                         if nCols > 1
-                            tableRow.(colVar) = string(cols(iCol));
+                            % remove prefix added further above
+                            tableRow.(colVar) = string(regexprep(cols(iRow), '^[^_]*_', ''));
                         end
 
                         if nGroups > 1
-                            tableRow.(groupVar) = string(groups(iGroup));
+                            % remove prefix added further above
+                            tableRow.(groupVar) = string(regexprep(groups(iRow), '^[^_]*_', ''));
                         end
+
+                        % remove prefix added further above
+                        pairs = string(regexprep(pairs, '^[^_]*_', ''));
 
                         tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
                         tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
@@ -2618,9 +2635,38 @@ if ischar(in) || isstring(in)
     if isNum
         value = numValue;
     else
-        value = strtrim(strsplit(in, {',', ';'}));
+        value = cellstr(strtrim(strsplit(in, {',', ';'})));
     end
 else % bool or whatever
     value = in;
 end
+end
+
+function output = makeStringsUniqueByAvoidingSubstrings(input)
+% makeStringsUniqueByAvoidingSubstrings ensures that no string in the input
+% cell array is a substring of any other by appending underscores.
+%
+% Input:  input  - cell array of character vectors or strings
+% Output: output - modified cell array where no entry is a substring of another
+
+    output = input(:); % Ensure column vector
+    n = numel(output);
+    changed = true;
+
+    while changed
+        changed = false;
+        for i = 1:n
+            for j = 1:n
+                if i == j
+                    continue;
+                end
+                % Check if output{i} is a substring of output{j}
+                if contains(output{j}, output{i})
+                    % Modify output{i} to break the substring condition
+                    output{i} = [output{i} '_'];
+                    changed = true;
+                end
+            end
+        end
+    end
 end
