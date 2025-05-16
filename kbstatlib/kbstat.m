@@ -1030,22 +1030,20 @@ end
 
 % Make fixed-effect IVs categorical by converting them to string
 % This apparently has to be done otherwise emmeans yields an error or flawed results
-prefixes = {'a', 'b', 'c', 'd'}; % possible prefixes for all of the maximally 4 factors
-nRows = size(Data2, 1);
-oldVals = strings(nRows, nFactors);
-newVals = strings(nRows, nFactors);
-for iVar = 1:nFactors
-    myVar = x{iVar};
-    prefix = prefixes{iVar};
+prefixes = char(97:122); % possible prefixes ('a' to 'z')
+catVars = union(x, randomVars, 'stable');
+for iVar = 1:length(catVars)
+    myVar = catVars{iVar};
+    prefix = prefixes(iVar);
+    Data2.(myVar) = string(Data2.(myVar));
     col = Data2.(myVar);
-    strCol = string(col); % Convert to string (handles char, string, numeric, etc.)
-    strVals = unique(strCol, levelOrder);
-    for iVal = 1:length(strVals)
-        strVal = strVals(iVal);
-        idx = (Data2.(myVar) == strVal);
-        oldVals(idx, iVar) = Data2{idx, myVar};
-        newVals(idx, iVar) = (prefix + string(num2str(iVal)) + "_") + oldVals(idx, iVar);
-        Data2{idx, myVar} = newVals(idx, iVar);
+    levels = unique(col, levelOrder);
+    for iLevel = 1:length(levels)
+        level = levels(iLevel);
+        idx = (Data2.(myVar) == level);
+        oldVals = Data2{idx, myVar};
+        newVals = (prefix + string(num2str(iLevel)) + "_") + string(oldVals);
+        Data2(idx, myVar) = table(newVals);
     end
 end
 
