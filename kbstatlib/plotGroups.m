@@ -49,7 +49,7 @@ groups = string(groups);
 nMembers = length(members);
 nGroups = length(groups);
 
-ogColors = lines(nMembers);
+colors = lines(nMembers);
 
 if ~isempty(parent)
     htl = tiledlayout(parent, 1,nGroups, 'TileSpacing','none');
@@ -102,10 +102,10 @@ for iGroup = 1:nGroups
             values(iGroup,:,:) = values(iGroup, sortIdx, :);
             barPositions(iGroup, sortIdx) = barPositions(iGroup, :);
             sortedMembers = members(sortIdx);
-            colors = ogColors(sortIdx,:);
+            sortedColors = colors(sortIdx,:);
         otherwise
             sortedMembers = members;
-            colors = ogColors;
+            sortedColors = colors;
             % do nothing
     end
 
@@ -116,7 +116,7 @@ for iGroup = 1:nGroups
             switch barType
 
                 case {'auto', 'custom'}
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors, 'ShowBox', false, 'ShowMedian', false);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowBox', false, 'ShowMedian', false);
 
                     % plot bar inside violins
                     hold on
@@ -129,28 +129,28 @@ for iGroup = 1:nGroups
                     end
 
                 case 'mean'
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors, 'ShowMean', true);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowMean', true);
 
                 otherwise
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
             end
 
         case 'boxplot'
-            boxplot(squeeze(values(iGroup,:,:))', 'Colors', colors);
+            boxplot(squeeze(values(iGroup,:,:))', 'Colors', sortedColors);
 
         case 'boxchart'
             hold on
             for iMember = 1:nMembers
                 yData = squeeze(values(iGroup,iMember,:));
                 boxchart(iMember*ones(numel(yData),1), yData, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize, ...
-                    'BoxFaceColor',colors(iMember,:), 'MarkerColor',colors(iMember,:));
+                    'BoxFaceColor',sortedColors(iMember,:), 'MarkerColor',sortedColors(iMember,:));
             end
             xticks(1:nMembers)
 
         case 'bar'
             hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
-                hbar.CData(iMember,:) = colors(iMember,:);
+                hbar.CData(iMember,:) = sortedColors(iMember,:);
                 hold on
                 errorbar(iMember, barCenter(iGroup, iMember), barCenter(iGroup, iMember) - barBottom(iGroup, iMember), barTop(iGroup, iMember) - barCenter(iGroup, iMember), 'LineStyle', 'none', 'Color', 0.6*[1 1 1], 'LineWidth', 2);
             end
@@ -160,9 +160,8 @@ for iGroup = 1:nGroups
 
     % plot horizontal lines at values if desired
     if plotLines && size(barCenter, 1) == nGroups && size(barCenter, 2) == nMembers
-        % colors = lines;
         for iMember = 1:nMembers
-            yline(barCenter(iGroup, iMember), '-', 'Color', colors(iMember,:));
+            yline(barCenter(iGroup, iMember), '-', 'Color', sortedColors(iMember,:));
         end
     end
 
