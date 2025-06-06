@@ -132,6 +132,22 @@ for iGroup = 1:nGroups
         case 'boxplot'
             boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
 
+        case 'boxchart'
+            % colororder(lines(nMembers))
+            % yData = table();
+            % yData.Data = reshape(values(iGroup,:,:), numel(values(iGroup,:,:)), 1);
+            % yData.Col = reshape(repmat(1:5, size(values,3), 1), numel(values(iGroup,:,:)), 1);
+            % boxchart(yData.Data, 'GroupByColor', yData.Col, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize);
+            clrs = lines(nMembers); 
+            hold on
+            for iMember = 1:nMembers
+                yData = squeeze(values(iGroup,iMember,:));
+                boxchart(iMember*ones(numel(yData),1), yData, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize, ...
+                    'BoxFaceColor',clrs(iMember,:), 'MarkerColor',clrs(iMember,:));
+            end
+            xticks(1:nMembers)
+
+
         case 'bar'
             colors = lines(nMembers);
             hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');

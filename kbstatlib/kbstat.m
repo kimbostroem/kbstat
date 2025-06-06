@@ -241,7 +241,7 @@ function results = kbstat(options)
 %                       common scale.
 %                       OPTIONAL, default = true.
 %
-%       outlierRemoval  Method to remove pre-fit outliers from the data.
+%       preOutlierRemoval  Method to remove pre-fit outliers from the data.
 %                       Possible values:
 %                       'none'      Do not remove outliers
 %                       'quartiles' Remove values outside 1.5 times the
