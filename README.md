@@ -30,7 +30,7 @@ kbstat(options); % Call main script with the given options
 ```
 The demo script produces several files, in particular the data plot,
 
-![DataPlots](demo/Results/Distance/DataPlots.png)
+![DataPlots](demo/Results_chocolate/Distance/DataPlots.png)
 
 and the diagnostic plot
 
