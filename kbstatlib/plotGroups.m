@@ -49,6 +49,8 @@ groups = string(groups);
 nMembers = length(members);
 nGroups = length(groups);
 
+ogColors = lines(nMembers);
+
 if ~isempty(parent)
     htl = tiledlayout(parent, 1,nGroups, 'TileSpacing','none');
 else
@@ -99,18 +101,22 @@ for iGroup = 1:nGroups
             barTop(iGroup, :) = barTop(iGroup, sortIdx);
             values(iGroup,:,:) = values(iGroup, sortIdx, :);
             barPositions(iGroup, sortIdx) = barPositions(iGroup, :);
-            members = members(sortIdx);
+            sortedMembers = members(sortIdx);
+            colors = ogColors(sortIdx,:);
         otherwise
+            sortedMembers = members;
+            colors = ogColors;
             % do nothing
     end
 
+
     switch lower(plotStyle)
 
-        case 'violin'
+         case 'violin'
             switch barType
 
                 case {'auto', 'custom'}
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ShowBox', false, 'ShowMedian', false);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors, 'ShowBox', false, 'ShowMedian', false);
 
                     % plot bar inside violins
                     hold on
@@ -123,33 +129,25 @@ for iGroup = 1:nGroups
                     end
 
                 case 'mean'
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ShowMean', true);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors, 'ShowMean', true);
 
                 otherwise
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize);
+                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', colors);
             end
 
         case 'boxplot'
-            boxplot(squeeze(values(iGroup,:,:))', 'Colors', lines(nMembers));
+            boxplot(squeeze(values(iGroup,:,:))', 'Colors', colors);
 
         case 'boxchart'
-            % colororder(lines(nMembers))
-            % yData = table();
-            % yData.Data = reshape(values(iGroup,:,:), numel(values(iGroup,:,:)), 1);
-            % yData.Col = reshape(repmat(1:5, size(values,3), 1), numel(values(iGroup,:,:)), 1);
-            % boxchart(yData.Data, 'GroupByColor', yData.Col, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize);
-            clrs = lines(nMembers); 
             hold on
             for iMember = 1:nMembers
                 yData = squeeze(values(iGroup,iMember,:));
                 boxchart(iMember*ones(numel(yData),1), yData, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize, ...
-                    'BoxFaceColor',clrs(iMember,:), 'MarkerColor',clrs(iMember,:));
+                    'BoxFaceColor',colors(iMember,:), 'MarkerColor',colors(iMember,:));
             end
             xticks(1:nMembers)
 
-
         case 'bar'
-            colors = lines(nMembers);
             hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
                 hbar.CData(iMember,:) = colors(iMember,:);
@@ -162,7 +160,7 @@ for iGroup = 1:nGroups
 
     % plot horizontal lines at values if desired
     if plotLines && size(barCenter, 1) == nGroups && size(barCenter, 2) == nMembers
-        colors = lines;
+        % colors = lines;
         for iMember = 1:nMembers
             yline(barCenter(iGroup, iMember), '-', 'Color', colors(iMember,:));
         end
@@ -171,7 +169,7 @@ for iGroup = 1:nGroups
     if ~isempty(groupName)
         title(groups(iGroup), 'interpreter', 'none');
     end
-    xticklabels(members);
+    xticklabels(sortedMembers);
 
     for iPair = 1:nPairs
         pairIdx = pairIdxs(iPair, :);

@@ -775,7 +775,7 @@ end
 sortValues = '';
 if ismember(levelOrder,{'ascend', 'descend'})
     sortValues = levelOrder;
-    levelOrder = 'sorted';
+    levelOrder = 'stable';
 end
 
 % plot style
