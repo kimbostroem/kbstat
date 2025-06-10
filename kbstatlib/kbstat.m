@@ -356,19 +356,24 @@ function results = kbstat(options)
 %                       OPTIONAL, default = 'levels'.
 %
 %       xOrder          Ordering of the items of the 1st x-variable on the 
-%                       x-axis in data plots, based on the order of the
+%                       x-axis in data plots, numerical or a cell with item names.
+%                       If numerical, it should be based on the order of the
 %                       level names defined by 'levelOrder'. 
 %                       OPTIONAL, default = []. 
-%                       Example: options.xOrder = '1 3 2'
+%                       Example: 
+%                       options.xOrder = '1 3 2'
+%                       options.xOrder = {'Intervention', 'Control'};
 %
 %       xOrder<n>       Ordering of the items of the n-th x-variable (with 
 %                       respect to the provided list) on the x-axis in data
-%                       plots, based on the order of the level names
-%                       defined by 'levelOrder'.
+%                       plots, numerical or a cell with item names.
+%                       If numerical, it should be based on the order of the
+%                       level names defined by 'levelOrder'.
 %                       OPTIONAL, default = []. 
 %                       Example: 
 %                       options.xOrder1 = '1 4 3 2'
 %                       options.xOrder2 = '2 1'
+%                       options.xOrder3 = {'Intervention', 'Control'};
 %
 %       plotLines      Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding
@@ -882,32 +887,6 @@ else
     yMult = 1;
 end
 
-if isfield(options, 'xOrder') && ~isempty(options.xOrder)
-    xOrder1 = getValue(options.xOrder);
-elseif isfield(options, 'xOrder1') && ~isempty(options.xOrder1)
-    xOrder1 = getValue(options.xOrder1);
-else
-    xOrder1 = [];
-end
-
-if isfield(options, 'xOrder2') && ~isempty(options.xOrder2)
-    xOrder2 = getValue(options.xOrder2);
-else
-    xOrder2 = [];
-end
-
-if isfield(options, 'xOrder3') && ~isempty(options.xOrder3)
-    xOrder3 = getValue(options.xOrder3);
-else
-    xOrder3 = [];
-end
-
-if isfield(options, 'xOrder4') && ~isempty(options.xOrder44)
-    xOrder4 = getValue(options.xOrder4);
-else
-    xOrder4 = [];
-end
-
 if isfield(options, 'plotLines') && ~isempty(options.plotLines)
     plotLines = getValue(options.plotLines);
 else
@@ -1115,6 +1094,53 @@ else
     rowVar = 'none';
     rows = "";
     nRows = 1;
+end
+
+%% Ordering
+if isfield(options, 'xOrder') && ~isempty(options.xOrder)
+    if isnumeric(options.xOrder)
+        xOrder1 = getValue(options.xOrder);
+    else
+        [~,xOrder1] = arrayfun(@(s) find(contains(members,s),1), string(options.xOrder)); 
+    end
+elseif isfield(options, 'xOrder1') && ~isempty(options.xOrder1)
+    if isnumeric(options.xOrder1)
+        xOrder1 = getValue(options.xOrder1);
+    else
+        xOrder1 = arrayfun(@(s) find(contains(members,s),1), string(options.xOrder1));
+    end
+else
+    xOrder1 = [];
+end
+
+if isfield(options, 'xOrder2') && ~isempty(options.xOrder2)
+    if isnumeric(options.xOrder2)
+        xOrder2 = getValue(options.xOrder2);
+    else
+        xOrder2 = arrayfun(@(s) find(contains(groups,s),1), string(options.xOrder2));
+    end
+else
+    xOrder2 = [];
+end
+
+if isfield(options, 'xOrder3') && ~isempty(options.xOrder3)
+    if isnumeric(options.xOrder3)
+        xOrder3 = getValue(options.xOrder3);
+    else
+        xOrder3 = arrayfun(@(s) find(contains(cols,s),1), string(options.xOrder3));
+    end
+else
+    xOrder3 = [];
+end
+
+if isfield(options, 'xOrder4') && ~isempty(options.xOrder44)
+    if isnumeric(options.xOrder4)
+        xOrder4 = getValue(options.xOrder44);
+    else
+        xOrder4 = arrayfun(@(s) find(contains(rows,s),1), string(options.xOrder4));
+    end
+else
+    xOrder4 = [];
 end
 
 % apply potential re-ordering
