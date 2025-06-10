@@ -374,9 +374,13 @@ function results = kbstat(options)
 %                       a horizontal line in the color of the corresponding
 %                       dataset.
 %
+%       plotGroupSize  Flag if the group size (no. of participants) should 
+%                       be displayed in the axis (i.e. N=...).
+%
 %       closeFigures    Flag if the figures created during the analysis
 %                       should be closed or left open.
-%                       OPTIONAL, default = false
+%                       OPTIONAL, default = true, if outDir is provided
+%                                 default = false, otherwise
 %
 % OUTPUT
 %       mdl             (Generalized linear mixed-effects model) Result
@@ -908,6 +912,12 @@ if isfield(options, 'plotLines') && ~isempty(options.plotLines)
     plotLines = getValue(options.plotLines);
 else
     plotLines = false;
+end
+
+if isfield(options, 'plotGroupSize') && ~isempty(options.plotGroupSize)
+    plotGroupSize = getValue(options.plotGroupSize);
+else
+    plotGroupSize = false;
 end
 
 % close figures
@@ -2432,7 +2442,13 @@ for iLevel = 1:nPosthocLevels
                         otherwise
                             myBarType = barType;
                     end
-                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues);
+
+                    if plotGroupSize
+                        subjGroupCombinations = unique([Data.Subject Data.(groupVar)],'rows');
+                        groupSize = arrayfun(@(s) numel(find(contains(subjGroupCombinations, s))), groups);
+                    end
+
+                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize);
                 end
             end
 

@@ -1,4 +1,8 @@
-function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues)
+function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize)
+
+if nargin < 19
+    groupSize = [];
+end
 
 if nargin < 18
     sortValues = '';
@@ -156,8 +160,6 @@ for iGroup = 1:nGroups
             end
     end
 
-
-
     % plot horizontal lines at values if desired
     if plotLines && size(barCenter, 1) == nGroups && size(barCenter, 2) == nMembers
         for iMember = 1:nMembers
@@ -165,18 +167,13 @@ for iGroup = 1:nGroups
         end
     end
 
+    % xaxis labeling
     if ~isempty(groupName)
         title(groups(iGroup), 'interpreter', 'none');
     end
     xticklabels(sortedMembers);
 
-    for iPair = 1:nPairs
-        pairIdx = pairIdxs(iPair, :);
-        if bar_pCorr(iGroup, iPair) < 0.05
-            sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iGroup, iPair));
-        end
-    end
-
+    % yaxis labeling
     if iGroup == 1
         ylabel(ylabelStr, 'interpreter', 'none');
     end    
@@ -184,9 +181,27 @@ for iGroup = 1:nGroups
         hnt(iGroup).YAxis.TickValues = [];
     end
     set(gca,'TickLabelInterpreter','none');
+
+    % significance 
+    for iPair = 1:nPairs
+        pairIdx = pairIdxs(iPair, :);
+        if bar_pCorr(iGroup, iPair) < 0.05
+            sigstar({barPositions(iGroup, pairIdx)}, bar_pCorr(iGroup, iPair));
+        end
+    end
 end
 linkaxes(hnt, 'y');
 
+% Plot number of subjects if desired
+if ~isempty(groupSize)
+    NperGroupMember = sum(~isnan(values),3);
+    NperGroup = sum(NperGroupMember,2);
+    for iGroup = 1:nGroups
+        text(hnt(iGroup), .02, .96, sprintf('N=%g', groupSize(iGroup)), 'Fontsize', 12, 'Units', 'Normalized'),
+    end
+end
+
+% add super Title
 if ~isempty(plotTitle)
     title(htl, plotTitle, 'interpreter', 'none')
 end
