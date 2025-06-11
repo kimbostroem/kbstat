@@ -777,7 +777,7 @@ end
 
 % level order
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
-    levelOrder = options.levelOrder;
+    levelOrder = lower(options.levelOrder);
 else
     levelOrder = 'sorted';
 end
@@ -2577,12 +2577,12 @@ for iLevel = 1:nPosthocLevels
 
                         if nCols > 1
                             % remove prefix added further above
-                            tableRow.(colVar) = string(regexprep(cols(iRow), '^[^_]*_', ''));
+                            tableRow.(colVar) = string(regexprep(cols(iCol), '^[^_]*_', ''));
                         end
 
                         if nGroups > 1
                             % remove prefix added further above
-                            tableRow.(groupVar) = string(regexprep(groups(iRow), '^[^_]*_', ''));
+                            tableRow.(groupVar) = string(regexprep(groups(iGroup), '^[^_]*_', ''));
                         end
 
                         % remove prefix added further above
