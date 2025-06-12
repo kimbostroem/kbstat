@@ -356,13 +356,13 @@ function results = kbstat(options)
 %                       OPTIONAL, default = 'levels'.
 %
 %       xOrder          Ordering of the items of the 1st x-variable on the 
-%                       x-axis in data plots, numerical or a cell with item names.
+%                       x-axis in data plots, numerical or a cell with the variable names.
 %                       If numerical, it should be based on the order of the
 %                       level names defined by 'levelOrder'. 
 %                       OPTIONAL, default = []. 
 %                       Example: 
 %                       options.xOrder = '1 3 2'
-%                       options.xOrder = {'Intervention', 'Control'};
+%                       options.xOrder = {'FactorA', 'FactorB'};
 %
 %       xOrder<n>       Ordering of the items of the n-th x-variable (with 
 %                       respect to the provided list) on the x-axis in data
@@ -373,14 +373,14 @@ function results = kbstat(options)
 %                       Example: 
 %                       options.xOrder1 = '1 4 3 2'
 %                       options.xOrder2 = '2 1'
-%                       options.xOrder3 = {'Intervention', 'Control'};
+%                       options.xOrder3 = {'FactorA', 'FactorB'};
 %
-%       plotLines      Flag if the data plots should display the median as
+%       plotLines       Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding
 %                       dataset.
 %
-%       plotGroupSize  Flag if the group size (no. of participants) should 
-%                       be displayed in the axis (i.e. N=...).
+%       plotGroupSize   Flag if the group size (usually n/o participants) should 
+%                       be displayed in the axis in the form "N=<#>".
 %
 %       closeFigures    Flag if the figures created during the analysis
 %                       should be closed or left open.
