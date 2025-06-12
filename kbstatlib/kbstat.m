@@ -362,7 +362,7 @@ function results = kbstat(options)
 %                       OPTIONAL, default = []. 
 %                       Example: 
 %                       options.xOrder = '1 3 2'
-%                       options.xOrder = {'FactorA', 'FactorB'};
+%                       options.xOrder = {'Level1', 'Level2', 'Level3'};
 %
 %       xOrder<n>       Ordering of the items of the n-th x-variable (with 
 %                       respect to the provided list) on the x-axis in data
@@ -373,7 +373,7 @@ function results = kbstat(options)
 %                       Example: 
 %                       options.xOrder1 = '1 4 3 2'
 %                       options.xOrder2 = '2 1'
-%                       options.xOrder3 = {'FactorA', 'FactorB'};
+%                       options.xOrder3 = {'Level1', 'Level2', 'Level3'};
 %
 %       plotLines       Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding
