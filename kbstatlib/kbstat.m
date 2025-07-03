@@ -1388,6 +1388,8 @@ end
 mdls = cell(1, nFits);
 anovas = cell(1, nFits);
 Datasets = cell(1, nFits);
+
+fprintf('Starting GLMM analyses for %g dependent variable(s) \n', nFits)
 for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     % dependent variable
     myVar = y{iFit};
@@ -1446,11 +1448,11 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         idxDesc = (Data.(yVar) == myVar);
         DataOrig = Data;
         Data = Data(idxDesc, :);
-        fprintf('Performing GLMM analysis for %s...\n', myVar);
+        fprintf('\nPerforming GLMM analysis for variable %g of %g %s...\n', iFit, nFits, myVar);
     elseif nY > 1
-        fprintf('Performing multivariate GLMM analysis...\n');
+        fprintf('\nPerforming multivariate GLMM analysis for %s...\n', myVar);
     else
-        fprintf('Performing GLMM analysis for %s...\n', depVar);
+        fprintf('\nPerforming GLMM analysis for variable %g of %g %s...\n', iFit, nFits, depVar);
     end
 
     % open summary file for writing
@@ -2185,14 +2187,16 @@ for iLevel = 1:nPosthocLevels
                                 bar_aux(iGroup, iPair, iRow, iCol, iVar) = contrasts.DF2;
                                 bar_smd(iGroup, iPair, iRow, iCol, iVar) = f2smd(contrasts.F, contrasts.DF1, contrasts.DF2);
                                 bar_eff(iGroup, iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-                                bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
-                                bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
-                                bar_emm_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L1);
-                                bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 1);
-                                bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 2);
-                                bar_emm_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L2);
-                                bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 1);
-                                bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 2);
+                                % bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
+                                % bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
+                                bar_diff(iGroup, iPair, iRow, iCol, iVar) = mean(backFcn(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2))) - backFcn(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))));
+                                bar_diffpct(iGroup, iPair, iRow, iCol, iVar) = bar_diff(iGroup, iPair, iRow, iCol, iVar) / mean(backFcn(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)))) * 100;
+                                bar_emm_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1)));
+                                bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 1)));
+                                bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 2)));
+                                bar_emm_2(iGroup, iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2)));
+                                bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 1)));
+                                bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar) = backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 2)));
 
                                 % calc main contrasts
                                 if posthocMain && nGroups * nRows * nCols * nPairs > 1
@@ -2206,14 +2210,14 @@ for iLevel = 1:nPosthocLevels
                                     main_aux(iPair, iRow, iCol, iVar) = contrasts.DF2;
                                     main_smd(iPair, iRow, iCol, iVar) = f2smd(contrasts.F, contrasts.DF1, contrasts.DF2);
                                     main_eff(iPair, iRow, iCol, iVar) = f2etaSqp(contrasts.F, contrasts.DF1, contrasts.DF2);
-                                    main_diff(iPair, iRow, iCol, iVar) = mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2)) - mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)));
-                                    main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))) * 100;
-                                    main_emm_1(iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L1);
-                                    main_CI95low_1(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 1);
-                                    main_CI95up_1(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L1, 2);
-                                    main_emm_2(iPair, iRow, iCol, iVar) =  emm.table.Estimated_Marginal_Mean(L2);
-                                    main_CI95low_2(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 1);
-                                    main_CI95up_2(iPair, iRow, iCol, iVar) =  emm.table.CI_95_0pct(L2, 2);
+                                    main_diff(iPair, iRow, iCol, iVar) = mean(backFcn(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L2))) - backFcn(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1))));
+                                    main_diffpct(iPair, iRow, iCol, iVar) = main_diff(iPair, iRow, iCol, iVar) / backFcn(mean(mdl.Link.Inverse(contrasts.table.Estimated_Marginal_Mean(L1)))) * 100;
+                                    main_emm_1(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L1)));
+                                    main_CI95low_1(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 1)));
+                                    main_CI95up_1(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L1, 2)));
+                                    main_emm_2(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.Estimated_Marginal_Mean(L2)));
+                                    main_CI95low_2(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 1)));
+                                    main_CI95up_2(iPair, iRow, iCol, iVar) =  backFcn(mdl.Link.Inverse(emm.table.CI_95_0pct(L2, 2)));
                                 end
                             end
                     end
@@ -2323,7 +2327,7 @@ for iLevel = 1:nPosthocLevels
 
     end
 
-    %% Loop over dependent variables
+    %% Loop over dependent variabeles
 
     for iVar = 1:nY
         % dependent variable
