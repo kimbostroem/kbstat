@@ -2472,6 +2472,8 @@ for iLevel = 1:nPosthocLevels
                     if plotGroupSize
                         subjGroupCombinations = unique([Data.Subject Data.(groupVar)],'rows');
                         groupSize = arrayfun(@(s) numel(find(contains(subjGroupCombinations, s))), groups);
+                    else
+                        groupSize = [];
                     end
 
                     plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize);
