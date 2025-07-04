@@ -152,7 +152,14 @@ if any(strcmpi(varargin, 'Annotations'))
             idx2 = find(xPositions == x2, 1);
             y1 = paramArray(idx1).topWhisker;
             y2 = paramArray(idx2).topWhisker;
-            y = max([y1, y2]) + 0.05 * range(ylim);
+            ymax = max(y1, y2);
+            if isfield(paramArray(idx1), 'outliers')
+                ymax = max(union(ymax, paramArray(idx1).outliers));
+            end
+            if isfield(paramArray(idx2), 'outliers')
+                ymax = max(union(ymax, paramArray(idx2).outliers));
+            end
+            y = ymax + 0.05 * range(ylim);
         end
 
         % Bracket height
@@ -170,6 +177,8 @@ if any(strcmpi(varargin, 'Annotations'))
         end
     end
 end
+
+axis padded
 
 
 end
