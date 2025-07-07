@@ -1,5 +1,5 @@
-function kbboxplot(paramArray, varargin)
-% KBBOXPLOT - Draws multiple stylized boxplots with explicitly defined parameters,
+function kbboxchart(paramArray, varargin)
+% KBBOXCHART - Draws multiple stylized boxcharts with explicitly defined parameters,
 %             mimicking the style of MATLAB's boxchart.
 %
 % Inputs:
@@ -42,7 +42,7 @@ for i = 1:N
     color = colors(i, :);
 
     % Validate fields
-    requiredFields = {'bottomWhisker','bottomBox','bottomNotch','median','topNotch','topBox','topWhisker'};
+    requiredFields = {'bottomWhisker','bottomBox','bottomNotch','center','topNotch','topBox','topWhisker'};
     for f = requiredFields
         if ~isfield(pStruct, f{1})
             error(['Missing field: ', f{1}, ' in paramArray(', num2str(i), ')']);
@@ -71,12 +71,12 @@ for i = 1:N
     yOutline = [
         pStruct.bottomBox
         pStruct.bottomNotch
-        pStruct.median
+        pStruct.center
         pStruct.topNotch
         pStruct.topBox
         pStruct.topBox
         pStruct.topNotch
-        pStruct.median
+        pStruct.center
         pStruct.bottomNotch
         pStruct.bottomBox
         ];
@@ -96,17 +96,17 @@ for i = 1:N
 
     yNotch = [
         pStruct.bottomNotch
-        pStruct.median
+        pStruct.center
         pStruct.topNotch
         pStruct.topNotch
-        pStruct.median
+        pStruct.center
         pStruct.bottomNotch
         ];
 
     patch(xNotch, yNotch, color, 'EdgeColor', 'none', 'FaceAlpha', notchAlpha);
 
     % --- Median line ---
-    line([xPos - quarterBox, xPos + quarterBox], [pStruct.median, pStruct.median], ...
+    line([xPos - quarterBox, xPos + quarterBox], [pStruct.center, pStruct.center], ...
         'Color', color, 'LineWidth', 2);
 
     % --- Whiskers ---
@@ -119,8 +119,9 @@ for i = 1:N
 
     % --- Outliers ---
     if isfield(pStruct, 'outliers')
-        plot(xPos + zeros(size(pStruct.outliers)), pStruct.outliers, 'ko', ...
-            'MarkeredgeColor', 'none', 'MarkerFaceColor', color, 'MarkerSize', 6);
+        jitterstrength=0.1;
+        plot(xPos + (rand(size(pStruct.outliers))-0.5)*2*jitterstrength, pStruct.outliers, 'k*', ...
+            'MarkeredgeColor', color, 'MarkerFaceColor', color, 'MarkerSize', 6);
     end
 end
 
