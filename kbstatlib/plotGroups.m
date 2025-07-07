@@ -1,4 +1,8 @@
-function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize)
+function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize, Outliers)
+
+if nargin<20
+    Outliers =[];
+end
 
 if nargin < 19
     groupSize = [];
@@ -116,7 +120,7 @@ for iGroup = 1:nGroups
 
     switch lower(plotStyle)
 
-         case 'violin'
+        case 'violin'
             switch barType
 
                 case {'auto', 'custom'}
@@ -139,18 +143,45 @@ for iGroup = 1:nGroups
                     violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
             end
 
+            % TO DO: add option to toggle outlier plotting on/off
+            for iMember = 1:nMembers
+                cOutliers=squeeze(Outliers(iGroup,iMember,:));
+                if sum(~isnan(cOutliers))==1; jitterstrength=0; else; jitterstrength=1; end
+                scatter(iMember+rand(numel(cOutliers),1)*jitterstrength, cOutliers, markerSize, sortedColors(iMember,:), '*');
+            end
+
         case 'boxplot'
             boxplot(squeeze(values(iGroup,:,:))', 'Colors', sortedColors);
 
         case 'boxchart'
             hold on
-            for iMember = 1:nMembers
-                yData = squeeze(values(iGroup,iMember,:));
-                boxchart(iMember*ones(numel(yData),1), yData, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize, ...
-                    'BoxFaceColor',sortedColors(iMember,:), 'MarkerColor',sortedColors(iMember,:));
-            end
-            xticks(1:nMembers)
+            if ~ismember(barType, {'auto', 'median'}); warning('This barType is not supported for plotStyle boxchart. The default barType is used instead'); end
+            switch barType
+                case 'median'
+                    for iMember = 1:nMembers
+                        yData = squeeze(values(iGroup,iMember,:));
+                        boxchart(iMember*ones(numel(yData),1), yData, 'notch', 'on', 'MarkerStyle', '.', 'JitterOutliers','on', 'MarkerSize', markerSize, ...
+                            'BoxFaceColor',sortedColors(iMember,:), 'MarkerColor',sortedColors(iMember,:));
+                    end
+                    xticks(1:nMembers)
 
+                otherwise
+                    paramArray = struct;
+                    for iMember = 1:nMembers
+                        cOutliers = squeeze(Outliers(iGroup,iMember,:));
+                        cValues = squeeze(values(iGroup,iMember,:));
+                        paramArray(iMember).outliers = cOutliers; % pre-identified outliers
+                        paramArray(iMember).topWhisker = max(cValues); % non-outlier max
+                        paramArray(iMember).topBox = quantile(cValues, 0.75); % 75%
+                        paramArray(iMember).topNotch = barTop(iGroup, iMember); % CI top
+                        paramArray(iMember).center = barCenter(iGroup, iMember); % EMM
+                        paramArray(iMember).bottomNotch = barBottom(iGroup, iMember); % CI bottom
+                        paramArray(iMember).bottomBox = quantile(cValues, 0.25); % 25%
+                        paramArray(iMember).bottomWhisker = min(cValues); % non-outlier min
+                    end
+                    kbboxchart(paramArray);
+                    % xticks(1:nMembers)
+            end
         case 'bar'
             hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
@@ -176,13 +207,13 @@ for iGroup = 1:nGroups
     % yaxis labeling
     if iGroup == 1
         ylabel(ylabelStr, 'interpreter', 'none');
-    end    
+    end
     if iGroup > 1
         hnt(iGroup).YAxis.TickValues = [];
     end
     set(gca,'TickLabelInterpreter','none');
 
-    % significance 
+    % significance
     for iPair = 1:nPairs
         pairIdx = pairIdxs(iPair, :);
         if bar_pCorr(iGroup, iPair) < 0.05

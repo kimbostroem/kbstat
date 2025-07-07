@@ -336,6 +336,7 @@ function results = kbstat(options)
 %                       Possible values:
 %                       'violin'
 %                       'boxplot'
+%                       'boxchart' (supports barType 'auto' and 'median')
 %                       'bar'
 %                       'prettybar'
 %                       OPTIONAL, default = 'violin'
@@ -1249,6 +1250,7 @@ outlierLevel = nFactors;
 if ~strcmp(outlierRemoval, 'none')
 
     idxOut = false(size(Data, 1), 1);
+    Outliers = nan(nGroups, nMembers, size(Data, 1)/nMembers, nRows, nCols, nY);
 
     for iVar = 1:nY
 
@@ -1271,6 +1273,7 @@ if ~strcmp(outlierRemoval, 'none')
                 idxTest = idxTest & (Data.(memberVar) == member);
                 yData = Data.(transVar)(idxTest);
                 idxOut(idxTest) = isoutlier(yData, outlierRemoval);
+                Outliers(1,iMember,idxOut(idxTest),1,1,iVar) = backFcn(yData(idxOut(idxTest)));
             end
 
         elseif outlierLevel == 2 % level 2: 2nd dependent variable, if given
@@ -1285,6 +1288,7 @@ if ~strcmp(outlierRemoval, 'none')
                     end
                     yData = Data.(transVar)(idxTest);
                     idxOut(idxTest) = isoutlier(yData, outlierRemoval);
+                    Outliers(iGroup,iMember,idxOut(idxTest),1,1,iVar) = backFcn(yData(idxOut(idxTest)));
                 end
             end
 
@@ -1305,6 +1309,7 @@ if ~strcmp(outlierRemoval, 'none')
                         end
                         yData = Data.(transVar)(idxTest);
                         idxOut(idxTest) = isoutlier(yData, outlierRemoval);
+                        Outliers(iGroup,iMember,idxOut(idxTest),1,iCol,iVar) = backFcn(yData(idxOut(idxTest)));
                     end
                 end
             end
@@ -1330,6 +1335,7 @@ if ~strcmp(outlierRemoval, 'none')
                             end
                             yData = Data.(transVar)(idxTest);
                             idxOut(idxTest) = isoutlier(yData, outlierRemoval);
+                            Outliers(iGroup,iMember,idxOut(idxTest),iRow,iCol,iVar) = backFcn(yData(idxOut(idxTest)));
                         end
                     end
                 end
@@ -2454,6 +2460,7 @@ for iLevel = 1:nPosthocLevels
                     end
 
                     myDataPoints = DataPoints(:, :, :, iRow, iCol, iVar);
+                    myOutliers = Outliers(:, :, :, iRow, iCol, iVar);
                     myBarCenter = emmCenter(:, :, iRow, iCol, iVar);
                     myBarBottom = emmBottom(:, :, iRow, iCol, iVar);
                     myBarTop = emmTop(:, :, iRow, iCol, iVar);
@@ -2480,7 +2487,7 @@ for iLevel = 1:nPosthocLevels
                         groupSize = [];
                     end
 
-                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize);
+                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize, myOutliers);
                 end
             end
 
