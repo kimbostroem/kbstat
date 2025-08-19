@@ -45,7 +45,7 @@ function results = kbstat(options)
 %                       one row per data point.
 %
 %       y               Name of the dependent variable or comma-separated
-%                       list of names of multiple dependent variables. In
+%                       list, or cell array, of names of multiple dependent variables. In
 %                       the latter case, by default each component is
 %                       treated as a separate dependent variable and as
 %                       many independent univariate analyses are performed.
@@ -53,11 +53,7 @@ function results = kbstat(options)
 %                       treated as a vector-valued dependent variable and a
 %                       multivariate analysis is performed.
 %
-%       yName           Display name of dependent variable appearing in
-%                       tables and plots
-%                       OPTIONAL, default = y
-%
-%       yLabel          Label for y axis in data plots.
+%       yLabel          Label(s) for y axis in data plots.
 %                       If y has more than one component, then this
 %                       parameter can have either one component, in which
 %                       case all units are equal to this component, or it
