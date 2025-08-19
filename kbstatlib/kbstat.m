@@ -1718,7 +1718,16 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     resFit = fitdist(mdlResiduals, 'Normal');
     xline(resFit.mu, 'Color', 'r', 'LineWidth', 2);
     ylims = ylim;
-    rectangle('Position', [resFit.mu - resFit.sigma, ylims(1), 2*resFit.sigma, ylims(2)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeColor', 'none');
+    % plot sigma region
+    xLeft  = resFit.mu - resFit.sigma;
+    xRight = resFit.mu + resFit.sigma;
+    yBottom = ylims(1);
+    yTop    = ylims(2);
+    xCoords = [xLeft, xRight, xRight, xLeft];
+    yCoords = [yBottom, yBottom, yTop, yTop];
+    patch(xCoords, yCoords, [0 0 0], ...
+        'FaceAlpha', 0.1, ...
+        'EdgeColor', 'none');
     title('Histogram of residuals');
     xlabel('Residuals');
 
