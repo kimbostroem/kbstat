@@ -143,20 +143,9 @@ for iGroup = 1:nGroups
                     violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
             end
 
-            if ~isempty(Outliers)
-                for iMember = 1:nMembers
-                    cOutliers = squeeze(Outliers(iGroup,iMember,:));
-                    if sum(~isnan(cOutliers)) == 1
-                        jitterstrength = 0;
-                    else
-                        jitterstrength = 1;
-                    end
-                    scatter(iMember+rand(numel(cOutliers),1)*jitterstrength, cOutliers, markerSize, sortedColors(iMember,:), '*');
-                end
-            end
-
         case 'boxplot'
-            boxplot(squeeze(values(iGroup,:,:))', 'Colors', sortedColors);
+            % do not plot outliers here, as they are plotted separately later. Whiskers extend to the entire range
+            boxplot(squeeze(values(iGroup,:,:))', 'Colors', sortedColors, 'Symbol', '', 'Whisker', Inf);
 
         case 'boxchart'
             hold on
@@ -188,6 +177,7 @@ for iGroup = 1:nGroups
                     kbboxchart(paramArray);
                     % xticks(1:nMembers)
             end
+
         case 'bar'
             hbar = bar(1:nMembers, barCenter, 'LineStyle', 'none', 'FaceColor', 'flat');
             for iMember = 1:nMembers
@@ -195,6 +185,20 @@ for iGroup = 1:nGroups
                 hold on
                 errorbar(iMember, barCenter(iGroup, iMember), barCenter(iGroup, iMember) - barBottom(iGroup, iMember), barTop(iGroup, iMember) - barCenter(iGroup, iMember), 'LineStyle', 'none', 'Color', 0.6*[1 1 1], 'LineWidth', 2);
             end
+    end
+
+    % plot outliers
+    if ~isempty(Outliers)
+        hold on
+        for iMember = 1:nMembers
+            cOutliers = squeeze(Outliers(iGroup,iMember,:));
+            if sum(~isnan(cOutliers)) == 1
+                jitterstrength = 0;
+            else
+                jitterstrength = 1;
+            end
+            scatter(iMember+rand(numel(cOutliers),1)*jitterstrength, cOutliers, markerSize, sortedColors(iMember,:), '*');
+        end
     end
 
     % plot horizontal lines at values if desired
