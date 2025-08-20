@@ -1,29 +1,23 @@
 function results = kbstat(options)
 %% Perform statistical analysis based on a generalized linear mixed model.
-% The result is a model fit summary, diagnostic plots, a data bar plot, a
-% descriptive statistics table, an ANOVA table, and a posthoc pairwise
-% comparison table for selected variables. For more information see the
-% README file and the demo subfolder.
+% The result is a model fit summary, diagnostic plots, a data bar plot, a descriptive statistics
+% table, an ANOVA table, and a posthoc pairwise comparison table for selected variables. For more
+% information see the README file and the demo subfolder.
 %
-% REMARK: This function can do multivariate analysis which can be done in
-% either one of two possible ways: 1) Declare a dependent variable
-% options.y as a cell array with more than 1 entry, or 2) declare
-% options.multiVar as the variable whose levels encode the individual
-% components of the multivariate variable indicated by options.y. By
-% default, the multivariate analysis is split up into several independent
-% univariate analyses, because this works in a more stable fashion. Note,
-% however, that the results are not statistically corrected for multiple
-% testing. To enable true multivariate analysis, set
-% options.multiVariate=true. However, the posthoc test then only works
-% when options.posthocMethod='ttest' instead of 'emm', due to limitations
-% of the external package 'emmeans'.
+% REMARK: This function can do multivariate analysis which can be done in either one of two possible
+% ways: 1) Declare a dependent variable options.y as a cell array with more than 1 entry, or 2)
+% declare options.multiVar as the variable whose levels encode the individual components of the
+% multivariate variable indicated by options.y. By default, the multivariate analysis is split up
+% into several independent univariate analyses, because this works in a more stable fashion. Note,
+% however, that the results are not statistically corrected for multiple testing. To enable true
+% multivariate analysis, set options.multiVariate=true. However, the posthoc test then only works
+% when options.posthocMethod='ttest' instead of 'emm', due to limitations of the external package
+% 'emmeans'.
 %
-% DISCLAIMER: This library come without any warranty and is for free use
-% only. See the LICENSE file in the root folder. The library uses an
-% adaptation of Bastian Bechtold's Violin plot library, available at
-% https://github.com/bastibe/Violinplot-Matlab, for plotting and John
-% Hartman's emmeans library, available at
-% https://de.mathworks.com/matlabcentral/fileexchange/71970-emmeans, for
+% DISCLAIMER: This library come without any warranty and is for free use only. See the LICENSE file
+% in the root folder. The library uses an adaptation of Bastian Bechtold's Violin plot library,
+% available at https://github.com/bastibe/Violinplot-Matlab, for plotting and John Hartman's emmeans
+% library, available at https://de.mathworks.com/matlabcentral/fileexchange/71970-emmeans, for
 % post-hoc analysis.
 %
 % SYNTAX
@@ -31,9 +25,8 @@ function results = kbstat(options)
 %
 % INPUT
 %   options     (struct) Structure containing parameters needed for
-%               analysis. All fields must be char or string, and if a list
-%               is to be given, it must be a string of words separated by
-%               comma or semicolon.
+%               analysis. All fields must be char or string, and if a list is to be given, it must
+%               be a string of words separated by comma or semicolon.
 %
 %       inFile          (char) Path to an Excel or CSV file. The table
 %                       must be in long format, so one row per data point.
@@ -45,42 +38,36 @@ function results = kbstat(options)
 %                       one row per data point.
 %
 %       y               Name of the dependent variable or comma-separated
-%                       list, or cell array, of names of multiple dependent variables. In
-%                       the latter case, by default each component is
-%                       treated as a separate dependent variable and as
-%                       many independent univariate analyses are performed.
-%                       If "multiVariate" is set to "true", then y is
-%                       treated as a vector-valued dependent variable and a
-%                       multivariate analysis is performed.
+%                       list, or cell array, of names of multiple dependent variables. In the latter
+%                       case, by default each component is treated as a separate dependent variable
+%                       and as many independent univariate analyses are performed. If "multiVariate"
+%                       is set to "true", then y is treated as a vector-valued dependent variable
+%                       and a multivariate analysis is performed.
 %
 %       yLabel          Label(s) for y axis in data plots.
-%                       If y has more than one component, then this
-%                       parameter can have either one component, in which
-%                       case all units are equal to this component, or it
-%                       must have the same number of components as y.
+%                       If y has more than one component, then this parameter can have either one
+%                       component, in which case all units are equal to this component, or it must
+%                       have the same number of components as y. 
 %                       OPTIONAL, default = y
 %
 %       yUnits          Physical units of the dependent variable.
-%                       If y has more than one component, then this
-%                       parameter can have either one component, in which
-%                       case all units are equal to this component, or it
-%                       must have the same number of components as y.
-%                       OPTIONAL, default = ''.
+%                       If y has more than one component, then this parameter can have either one
+%                       component, in which case all units are equal to this component, or it must
+%                       have the same number of components as y. OPTIONAL, default = ''.
 %
 %       yMult           Factor to multiply (each dimension of) y
 %                       OPTIONAL, default = 1
 %
 %       formula         Formula in Wilkinson Notation. If given, it
-%                       overrides the automatically created formula. The
-%                       script tries to identify relevant variables from
-%                       the given formula, including 'x', 'y', 'subject', when
-%                       they are not provided.
+%                       overrides the automatically created formula. The script tries to identify
+%                       relevant variables from the given formula, including 'x', 'y', 'subject',
+%                       when they are not provided.
 %
-%       x               Comma-separated list of categorical independent variables to be included 
+%       x               Comma-separated list of categorical independent variables to be included
 %                       in the analysis as factors.
 %
 %       xName           Display name of independent variable(s) appearing
-%                       in tables and plots
+%                       in tables and plots. 
 %                       OPTIONAL, default = x
 %
 %       subject         Name of the subject variable.
@@ -99,35 +86,31 @@ function results = kbstat(options)
 %       crossed         Same as 'stimulus'.
 %
 %       interact        Comma-separated list of variables whose interaction
-%                       with each other is to be analyzed. Can be a subset
-%                       of "x", or else its members are added to "x". When
-%                       not set, all members of x are assumed to mutually
-%                       interact.
-%                       Example:
+%                       with each other is to be analyzed. Can be a subset of "x", or else its
+%                       members are added to "x". When not set, all members of x are assumed to
+%                       mutually interact. 
+%                       Example: 
 %                       options.subject = 'subject'
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
 %                       OPTIONAL, default = options.x
 %
 %       covariate       Comma-separated list of (continuous or categorical)
-%                       variables that are added as covariates to improve
-%                       the model without being represented in the plots or
-%                       included in the posthoc comparisons. They are,
+%                       variables that are added as covariates to improve the model without being
+%                       represented in the plots or included in the posthoc comparisons. They are,
 %                       however, included in the ANOVA table.
 %
 %       multiVar        Name of the variable that encodes levels of a
-%                       multivariate dependent variable.
+%                       multivariate dependent variable. 
 %                       OPTIONAL, default = ''.
 %
 %       multiVarLevels  Comma-separated list of the levels of multiVar that
-%                       will be taken into account. If empty or undefined,
-%                       all levels are taken.
+%                       will be taken into account. If empty or undefined, all levels are taken.
 %                       OPTIONAL, default = ''.
 %
 %       multiVariate    Flag if, when the dependent variable has multiple
-%                       components, these components should be analyzed
-%                       together. If set to false, they are treated as
-%                       independent variables instead and the results are
+%                       components, these components should be analyzed together. If set to false,
+%                       they are treated as independent variables instead and the results are
 %                       statistically corrected for these multiple tests.
 %                       OPTIONAL, default = false.
 %
@@ -135,8 +118,7 @@ function results = kbstat(options)
 %                       OPTIONAL, default = true.
 %
 %       isRandomInteract Flag if the slopes of the interactions should also
-%                       be estimated. If isRandomSlopes = false, this
-%                       parameter is ignored.
+%                       be estimated. If isRandomSlopes = false, this parameter is ignored.
 %                       OPTIONAL, default = false.
 %
 %       randomSlopes    Comma-separated list of random slope variables
@@ -148,14 +130,14 @@ function results = kbstat(options)
 %                       'MPL'                   Maximum pseudo likelihood
 %                       'REMPL'                 Restricted maximum pseudo likelihood
 %                       'Laplace'               Maximum likelihood using Laplace approximation
-%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace approximation with fixed effects profiled out
+%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace 
+%                                               approximation with fixed effects profiled out
 %                       OPTIONAL, default = 'MPL'.
 %
 %       distribution    Distribution used for the GLM fit.
-%                       If y has more than one component, then this
-%                       parameter can have either one component, in which
-%                       case all units are equal to this component, or it
-%                       must have the same number of components as y.
+%                       If y has more than one component, then this parameter can have either one
+%                       component, in which case all units are equal to this component, or it must
+%                       have the same number of components as y.
 %                       OPTIONAL, default = 'Normal'.
 %                       Possible values:
 %                       'normal'	        Normal distribution
@@ -166,9 +148,8 @@ function results = kbstat(options)
 %                       'inverseGaussian'	Inverse Gaussian distribution
 %
 %       link            Link function used for the GLM fit.
-%                       If y has more than one component, then link can
-%                       have either one component, in which case all units
-%                       are equal to this component, or it must have the
+%                       If y has more than one component, then link can have either one component,
+%                       in which case all units are equal to this component, or it must have the
 %                       same number of components as y.
 %                       Possible values:
 %                       'identity'	    g(mu) = mu.             Default for Normal distribution
@@ -213,32 +194,29 @@ function results = kbstat(options)
 %                                   for p not exceeding 1.
 %                       OPTIONAL, default = 'holm'.
 %
-%       posthocMain  Flag if also the posthoc main effects should be
-%                       calculated, i.e. the comparison between one
-%                       variable set to 'any'.
+%       posthocMain     Flag if also the posthoc main effects should be
+%                       calculated, i.e. the comparison between one variable set to 'any'. 
 %                       OPTIONAL, default = false.
 %
 %       posthocLevel    Indiciate to which level of the independent
-%                       variables the posthoc comparison should be
-%                       calculated. For example, level 1 means that only
-%                       level pairs of the 1st independent variable are
-%                       compared, level 2 means that the level pairs of the
-%                       1st and 2nd dependent variable are compared.
+%                       variables the posthoc comparison should be calculated. For example, level 1
+%                       means that only level pairs of the 1st independent variable are compared,
+%                       level 2 means that the level pairs of the 1st and 2nd dependent variable are
+%                       compared.
 %                       OPTIONAL, default = 1.
 %
 %       correctForN     Number of test to be statistically corrected
-%                       for in addition to the correction already performed
-%                       within the current analysis. Most probably, this
-%                       number corresponds to the number of calls of
+%                       for in addition to the correction already performed within the current
+%                       analysis. Most probably, this number corresponds to the number of calls of
 %                       'kbstat' for one dataset.
 %
 %       rescale         Flag if the y-axis of each
-%                       panel of the data plot is to be resized to a
-%                       common scale.
+%                       panel of the data plot is to be resized to a common scale.
 %                       OPTIONAL, default = true.
 %
-%       preOutlierRemoval  Method to remove pre-fit outliers from the data.
-%                       Possible values:
+%       outlierRemoval  Also 'outlierMethod' or 'preOutlierMethod'. Method to remove pre-fit
+%                       outliers from the data. 
+%                       Possible values: 
 %                       'none'      Do not remove outliers
 %                       'quartiles' Remove values outside 1.5 times the
 %                                   interquartile range [.25, .75]
@@ -248,8 +226,8 @@ function results = kbstat(options)
 %                                   deviations from the mean.
 %                       OPTIONAL, default = 'none'.
 %
-%       postOutlierRemoval  Method to remove post-fit outliers, i.e.,
-%                       outliers in the residuals.
+%       postOutlierRemoval Also 'postOutlierMethod'. Method to remove post-fit outliers, i.e.,
+%                       outliers in the residuals. 
 %                       Possible values: see preOutlierMethod
 %                       OPTIONAL, default = 'none'.
 %
@@ -352,19 +330,18 @@ function results = kbstat(options)
 %                       'Names_Levels'    = display names and levels, capitalize both
 %                       OPTIONAL, default = 'levels'.
 %
-%       xOrder          Ordering of the items of the 1st x-variable on the 
-%                       x-axis in data plots, numerical or a cell with the variable names.
-%                       If numerical, it should be based on the order of the
-%                       level names defined by 'levelOrder'. 
+%       xOrder          Ordering of the items of the 1st x-variable on the
+%                       x-axis in data plots, numerical or a cell with the variable names. If
+%                       numerical, it should be based on the order of the level names defined by
+%                       'levelOrder'.
 %                       OPTIONAL, default = []. 
 %                       Example: 
 %                       options.xOrder = '1 3 2'
 %                       options.xOrder = {'Level1', 'Level2', 'Level3'};
 %
-%       xOrder<n>       Ordering of the items of the n-th x-variable (with 
-%                       respect to the provided list) on the x-axis in data
-%                       plots, numerical or a cell with item names.
-%                       If numerical, it should be based on the order of the
+%       xOrder<n>       Ordering of the items of the n-th x-variable (with
+%                       respect to the provided list) on the x-axis in data plots, numerical or a
+%                       cell with item names. If numerical, it should be based on the order of the
 %                       level names defined by 'levelOrder'.
 %                       OPTIONAL, default = []. 
 %                       Example: 
@@ -373,14 +350,12 @@ function results = kbstat(options)
 %                       options.xOrder3 = {'Level1', 'Level2', 'Level3'};
 %
 %       plotLines       Flag if the data plots should display the median as
-%                       a horizontal line in the color of the corresponding
-%                       dataset.
+%                       a horizontal line in the color of the corresponding dataset.
 %
-%       plotGroupSize   Flag if the group size (usually n/o participants) should 
+%       plotGroupSize   Flag if the group size (usually n/o participants) should
 %                       be displayed in the axis in the form "N=<#>".
 %
-%       closeFigures    Flag if the figures created during the analysis
-%                       should be closed or left open.
+%       closeFigures    Flag if the figures created during the analysis should be closed or left open.
 %                       OPTIONAL, default = true, if outDir is provided
 %                                 default = false, otherwise
 %
@@ -830,7 +805,9 @@ else
 end
 
 % flag if post-fit outliers should be removed
-if isfield(options, 'postOutlierMethod') && ~isempty(options.postOutlierMethod)
+if isfield(options, 'postOutlierRemoval') && ~isempty(options.postOutlierRemoval)
+    postOutlierMethod = options.postOutlierRemoval;
+elseif isfield(options, 'postOutlierMethod') && ~isempty(options.postOutlierMethod)
     postOutlierMethod = options.postOutlierMethod;
 else
     postOutlierMethod = 'none';
