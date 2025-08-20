@@ -352,6 +352,10 @@ function results = kbstat(options)
 %       plotLines       Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding dataset.
 %
+%       plotOutliers    Flag if outliers should be included in the data plots. This overrides the
+%                       default behavior, which is plotOutliers=true for plotStyle='boxplot' and
+%                       plotStyle='boxchart', and plotOutliers=false otherwise.
+%
 %       plotGroupSize   Flag if the group size (usually n/o participants) should
 %                       be displayed in the axis in the form "N=<#>".
 %
@@ -749,7 +753,7 @@ end
 
 % level order
 if isfield(options, 'levelOrder') && ~isempty(options.levelOrder)
-    levelOrder = lower(options.levelOrder);
+    levelOrder = getValue(options.levelOrder);
 else
     levelOrder = 'sorted';
 end
@@ -761,14 +765,14 @@ end
 
 % plot style
 if isfield(options, 'plotStyle') && ~isempty(options.plotStyle)
-    plotStyle = options.plotStyle;
+    plotStyle = getValue(options.plotStyle);
 else
     plotStyle = 'violin';
 end
 
 % plot style
 if isfield(options, 'markerSize') && ~isempty(options.markerSize)
-    markerSize = options.markerSize;
+    markerSize = getValue(options.markerSize);
 else
     markerSize = NaN;
 end
@@ -781,7 +785,7 @@ else
 end
 
 if isfield(options, 'barType') && ~isempty(options.barType)
-    barType = lower(options.barType);
+    barType = getValue(options.barType);
 else
     barType = 'auto';
 end
@@ -795,20 +799,20 @@ end
 
 % flag if pre-fit outliers should be removed
 if isfield(options, 'outlierRemoval') && ~isempty(options.outlierRemoval)
-    outlierRemoval = options.outlierRemoval;
+    outlierRemoval = getValue(options.outlierRemoval);
 elseif isfield(options, 'preOutlierMethod') && ~isempty(options.preOutlierMethod)
-    outlierRemoval = options.preOutlierMethod;
+    outlierRemoval = getValue(options.preOutlierMethod);
 elseif isfield(options, 'outlierMethod') && ~isempty(options.outlierMethod)
-    outlierRemoval = options.outlierMethod;
+    outlierRemoval = getValue(options.outlierMethod);
 else
     outlierRemoval = 'none';
 end
 
 % flag if post-fit outliers should be removed
 if isfield(options, 'postOutlierRemoval') && ~isempty(options.postOutlierRemoval)
-    postOutlierMethod = options.postOutlierRemoval;
+    postOutlierMethod = getValue(options.postOutlierRemoval);
 elseif isfield(options, 'postOutlierMethod') && ~isempty(options.postOutlierMethod)
-    postOutlierMethod = options.postOutlierMethod;
+    postOutlierMethod = getValue(options.postOutlierMethod);
 else
     postOutlierMethod = 'none';
 end
@@ -871,6 +875,14 @@ if isfield(options, 'plotGroupSize') && ~isempty(options.plotGroupSize)
     plotGroupSize = getValue(options.plotGroupSize);
 else
     plotGroupSize = false;
+end
+
+if isfield(options, 'plotOutliers') && ~isempty(options.plotOutliers)
+    plotOutliers = getValue(options.plotOutliers);
+elseif ismember(plotStyle, {'boxplot', 'boxchart'})
+    plotOutliers = true;
+else
+    plotOutliers = false;
 end
 
 % close figures
@@ -2470,13 +2482,18 @@ for iLevel = 1:nPosthocLevels
                         groupSize = [];
                     end
 
+                    if ~plotOutliers
+                        myOutliers = [];
+                    end
                     plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize, myOutliers);
                 end
             end
 
             % rescale plots to achieve the same scale for all panels
             if rescale
-                axs = findobj(fig, 'type', 'axes');
+                axs = findall(gcf, 'type', 'axes', '-not', 'Tag', 'legend', '-not', 'Tag', 'Colorbar');
+                % Keep only axes that contain plotted objects
+                axs = axs(~arrayfun(@(a) isempty(get(a, 'Children')), axs)); 
                 ylimits = NaN(length(axs), 2);
                 for iAx = 1:length(axs)
                     if ~isempty(axs(iAx).XAxis.TickValues)
@@ -2657,7 +2674,7 @@ if ischar(in) || isstring(in)
     if isNum
         value = numValue;
     else
-        value = in;
+        value = lower(in);
     end
 else % bool or whatever
     value = in;
