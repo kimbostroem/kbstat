@@ -442,7 +442,7 @@ end
 %% dependent variable(s)
 
 if isfield(options, 'y') && ~isempty(options.y)
-    y = cellstr(options.y);
+    y = getList(options.y);
     nY = length(y);
     for iY = 1:nY
         myY = y{iY};
@@ -844,19 +844,19 @@ else
 end
 
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
-    yLabel = cellstr(options.yLabel);
+    yLabel = getList(options.yLabel);
 else
     yLabel = cellstr(y);
 end
 
 if isfield(options, 'yUnits')
-    yUnits = cellstr(options.yUnits);
+    yUnits = getList(options.yUnits);
 else
     yUnits = {''};
 end
 
 if isfield(options, 'yMult') && ~isempty(options.yMult)
-    yMult = getValue(options.yMult);
+    yMult = getList(options.yMult);
 else
     yMult = 1;
 end
