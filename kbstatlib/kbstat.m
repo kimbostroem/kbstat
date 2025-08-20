@@ -1228,7 +1228,7 @@ end
 
 %% Remove pre-fit outliers
 
-Outliers = nan(nGroups, nMembers, size(Data, 1)/nMembers, nRows, nCols, nY);
+Outliers = nan(nGroups, nMembers, ceil(size(Data, 1)/nMembers), nRows, nCols, nY);
 
 nPreOutliers = 0;
 nPreObs = size(Data, 1);
