@@ -32,8 +32,8 @@ if nargin < 13
     barType = 'median';
 end
 
-if nargin < 12 || isnan(markerSize)
-    markerSize = 2;
+if nargin < 12
+    markerSize = [];
 end
 
 if nargin < 11
@@ -56,6 +56,14 @@ members = string(members);
 groups = string(groups);
 nMembers = length(members);
 nGroups = length(groups);
+
+if isempty(markerSize) || isnan(markerSize)
+    msize = @(x) max([2,24 - 1.5*floor(x/10)]);
+    myValues = values;
+    myValues(isnan(myValues)) = [];
+    nPoints = numel(myValues)/nMembers/nGroups;
+    markerSize = msize(nPoints);
+end
 
 colors = lines(nMembers);
 
@@ -115,15 +123,14 @@ for iGroup = 1:nGroups
             sortedMembers = members;
             sortedColors = colors;
             % do nothing
-    end
-
+    end    
 
     switch plotStyle
 
         case 'violin'
             switch barType
 
-                case {'auto', 'custom'}
+                case {'auto', 'custom'}                    
                     violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowBox', false, 'ShowMedian', false);
 
                     % plot bar inside violins
