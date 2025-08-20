@@ -1239,14 +1239,15 @@ end
 
 %% Remove pre-fit outliers
 
+Outliers = nan(nGroups, nMembers, size(Data, 1)/nMembers, nRows, nCols, nY);
+
 nPreOutliers = 0;
 nPreObs = size(Data, 1);
 
 outlierLevel = nFactors;
 if ~strcmp(outlierRemoval, 'none')
 
-    idxOut = false(size(Data, 1), 1);
-    Outliers = nan(nGroups, nMembers, size(Data, 1)/nMembers, nRows, nCols, nY);
+    idxOut = false(size(Data, 1), 1);    
 
     for iVar = 1:nY
 
