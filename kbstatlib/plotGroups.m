@@ -1,7 +1,7 @@
 function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize, Outliers)
 
 if nargin<20
-    Outliers =[];
+    Outliers = [];
 end
 
 if nargin < 19
@@ -118,7 +118,7 @@ for iGroup = 1:nGroups
     end
 
 
-    switch lower(plotStyle)
+    switch plotStyle
 
         case 'violin'
             switch barType
@@ -143,11 +143,16 @@ for iGroup = 1:nGroups
                     violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
             end
 
-            % TO DO: add option to toggle outlier plotting on/off
-            for iMember = 1:nMembers
-                cOutliers=squeeze(Outliers(iGroup,iMember,:));
-                if sum(~isnan(cOutliers))==1; jitterstrength=0; else; jitterstrength=1; end
-                scatter(iMember+rand(numel(cOutliers),1)*jitterstrength, cOutliers, markerSize, sortedColors(iMember,:), '*');
+            if ~isempty(Outliers)
+                for iMember = 1:nMembers
+                    cOutliers = squeeze(Outliers(iGroup,iMember,:));
+                    if sum(~isnan(cOutliers)) == 1
+                        jitterstrength = 0;
+                    else
+                        jitterstrength = 1;
+                    end
+                    scatter(iMember+rand(numel(cOutliers),1)*jitterstrength, cOutliers, markerSize, sortedColors(iMember,:), '*');
+                end
             end
 
         case 'boxplot'
@@ -167,10 +172,11 @@ for iGroup = 1:nGroups
 
                 otherwise
                     paramArray = struct;
-                    for iMember = 1:nMembers
-                        cOutliers = squeeze(Outliers(iGroup,iMember,:));
+                    for iMember = 1:nMembers                        
+                        if ~isempty(Outliers)
+                            paramArray(iMember).outliers = squeeze(Outliers(iGroup,iMember,:)); % pre-identified outliers
+                        end
                         cValues = squeeze(values(iGroup,iMember,:));
-                        paramArray(iMember).outliers = cOutliers; % pre-identified outliers
                         paramArray(iMember).topWhisker = max(cValues); % non-outlier max
                         paramArray(iMember).topBox = quantile(cValues, 0.75); % 75%
                         paramArray(iMember).topNotch = barTop(iGroup, iMember); % CI top
