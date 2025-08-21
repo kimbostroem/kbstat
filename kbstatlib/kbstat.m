@@ -47,7 +47,7 @@ function results = kbstat(options)
 %       yLabel          Label(s) for y axis in data plots.
 %                       If y has more than one component, then this parameter can have either one
 %                       component, in which case all units are equal to this component, or it must
-%                       have the same number of components as y. 
+%                       have the same number of components as y.
 %                       OPTIONAL, default = y
 %
 %       yUnits          Physical units of the dependent variable.
@@ -67,8 +67,44 @@ function results = kbstat(options)
 %                       in the analysis as factors.
 %
 %       xName           Display name of independent variable(s) appearing
-%                       in tables and plots. 
+%                       in tables and plots.
 %                       OPTIONAL, default = x
+%
+%       xOrder          Ordering of the items of the 1st x-variable on the x-axis in data plots,
+%                       numerical, as cell with the variable names, or as comma-separated list. If
+%                       numerical, it should be based on the order of the level names defined by
+%                       'levelOrder'.
+%                       OPTIONAL, default = [].
+%                       Example:
+%                       options.xOrder = '2 1 3'
+%                       options.xOrder = 'Level2, Level1, Level3';
+%
+%       xOrder<n>       Ordering of the items of the n-th x-variable (with respect to the provided
+%                       list) on the x-axis in data plots, numerical, as cell with the variable
+%                       names, or as comma-separated list. If numerical, it should be based on the
+%                       order of the level names defined by 'levelOrder'.
+%                       OPTIONAL, default = [].
+%                       Example:
+%                       options.xOrder1 = '1 4 3 2'
+%                       options.xOrder2 = '2 1 3'
+%                       options.xOrder3 = {'Level2', 'Level1', 'Level3'};
+%                       options.xOrder4 = 'Level2, Level1, Level3';
+%
+%       xLevelss         Display names of the levels of the 1st x-variable, replacing its level names
+%                       as they are currently displayed, i.e. after potential re-ordering them using
+%                       the xOrder commands.
+%                       OPTIONAL, default = [].
+%                       Example:
+%                       options.xLevelss = 'LevelBla, LevelBlo, LevelBli';
+%                       options.xLevelss = {'LevelBla', 'LevelBlo', 'LevelBli'};
+%
+%       xLevelss<n>      Display names of the levels of the n-th x-variable, replacing its level names
+%                       as they are currently displayed, i.e. after potential re-ordering them using
+%                       the xOrder commands.
+%                       OPTIONAL, default = [].
+%                       Example:
+%                       options.xLevelss1 = 'LevelBla, LevelBlo, LevelBli';
+%                       options.xLevelss2 = {'LevelBlubb', 'LevelBlobb', 'LevelBlibb'};
 %
 %       subject         Name of the subject variable.
 %                       OPTIONAL, default = ''.
@@ -88,8 +124,8 @@ function results = kbstat(options)
 %       interact        Comma-separated list of variables whose interaction
 %                       with each other is to be analyzed. Can be a subset of "x", or else its
 %                       members are added to "x". When not set, all members of x are assumed to
-%                       mutually interact. 
-%                       Example: 
+%                       mutually interact.
+%                       Example:
 %                       options.subject = 'subject'
 %                       options.x = 'time, dose'
 %                       options.interact = 'dose, age'.
@@ -101,7 +137,7 @@ function results = kbstat(options)
 %                       however, included in the ANOVA table.
 %
 %       multiVar        Name of the variable that encodes levels of a
-%                       multivariate dependent variable. 
+%                       multivariate dependent variable.
 %                       OPTIONAL, default = ''.
 %
 %       multiVarLevels  Comma-separated list of the levels of multiVar that
@@ -130,7 +166,7 @@ function results = kbstat(options)
 %                       'MPL'                   Maximum pseudo likelihood
 %                       'REMPL'                 Restricted maximum pseudo likelihood
 %                       'Laplace'               Maximum likelihood using Laplace approximation
-%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace 
+%                       'ApproximateLaplace'    Maximum likelihood using approximate Laplace
 %                                               approximation with fixed effects profiled out
 %                       OPTIONAL, default = 'MPL'.
 %
@@ -195,7 +231,7 @@ function results = kbstat(options)
 %                       OPTIONAL, default = 'holm'.
 %
 %       posthocMain     Flag if also the posthoc main effects should be
-%                       calculated, i.e. the comparison between one variable set to 'any'. 
+%                       calculated, i.e. the comparison between one variable set to 'any'.
 %                       OPTIONAL, default = false.
 %
 %       posthocLevel    Indiciate to which level of the independent
@@ -215,8 +251,8 @@ function results = kbstat(options)
 %                       OPTIONAL, default = true.
 %
 %       outlierRemoval  Also 'outlierMethod' or 'preOutlierMethod'. Method to remove pre-fit
-%                       outliers from the data. 
-%                       Possible values: 
+%                       outliers from the data.
+%                       Possible values:
 %                       'none'      Do not remove outliers
 %                       'quartiles' Remove values outside 1.5 times the
 %                                   interquartile range [.25, .75]
@@ -227,7 +263,7 @@ function results = kbstat(options)
 %                       OPTIONAL, default = 'none'.
 %
 %       postOutlierRemoval Also 'postOutlierMethod'. Method to remove post-fit outliers, i.e.,
-%                       outliers in the residuals. 
+%                       outliers in the residuals.
 %                       Possible values: see preOutlierMethod
 %                       OPTIONAL, default = 'none'.
 %
@@ -255,7 +291,7 @@ function results = kbstat(options)
 %                       back-transformed data.
 %                       OPTIONAL, default = ''.
 %                       Possible values:
-%                       f(y)        Arbitrary function of the dependent variable y. 
+%                       f(y)        Arbitrary function of the dependent variable y.
 %                                   Examples:
 %                                   'log(y)'
 %                                   '1/y'
@@ -279,11 +315,11 @@ function results = kbstat(options)
 %                       'max'
 %                       'minmax'
 %
-%       outDir          Output folder for generated files, relative to the 
+%       outDir          Output folder for generated files, relative to the
 %                       working directory where the main script is called.
 %                       If not defined or set to empty, no output files are
-%                       generated. 
-%                       OPTIONAL, default = '' (nothing is saved)                      
+%                       generated.
+%                       OPTIONAL, default = '' (nothing is saved)
 %
 %       isPlot          Plot data as grouped bars with significance brackets
 %
@@ -329,25 +365,6 @@ function results = kbstat(options)
 %                       'names_Levels'    = display names and levels, capitalize levels
 %                       'Names_Levels'    = display names and levels, capitalize both
 %                       OPTIONAL, default = 'levels'.
-%
-%       xOrder          Ordering of the items of the 1st x-variable on the
-%                       x-axis in data plots, numerical or a cell with the variable names. If
-%                       numerical, it should be based on the order of the level names defined by
-%                       'levelOrder'.
-%                       OPTIONAL, default = []. 
-%                       Example: 
-%                       options.xOrder = '1 3 2'
-%                       options.xOrder = {'Level1', 'Level2', 'Level3'};
-%
-%       xOrder<n>       Ordering of the items of the n-th x-variable (with
-%                       respect to the provided list) on the x-axis in data plots, numerical or a
-%                       cell with item names. If numerical, it should be based on the order of the
-%                       level names defined by 'levelOrder'.
-%                       OPTIONAL, default = []. 
-%                       Example: 
-%                       options.xOrder1 = '1 4 3 2'
-%                       options.xOrder2 = '2 1'
-%                       options.xOrder3 = {'Level1', 'Level2', 'Level3'};
 %
 %       plotLines       Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding dataset.
@@ -572,7 +589,7 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
     xStr = eqParts{2};
 
     % separate between fixed and random effects
-    fixedStop = regexp(xStr, '\s*\+\s*\(.*?\)');    
+    fixedStop = regexp(xStr, '\s*\+\s*\(.*?\)');
     if ~isempty(fixedStop) % there is a random variable term
         xStrFixed = xStr(1:fixedStop(1));
         fixedVars = strtrim(strsplit(xStrFixed, {'+', '*', ':', '|'}));
@@ -591,7 +608,7 @@ if isfield(options, 'formula') && ~isempty(options.formula) % formula is given a
         randomVars = {};
     end
     randomVars = reshape(randomVars, 1, []); % make horizontal array
-   
+
     % x variables are all fixed-effect IVs except random variables and covariates
     if isempty(x)
         x = fixedVars;
@@ -742,7 +759,7 @@ links = {
     'logit'
     'log'
     };
-canonicalLink = containers.Map(distributions,links);
+canonicalLink = containers.Map(distributions, links);
 
 % dummy coding
 if isfield(options, 'dummyCoding') && ~isempty(options.dummyCoding)
@@ -1007,18 +1024,22 @@ end
 % This apparently has to be done otherwise emmeans yields an error or flawed results
 prefixes = char(97:122); % possible prefixes ('a' to 'z')
 catVars = union(x, randomVars, 'stable');
+levelMap = struct;
 for iVar = 1:length(catVars)
     myVar = catVars{iVar};
     prefix = prefixes(iVar);
     Data2.(myVar) = string(Data2.(myVar));
     col = Data2.(myVar);
     levels = unique(col, levelOrder);
+    levelMap.(myVar) = containers.Map('KeyType','char','ValueType','char');
     for iLevel = 1:length(levels)
         level = levels(iLevel);
         idx = (Data2.(myVar) == level);
+        newLevel = (prefix + string(num2str(iLevel)) + "_") + string(level); 
         oldVals = Data2{idx, myVar};
-        newVals = (prefix + string(num2str(iLevel)) + "_") + string(oldVals);
+        newVals = (prefix + string(num2str(iLevel)) + "_") + string(oldVals);        
         Data2(idx, myVar) = table(newVals);
+        levelMap.(myVar)(newLevel) = string(level);
     end
 end
 
@@ -1083,6 +1104,7 @@ else
 end
 
 %% Ordering
+
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
     xOrder1 = getListOrder(options.xOrder, members);
 elseif isfield(options, 'xOrder1') && ~isempty(options.xOrder1)
@@ -1121,6 +1143,42 @@ if ~isempty(xOrder3)
 end
 if ~isempty(xOrder4)
     rows = rows(xOrder4);
+end
+
+%% Level renaming
+
+if isfield(options, 'xLevels') && ~isempty(options.xLevels)
+    xLevels1 = getList(options.xLevels);
+elseif isfield(options, 'xLevels1') && ~isempty(options.xLevels1)
+    xLevels1 = getList(options.xLevels1);
+elseif members ~= ""
+    xLevels1 = cellfun(@(x_) levelMap.(memberVar)(x_), members, 'un', 0);
+else
+    xLevels1 = [];
+end
+
+if isfield(options, 'xLevels2') && ~isempty(options.xLevels2)
+    xLevels2 = getList(options.xLevels2);
+elseif groups ~= ""
+    xLevels2 = cellfun(@(x_) levelMap.(groupVar)(x_), groups, 'un', 0);
+else
+    xLevels2 = [];
+end
+
+if isfield(options, 'xLevels3') && ~isempty(options.xLevels3)
+    xLevels3 = getList(options.xLevels3);
+elseif cols ~= ""
+    xLevels3 = cellfun(@(x_) levelMap.(colVar)(x_), cols, 'un', 0);
+else
+    xLevels3 = [];
+end
+
+if isfield(options, 'xLevels4') && ~isempty(options.xLevels4)
+    xLevels4 = getList(options.xLevels4);
+elseif rows ~= ""
+    xLevels4 = cellfun(@(x_) levelMap.(rowVar)(x_), rows, 'un', 0);
+else
+    xLevels4 = [];
 end
 
 %% Apply data transformation, if given
@@ -1216,7 +1274,7 @@ nPreObs = size(Data, 1);
 outlierLevel = nFactors;
 if ~strcmp(outlierRemoval, 'none')
 
-    idxOut = false(size(Data, 1), 1);    
+    idxOut = false(size(Data, 1), 1);
 
     for iVar = 1:nY
 
@@ -1480,7 +1538,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                     myRandomIntercept = sprintf('(1|%s:%s)', subject, trial);
                 else
                     myRandomIntercept = sprintf('(1|%s)', subject);
-                end                
+                end
                 myRandomEffects = '';
             end
         else
@@ -1646,7 +1704,8 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
     figWidth = nPanelCols * panelWidth;
     figHeight = nPanelRows * panelHeight;
     figName = 'Diagnostics';
-    fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+    fig = figure('Name', figName);
+    fig.Position(3:4) = [figWidth, figHeight];
 
     if nY > 1 && ~multiVariate
         if strcmp(depVar, yVal)
@@ -1873,6 +1932,7 @@ for iLevel = 1:nPosthocLevels
 
     % define posthoc comparison pairs
     pairs = nchoosek(members, 2);
+    displayPairs = nchoosek(xLevels1, 2);
     nPairs = size(pairs, 1);
 
     % create arrays for the estimated marginal means and confidence intervals
@@ -1995,36 +2055,36 @@ for iLevel = 1:nPosthocLevels
                         % 4th x, if given
                         if nRows > 1
                             row = rows(iRow);
+                            rowDisp = xLevels4{iRow};
                             idxDesc = idxDesc & Data.(rowVar) == row;
                             idxEmm = idxEmm & (emm.table.(rowVar) == row);
-                            % remove prefix added further above
-                            statsRow.(rowVarDisp) = string(regexprep(row, '^[^_]*_', ''));
+                            statsRow.(rowVarDisp) = string(rowDisp);
                         end
 
                         % 3rd x, if given
                         if nCols > 1
                             col = cols(iCol);
+                            colDisp = xLevels3{iCol};
                             idxDesc = idxDesc & Data.(colVar) == col;
                             idxEmm = idxEmm & (emm.table.(colVar) == col);
-                            % remove prefix added further above
-                            statsRow.(colVarDisp) = string(regexprep(col, '^[^_]*_', ''));
+                            statsRow.(colVarDisp) = string(colDisp);
                         end
 
                         % 2nd x, if given
                         if nGroups > 1
                             group = groups(iGroup);
+                            groupDisp = xLevels2{iGroup};
                             idxDesc = idxDesc & (Data.(groupVar) == group);
                             idxEmm = idxEmm & (emm.table.(groupVar) == group);
-                            % remove prefix added further above
-                            statsRow.(groupVarDisp) = string(regexprep(group, '^[^_]*_', ''));
+                            statsRow.(groupVarDisp) = string(groupDisp);
                         end
 
                         % 1st x
                         member = members(iMember);
+                        memberDisp = xLevels1{iMember};
                         idxDescMember = idxDesc & (Data.(memberVar) == member);
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
-                        % remove prefix added further above
-                        statsRow.(memberVarDisp) = string(regexprep(member, '^[^_]*_', ''));
+                        statsRow.(memberVarDisp) = string(memberDisp);
 
                         emMean = mean(emm.table.Estimated_Marginal_Mean(idxEmmMember));
                         statsRow.emMean = backFcn(mdl.Link.Inverse(emMean));
@@ -2216,7 +2276,7 @@ for iLevel = 1:nPosthocLevels
             % add table to results
             results.(myVar).(tableName) = StatsTable;
             % save table to file
-            if isSave                
+            if isSave
                 saveTable(StatsTable, tableName, {'xlsx'}, outSubDir);
             end
         end
@@ -2280,7 +2340,7 @@ for iLevel = 1:nPosthocLevels
         end
 
         % statistical correction of main posthoc p-Values
-        if posthocMain && nGroups * nRows * nCols * nPairs > 1            
+        if posthocMain && nGroups * nRows * nCols * nPairs > 1
             if multiVariate
                 myMain_p = main_p;
                 myMain_pCorr = myMain_p; % create array of corrected p-values
@@ -2351,7 +2411,8 @@ for iLevel = 1:nPosthocLevels
             else
                 figName = 'DataPlots';
             end
-            fig = figure('Name', figName, 'Position', [0, 0, figWidth, figHeight]);
+            fig = figure('Name', figName);            
+
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
                 if isempty(plotTitle)
@@ -2369,13 +2430,13 @@ for iLevel = 1:nPosthocLevels
 
             % prepare to display variable names and levels
             displayMemberVar = memberVarDisp;
-            displayMembers = regexprep(members, '^[^_]*_', ''); % remove prefix added further above
+            displayMembers = xLevels1;
             displayGroupVar = groupVarDisp;
-            displayGroups = regexprep(groups, '^[^_]*_', ''); % remove prefix added further above
+            displayGroups = xLevels2;
             displayColVar = colVarDisp;
-            displayCols = regexprep(cols, '^[^_]*_', ''); % remove prefix added further above
+            displayCols = xLevels3;
             displayRowVar = rowVarDisp;
-            displayRows = regexprep(rows, '^[^_]*_', ''); % remove prefix added further above
+            displayRows = xLevels4;
             % capitalize names and/or levels, if needed
             if contains(showVarNames, 'Names')
                 displayMemberVar = string(capitalize(memberVarDisp));
@@ -2389,7 +2450,7 @@ for iLevel = 1:nPosthocLevels
                 displayCols = string(strsplit(capitalize(strjoin(cellstr(displayCols), ', '), 'all'), ', '));
                 displayRows = string(strsplit(capitalize(strjoin(cellstr(displayRows), ', '), 'all'), ', '));
             end
-            
+
             % plot grouped data
             for iRow = 1:nRows
 
@@ -2473,7 +2534,7 @@ for iLevel = 1:nPosthocLevels
             if rescale
                 axs = findall(gcf, 'type', 'axes', '-not', 'Tag', 'legend', '-not', 'Tag', 'Colorbar');
                 % Keep only axes that contain plotted objects
-                axs = axs(~arrayfun(@(a) isempty(get(a, 'Children')), axs)); 
+                axs = axs(~arrayfun(@(a) isempty(get(a, 'Children')), axs));
                 ylimits = NaN(length(axs), 2);
                 for iAx = 1:length(axs)
                     if ~isempty(axs(iAx).XAxis.TickValues)
@@ -2486,6 +2547,8 @@ for iLevel = 1:nPosthocLevels
                     set(axs(iAx), 'ylim', maxYlimits);
                 end
             end
+
+            fig.Position(3:4) = [figWidth, figHeight];
 
             % save figure
             if isSave
@@ -2519,8 +2582,8 @@ for iLevel = 1:nPosthocLevels
                     tableRow.(groupVar) = "any";
                 end
 
-                tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
-                tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+                tableRow.([memberVar, '_1']) = string(displayPairs(iPair, 1));
+                tableRow.([memberVar, '_2']) = string(displayPairs(iPair, 2));
                 tableRow.emmCI_1 = string(sprintf('%.2f (%.2f, %.2f)', main_emm_1(iPair, iRow, iCol, iVar), main_CI95low_1(iPair, iRow, iCol, iVar), main_CI95up_1(iPair, iRow, iCol, iVar)));
                 tableRow.emmCI_2 = string(sprintf('%.2f (%.2f, %.2f)', main_emm_2(iPair, iRow, iCol, iVar), main_CI95low_2(iPair, iRow, iCol, iVar), main_CI95up_2(iPair, iRow, iCol, iVar)));
                 % tableRow.emm_1 = main_emm_1(iPair, iRow, iCol, iVar);
@@ -2532,7 +2595,7 @@ for iLevel = 1:nPosthocLevels
                 tableRow.p = main_p(iPair, iRow, iCol, iVar);
                 tableRow.pCorr = main_pCorr(iPair, iRow, iCol, iVar);
                 tableRow.diff = main_diff(iPair, iRow, iCol, iVar);
-                tableRow.diffpct = main_diffpct(iPair, iRow, iCol, iVar);                
+                tableRow.diffpct = main_diffpct(iPair, iRow, iCol, iVar);
                 switch posthocMethod
                     case 'ttest'
                         tableRow.t = main_test(iPair, iRow, iCol, iVar);
@@ -2578,11 +2641,8 @@ for iLevel = 1:nPosthocLevels
                             tableRow.(groupVar) = string(regexprep(groups(iGroup), '^[^_]*_', ''));
                         end
 
-                        % remove prefix added further above
-                        pairs = string(regexprep(pairs, '^[^_]*_', ''));
-
-                        tableRow.([memberVar, '_1']) = string(pairs(iPair, 1));
-                        tableRow.([memberVar, '_2']) = string(pairs(iPair, 2));
+                        tableRow.([memberVar, '_1']) = string(displayPairs(iPair, 1));
+                        tableRow.([memberVar, '_2']) = string(displayPairs(iPair, 2));
                         tableRow.emmCI_1 = string(sprintf('%.2f (%.2f, %.2f)', bar_emm_1(iGroup, iPair, iRow, iCol, iVar), bar_CI95low_1(iGroup, iPair, iRow, iCol, iVar), bar_CI95up_1(iGroup, iPair, iRow, iCol, iVar)));
                         tableRow.emmCI_2 = string(sprintf('%.2f (%.2f, %.2f)', bar_emm_2(iGroup, iPair, iRow, iCol, iVar), bar_CI95low_2(iGroup, iPair, iRow, iCol, iVar), bar_CI95up_2(iGroup, iPair, iRow, iCol, iVar)));
                         % tableRow.emm_1 = bar_emm_1(iGroup, iPair, iRow, iCol, iVar);
@@ -2633,7 +2693,7 @@ for iLevel = 1:nPosthocLevels
         results.(myVar).(tableName) = posthocTable;
 
         % save table
-        if isSave            
+        if isSave
             saveTable(posthocTable, tableName, {'xlsx'}, outSubDir);
         end
     end
@@ -2675,35 +2735,6 @@ else % bool or whatever
 end
 end
 
-function output = makeStringsUniqueByAvoidingSubstrings(input)
-% makeStringsUniqueByAvoidingSubstrings ensures that no string in the input
-% cell array is a substring of any other by appending underscores.
-%
-% Input:  input  - cell array of character vectors or strings
-% Output: output - modified cell array where no entry is a substring of another
-
-    output = input(:); % Ensure column vector
-    n = numel(output);
-    changed = true;
-
-    while changed
-        changed = false;
-        for i = 1:n
-            for j = 1:n
-                if i == j
-                    continue;
-                end
-                % Check if output{i} is a substring of output{j}
-                if contains(output{j}, output{i})
-                    % Modify output{i} to break the substring condition
-                    output{i} = [output{i} '_'];
-                    changed = true;
-                end
-            end
-        end
-    end
-end
-
 function newOrder = getListOrder(orderStr, list)
 
 if isnumeric(orderStr)
@@ -2726,3 +2757,33 @@ end
 newOrder = cell2mat(newOrder);
 
 end
+
+function output = makeStringsUniqueByAvoidingSubstrings(input)
+% makeStringsUniqueByAvoidingSubstrings ensures that no string in the input
+% cell array is a substring of any other by appending underscores.
+%
+% Input:  input  - cell array of character vectors or strings
+% Output: output - modified cell array where no entry is a substring of another
+
+output = input(:); % Ensure column vector
+n = numel(output);
+changed = true;
+
+while changed
+    changed = false;
+    for i = 1:n
+        for j = 1:n
+            if i == j
+                continue;
+            end
+            % Check if output{i} is a substring of output{j}
+            if contains(output{j}, output{i})
+                % Modify output{i} to break the substring condition
+                output{i} = [output{i} '_'];
+                changed = true;
+            end
+        end
+    end
+end
+end
+
