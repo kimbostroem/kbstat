@@ -22,7 +22,7 @@ for i = 1:length(fileTypes)
     fileType = fileTypes{i};
     switch lower(fileType)
         case {'fig', '.fig'}
-            savefig(fig, sprintf('%s.fig', filePath), 'compact');
+            savefig(fig, sprintf('%s.fig', filePath));
         case {'png', '.png'}
             print(fig, sprintf('%s', filePath), '-dpng', sprintf('-r%.0f', printResolution));
         case {'pdf', '.pdf'}
