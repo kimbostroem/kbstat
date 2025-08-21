@@ -1084,47 +1084,27 @@ end
 
 %% Ordering
 if isfield(options, 'xOrder') && ~isempty(options.xOrder)
-    if isnumeric(options.xOrder)
-        xOrder1 = getValue(options.xOrder);
-    else
-        [~,xOrder1] = arrayfun(@(s) find(contains(members,s),1), string(options.xOrder)); 
-    end
+    xOrder1 = getListOrder(options.xOrder, members);
 elseif isfield(options, 'xOrder1') && ~isempty(options.xOrder1)
-    if isnumeric(options.xOrder1)
-        xOrder1 = getValue(options.xOrder1);
-    else
-        xOrder1 = arrayfun(@(s) find(contains(members,s),1), string(options.xOrder1));
-    end
+    xOrder1 = getListOrder(options.xOrder1, members);
 else
     xOrder1 = [];
 end
 
 if isfield(options, 'xOrder2') && ~isempty(options.xOrder2)
-    if isnumeric(options.xOrder2)
-        xOrder2 = getValue(options.xOrder2);
-    else
-        xOrder2 = arrayfun(@(s) find(contains(groups,s),1), string(options.xOrder2));
-    end
+    xOrder2 = getListOrder(options.xOrder2, groups);
 else
     xOrder2 = [];
 end
 
 if isfield(options, 'xOrder3') && ~isempty(options.xOrder3)
-    if isnumeric(options.xOrder3)
-        xOrder3 = getValue(options.xOrder3);
-    else
-        xOrder3 = arrayfun(@(s) find(contains(cols,s),1), string(options.xOrder3));
-    end
+    xOrder3 = getListOrder(options.xOrder3, cols);
 else
     xOrder3 = [];
 end
 
 if isfield(options, 'xOrder4') && ~isempty(options.xOrder44)
-    if isnumeric(options.xOrder4)
-        xOrder4 = getValue(options.xOrder44);
-    else
-        xOrder4 = arrayfun(@(s) find(contains(rows,s),1), string(options.xOrder4));
-    end
+    xOrder4 = getListOrder(options.xOrder4, rows);
 else
     xOrder4 = [];
 end
@@ -2722,4 +2702,27 @@ function output = makeStringsUniqueByAvoidingSubstrings(input)
             end
         end
     end
+end
+
+function newOrder = getListOrder(orderStr, list)
+
+if isnumeric(orderStr)
+    newOrder = getValue(orderStr);
+else
+    [numValue, isnum] = str2num(orderStr);
+    if isnum
+        newOrder = getValue(numValue);
+    else
+        newOrder = arrayfun(@(s) find(contains(list,s),1), string(strtrim(strsplit(orderStr, ','))), 'un', 0);
+    end
+end
+
+isFailed = any(cell2mat(cellfun(@isempty, newOrder, 'un', 0)));
+
+if isFailed
+    error('Cannot reorder list [%s] using the string ''%s''', strjoin(list, ', '), orderStr);
+end
+
+newOrder = cell2mat(newOrder);
+
 end
