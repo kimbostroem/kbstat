@@ -1151,7 +1151,7 @@ if isfield(options, 'xLevels') && ~isempty(options.xLevels)
     xLevels1 = getList(options.xLevels);
 elseif isfield(options, 'xLevels1') && ~isempty(options.xLevels1)
     xLevels1 = getList(options.xLevels1);
-elseif members ~= ""
+elseif memberVar ~= "none"
     xLevels1 = cellfun(@(x_) levelMap.(memberVar)(x_), members, 'un', 0);
 else
     xLevels1 = [];
@@ -1159,7 +1159,7 @@ end
 
 if isfield(options, 'xLevels2') && ~isempty(options.xLevels2)
     xLevels2 = getList(options.xLevels2);
-elseif groups ~= ""
+elseif groupVar ~= "none"
     xLevels2 = cellfun(@(x_) levelMap.(groupVar)(x_), groups, 'un', 0);
 else
     xLevels2 = [];
@@ -1167,7 +1167,7 @@ end
 
 if isfield(options, 'xLevels3') && ~isempty(options.xLevels3)
     xLevels3 = getList(options.xLevels3);
-elseif cols ~= ""
+elseif colVar ~= "none"
     xLevels3 = cellfun(@(x_) levelMap.(colVar)(x_), cols, 'un', 0);
 else
     xLevels3 = [];
@@ -1175,7 +1175,7 @@ end
 
 if isfield(options, 'xLevels4') && ~isempty(options.xLevels4)
     xLevels4 = getList(options.xLevels4);
-elseif rows ~= ""
+elseif rowVar ~= "none"
     xLevels4 = cellfun(@(x_) levelMap.(rowVar)(x_), rows, 'un', 0);
 else
     xLevels4 = [];
@@ -2411,7 +2411,8 @@ for iLevel = 1:nPosthocLevels
             else
                 figName = 'DataPlots';
             end
-            fig = figure('Name', figName);            
+            fig = figure('Name', figName);
+            fig.Position(3:4) = [figWidth, figHeight];
 
             layout = tiledlayout(nRows, nCols);
             if nY > 1 && ~multiVariate
@@ -2547,8 +2548,6 @@ for iLevel = 1:nPosthocLevels
                     set(axs(iAx), 'ylim', maxYlimits);
                 end
             end
-
-            fig.Position(3:4) = [figWidth, figHeight];
 
             % save figure
             if isSave
