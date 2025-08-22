@@ -2431,13 +2431,13 @@ for iLevel = 1:nPosthocLevels
 
             % prepare to display variable names and levels
             displayMemberVar = memberVarDisp;
-            displayMembers = xLevels1;
+            displayMembers = string(xLevels1);
             displayGroupVar = groupVarDisp;
-            displayGroups = xLevels2;
+            displayGroups = string(xLevels2);
             displayColVar = colVarDisp;
-            displayCols = xLevels3;
+            displayCols = string(xLevels3);
             displayRowVar = rowVarDisp;
-            displayRows = xLevels4;
+            displayRows = string(xLevels4);
             % capitalize names and/or levels, if needed
             if contains(showVarNames, 'Names')
                 displayMemberVar = string(capitalize(memberVarDisp));
