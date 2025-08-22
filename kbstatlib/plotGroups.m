@@ -54,8 +54,8 @@ end
 
 members = string(members);
 groups = string(groups);
-nMembers = length(members);
-nGroups = length(groups);
+nMembers = max([1, length(members)]);
+nGroups = max([1, length(groups)]);
 
 if isempty(markerSize) || isnan(markerSize)
     msize = @(x) max([2,24 - 1.5*floor(x/10)]);
@@ -216,7 +216,7 @@ for iGroup = 1:nGroups
     end
 
     % xaxis labeling
-    if ~isempty(groupName)
+    if strlength(groupName) > 0 && ~strcmp(groupName, 'none')
         title(groups(iGroup), 'interpreter', 'none');
     end
     xticklabels(sortedMembers);
