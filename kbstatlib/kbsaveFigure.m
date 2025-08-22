@@ -1,20 +1,18 @@
-function kbsaveFigure(fig, filePath, fileTypes, width, height)
+function kbsaveFigure(fig, filePath, fileTypes, figWidth, figHeight)
 
 [fdir, fname, ~] = fileparts(filePath);
 filePath = fullfile(fdir, fname);
 fileTypes = cellstr(fileTypes); % ensure cell array
 figPos = get(fig, 'Position');
 if nargin < 4
-    width = figPos(3);
-    height = figPos(4);
+    figWidth = figPos(3);
+    figHeight = figPos(4);
 end
 
-% scrsz = get(0, 'ScreenSize');
-set(fig, 'Position', [1, 1, width, height]);
-% set(fig, 'Position', [figPos(1), figPos(2), width, height]);
+fig.Position(3:4) = [figWidth, figHeight];
 set(fig, 'PaperPositionMode', 'auto');
 set(fig, 'PaperUnits', 'points');
-set(fig, 'PaperSize', [width height]);
+set(fig, 'PaperSize', [figWidth figHeight]);
 set(fig, 'renderer', 'painters');
 printResolution = 300; % 72 = monitor resolution; 300 = printer resolution
 
