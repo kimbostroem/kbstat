@@ -90,21 +90,21 @@ function results = kbstat(options)
 %                       options.xOrder3 = {'Level2', 'Level1', 'Level3'};
 %                       options.xOrder4 = 'Level2, Level1, Level3';
 %
-%       xLevelss         Display names of the levels of the 1st x-variable, replacing its level names
+%       xLevels         Display names of the levels of the 1st x-variable, replacing its level names
 %                       as they are currently displayed, i.e. after potential re-ordering them using
 %                       the xOrder commands.
 %                       OPTIONAL, default = [].
 %                       Example:
-%                       options.xLevelss = 'LevelBla, LevelBlo, LevelBli';
-%                       options.xLevelss = {'LevelBla', 'LevelBlo', 'LevelBli'};
+%                       options.xLevels = 'LevelBla, LevelBlo, LevelBli';
+%                       options.xLevels = {'LevelBla', 'LevelBlo', 'LevelBli'};
 %
-%       xLevelss<n>      Display names of the levels of the n-th x-variable, replacing its level names
+%       xLevels<n>      Display names of the levels of the n-th x-variable, replacing its level names
 %                       as they are currently displayed, i.e. after potential re-ordering them using
 %                       the xOrder commands.
 %                       OPTIONAL, default = [].
 %                       Example:
-%                       options.xLevelss1 = 'LevelBla, LevelBlo, LevelBli';
-%                       options.xLevelss2 = {'LevelBlubb', 'LevelBlobb', 'LevelBlibb'};
+%                       options.xLevels1 = 'LevelBla, LevelBlo, LevelBli';
+%                       options.xLevels2 = {'LevelBlubb', 'LevelBlobb', 'LevelBlibb'};
 %
 %       subject         Name of the subject variable.
 %                       OPTIONAL, default = ''.
