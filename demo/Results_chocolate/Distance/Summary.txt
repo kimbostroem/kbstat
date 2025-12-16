@@ -20,11 +20,11 @@ Model fit statistics:
     -3151.3    -3126.1    1581.6           -3163.3 
 
 Fixed effects coefficients (95% CIs):
-    Name                                Estimate       SE            tStat      DF     pValue        Lower          Upper      
-    {'(Intercept)'             }             1.9542     0.0031876     613.07    490             0          1.948         1.9605
-    {'Chocolate_no'            }         0.00012833    6.4093e-05     2.0023    490      0.045806     2.4005e-06     0.00025426
-    {'Gender_male'             }           0.098035     0.0031876     30.755    490    1.779e-116       0.091772         0.1043
-    {'Chocolate_no:Gender_male'}        -0.00075535    6.4093e-05    -11.785    490     2.129e-28    -0.00088129    -0.00062942
+    Name                                      Estimate       SE            tStat      DF     pValue        Lower          Upper      
+    {'(Intercept)'                   }             1.9542     0.0031876     613.07    490             0          1.948         1.9605
+    {'Chocolate_a1_no'               }         0.00012833    6.4093e-05     2.0023    490      0.045806     2.4005e-06     0.00025426
+    {'Gender_b2_male'                }           0.098035     0.0031876     30.755    490    1.779e-116       0.091772         0.1043
+    {'Chocolate_a1_no:Gender_b2_male'}        -0.00075535    6.4093e-05    -11.785    490    2.1289e-28    -0.00088129    -0.00062942
 
 Random effects covariance parameters:
 Group: Subject (247 Levels)

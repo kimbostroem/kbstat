@@ -54,6 +54,7 @@ options.link = 'log'; % Link function of GLM
 options.fitMethod = 'MPL'; % Fitting method of GLM
 options.outlierMethod = 'quartiles'; % Remove outliers using this method 
 options.showVarNames = 'Names_and_levels'; % Display names and levels, capitalize first letter of names
+options.connectPoints = true; % Plot a connection line between data points for each subject
 
 %% Alternative 1: Explicitly define variable types
 % Define model variables and their roles explicitly
