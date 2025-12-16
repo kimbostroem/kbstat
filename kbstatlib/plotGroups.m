@@ -1,49 +1,55 @@
-function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize, Outliers)
+function plotGroups(values, members, groups, memberName, groupName, bar_pCorr, plotTitle, ylabelStr, plotStyle, parent, showVarNames, markerSize, barType, barCenter, barBottom, barTop, plotLines, sortValues, groupSize, Outliers, connectPoints)
 
-if nargin<20
+nArgs = 21;
+
+if nargin < nArgs
+    connectPoints = false;
+end
+
+if nargin < nArgs-1
     Outliers = [];
 end
 
-if nargin < 19
+if nargin < nArgs-2
     groupSize = [];
 end
 
-if nargin < 18
+if nargin < nArgs-3
     sortValues = '';
 end
 
-if nargin < 17
+if nargin < nArgs-4
     plotLines = false;
 end
 
-if nargin < 16
+if nargin < nArgs-5
     barBottom = [];
 end
 
-if nargin < 15
+if nargin < nArgs-6
     barTop = [];
 end
 
-if nargin < 14
+if nargin < nArgs-7
     barCenter = [];
 end
 
-if nargin < 13
+if nargin < nArgs-8
     barType = 'median';
 end
 
-if nargin < 12
+if nargin < nArgs-9
     markerSize = [];
 end
 
-if nargin < 11
+if nargin < nArgs-10
     showVarNames = 1;
 end
-if nargin < 10
+if nargin < nArgs-11
     parent = [];
 end
 
-if nargin < 9
+if nargin < nArgs-12
     plotStyle = 'violin';
 end
 
@@ -123,15 +129,24 @@ for iGroup = 1:nGroups
             sortedMembers = members;
             sortedColors = colors;
             % do nothing
-    end    
+    end
 
     switch plotStyle
 
         case 'violin'
+
+            % data to be plotted
+            xyData = squeeze(values(iGroup,:,:))';
+
+            dataStyle = 'scatter';
+            if markerSize == 0
+                dataStyle = 'none';
+            end
+
             switch barType
 
                 case {'auto', 'custom'}                    
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowBox', false, 'ShowMedian', false);
+                    violinAxes = violinplot(xyData, [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowBox', false, 'ShowMedian', false, 'DataStyle', dataStyle);
 
                     % plot bar inside violins
                     hold on
@@ -144,15 +159,32 @@ for iGroup = 1:nGroups
                     end
 
                 case 'mean'
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowMean', true);
+                    violinAxes = violinplot(xyData, [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors, 'ShowMean', true);
 
                 otherwise
-                    violinplot(squeeze(values(iGroup,:,:))', [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
+                    violinAxes = violinplot(xyData, [], 'MedianMarkerSize', 48, 'BoxColor', 0.2*[1 1 1], 'MarkerSize', markerSize, 'ViolinColor', sortedColors);
+            end
+
+            if connectPoints && markerSize > 0
+                violins = {violinAxes.ScatterPlot};
+                nViolins = length(violins);
+                for iViolin = 1:nViolins-1
+                    nLines = length(violins{iViolin}.XData);
+                    for iLine = 1:nLines
+                        xData = [violins{iViolin}.XData(iLine), violins{iViolin+1}.XData(iLine)];
+                        yData = [violins{iViolin}.YData(iLine), violins{iViolin+1}.YData(iLine)];
+                        plot(xData, yData, 'Color', [0 0 0 0.2])
+                    end
+                end
             end
 
         case 'boxplot'
+
+            % data to be plotted
+            xyData = squeeze(values(iGroup,:,:))';
+            
             % do not plot outliers here, as they are plotted separately later. Whiskers extend to the entire range
-            boxplot(squeeze(values(iGroup,:,:))', 'Colors', sortedColors, 'Symbol', '', 'Whisker', Inf);
+            boxplot(xyData, 'Colors', sortedColors, 'Symbol', '', 'Whisker', Inf);
 
         case 'boxchart'
             hold on

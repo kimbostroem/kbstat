@@ -4,7 +4,7 @@ Formula:
 Generalized linear mixed-effects model fit by PL
 
 Model information:
-    Number of observations             529
+    Number of observations             540
     Fixed effects coefficients           6
     Random effects coefficients        120
     Covariance parameters               11
@@ -17,33 +17,33 @@ Formula:
 
 Model fit statistics:
     AIC        BIC        LogLikelihood    Deviance
-    -648.95    -576.34    341.47           -682.95 
+    -559.34    -486.38    296.67           -593.34 
 
 Fixed effects coefficients (95% CIs):
-    Name                     Estimate      SE           tStat       DF     pValue        Lower         Upper      
-    {'(Intercept)'  }            1.7622    0.0058977       298.8    523             0        1.7506         1.7738
-    {'A_a1_1'       }         -0.012479     0.006072     -2.0552    523      0.040353     -0.024408    -0.00055083
-    {'B_b1_1'       }         -0.041186      0.01017     -4.0498    523    5.9025e-05     -0.061165      -0.021207
-    {'B_b2_2'       }         -0.011128    0.0088892     -1.2519    523       0.21117     -0.028591      0.0063347
-    {'A_a1_1:B_b1_1'}        -0.0050805    0.0075527    -0.67267    523       0.50146     -0.019918      0.0097569
-    {'A_a1_1:B_b2_2'}         0.0060128    0.0076072     0.79042    523       0.42964    -0.0089315       0.020957
+    Name                     Estimate       SE           tStat       DF     pValue       Lower         Upper     
+    {'(Intercept)'  }             1.7538    0.0063403      276.62    534            0        1.7414        1.7663
+    {'A_a1_1'       }          -0.016434    0.0067095     -2.4493    534     0.014632     -0.029614    -0.0032536
+    {'B_b1_1'       }           -0.03255     0.010118      -3.217    534    0.0013739     -0.052427     -0.012674
+    {'B_b2_2'       }          -0.014481    0.0093025     -1.5567    534      0.12014     -0.032755     0.0037932
+    {'A_a1_1:B_b1_1'}        -0.00099321    0.0082967    -0.11971    534      0.90476     -0.017291      0.015305
+    {'A_a1_1:B_b2_2'}          0.0075999    0.0082967     0.91601    534      0.36007    -0.0086983      0.023898
 
 Random effects covariance parameters:
 Group: id (30 Levels)
     Name1                  Name2                  Type            Estimate
-    {'(Intercept)'}        {'(Intercept)'}        {'std' }        0.013367
-    {'A_a1_1'     }        {'(Intercept)'}        {'corr'}         0.38713
-    {'B_b1_1'     }        {'(Intercept)'}        {'corr'}         0.93782
-    {'B_b2_2'     }        {'(Intercept)'}        {'corr'}        -0.76624
-    {'A_a1_1'     }        {'A_a1_1'     }        {'std' }        0.015535
-    {'B_b1_1'     }        {'A_a1_1'     }        {'corr'}         0.68312
-    {'B_b2_2'     }        {'A_a1_1'     }        {'corr'}        -0.88909
-    {'B_b1_1'     }        {'B_b1_1'     }        {'std' }        0.037301
-    {'B_b2_2'     }        {'B_b1_1'     }        {'corr'}        -0.94164
-    {'B_b2_2'     }        {'B_b2_2'     }        {'std' }        0.025191
+    {'(Intercept)'}        {'(Intercept)'}        {'std' }         0.01317
+    {'A_a1_1'     }        {'(Intercept)'}        {'corr'}         0.70753
+    {'B_b1_1'     }        {'(Intercept)'}        {'corr'}         0.87981
+    {'B_b2_2'     }        {'(Intercept)'}        {'corr'}        -0.96826
+    {'A_a1_1'     }        {'A_a1_1'     }        {'std' }        0.017832
+    {'B_b1_1'     }        {'A_a1_1'     }        {'corr'}         0.28658
+    {'B_b2_2'     }        {'A_a1_1'     }        {'corr'}         -0.8617
+    {'B_b1_1'     }        {'B_b1_1'     }        {'std' }        0.031722
+    {'B_b2_2'     }        {'B_b1_1'     }        {'corr'}        -0.73309
+    {'B_b2_2'     }        {'B_b2_2'     }        {'std' }        0.023044
 
 Group: Error
     Name                        Estimate
-    {'sqrt(Dispersion)'}        0.12344 
+    {'sqrt(Dispersion)'}        0.13633 
 Performing post-hoc comparison using method 'emm'
 Data have been transformed using f(x) = log(1+Y_)

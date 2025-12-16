@@ -52,7 +52,7 @@ options = struct; % Init empty structure
 options.inFile = 'reaction_time.csv'; % Relative path to input file in long format as CSV table
 topOutDir = 'Results_rt'; % Relative path to output folder containing both analysis methods
 options.fitMethod = 'MPL'; % Fitting method of GLM
-options.outlierMethod = 'quartiles'; % Remove outliers using this method
+options.outlierMethod = 'none'; % Remove outliers using this method
 options.showVarNames = 'Names_and_levels'; % Display names and levels, capitalize first letter of names
 options.posthocLevel = 2; % Post-hoc comparison between the levels of both factors
 

@@ -368,6 +368,8 @@ function results = kbstat(options)
 %
 %       plotLines       Flag if the data plots should display the median as
 %                       a horizontal line in the color of the corresponding dataset.
+%       connectPoints   Flag if corresponding data points between groups in violin plots should 
+%                       be connected by a line. This only works for paired data!
 %
 %       plotOutliers    Flag if outliers should be included in the data plots. This overrides the
 %                       default behavior, which is plotOutliers=true for plotStyle='boxplot' and
@@ -886,6 +888,12 @@ if isfield(options, 'plotLines') && ~isempty(options.plotLines)
     plotLines = getValue(options.plotLines);
 else
     plotLines = false;
+end
+
+if isfield(options, 'connectPoints') && ~isempty(options.connectPoints)
+    connectPoints = getValue(options.connectPoints);
+else
+    connectPoints = false;
 end
 
 if isfield(options, 'plotGroupSize') && ~isempty(options.plotGroupSize)
@@ -1932,7 +1940,29 @@ for iLevel = 1:nPosthocLevels
 
     % define posthoc comparison pairs
     pairs = nchoosek(members, 2);
-    displayPairs = nchoosek(xLevels1, 2);
+    switch iLevel
+        case 1
+            memberLevels = xLevels1;
+            groupLevels = xLevels2;
+            colLevels = xLevels3;
+            rowLevels = xLevels4;
+        case 2
+            memberLevels = xLevels2;
+            groupLevels = xLevels1;
+            colLevels = xLevels3;
+            rowLevels = xLevels4;
+        case 3
+            memberLevels = xLevels3;
+            groupLevels = xLevels2;
+            colLevels = xLevels1;
+            rowLevels = xLevels4;
+        case 4
+            memberLevels = xLevels4;
+            groupLevels = xLevels2;
+            colLevels = xLevels3;
+            rowLevels = xLevels1;
+    end
+    displayPairs = nchoosek(memberLevels, 2);
     nPairs = size(pairs, 1);
 
     % create arrays for the estimated marginal means and confidence intervals
@@ -2055,7 +2085,7 @@ for iLevel = 1:nPosthocLevels
                         % 4th x, if given
                         if nRows > 1
                             row = rows(iRow);
-                            rowDisp = xLevels4{iRow};
+                            rowDisp = rowLevels{iRow};
                             idxDesc = idxDesc & Data.(rowVar) == row;
                             idxEmm = idxEmm & (emm.table.(rowVar) == row);
                             statsRow.(rowVarDisp) = string(rowDisp);
@@ -2064,7 +2094,7 @@ for iLevel = 1:nPosthocLevels
                         % 3rd x, if given
                         if nCols > 1
                             col = cols(iCol);
-                            colDisp = xLevels3{iCol};
+                            colDisp = colLevels{iCol};
                             idxDesc = idxDesc & Data.(colVar) == col;
                             idxEmm = idxEmm & (emm.table.(colVar) == col);
                             statsRow.(colVarDisp) = string(colDisp);
@@ -2073,7 +2103,7 @@ for iLevel = 1:nPosthocLevels
                         % 2nd x, if given
                         if nGroups > 1
                             group = groups(iGroup);
-                            groupDisp = xLevels2{iGroup};
+                            groupDisp = groupLevels{iGroup};
                             idxDesc = idxDesc & (Data.(groupVar) == group);
                             idxEmm = idxEmm & (emm.table.(groupVar) == group);
                             statsRow.(groupVarDisp) = string(groupDisp);
@@ -2081,7 +2111,7 @@ for iLevel = 1:nPosthocLevels
 
                         % 1st x
                         member = members(iMember);
-                        memberDisp = xLevels1{iMember};
+                        memberDisp = memberLevels{iMember};
                         idxDescMember = idxDesc & (Data.(memberVar) == member);
                         idxEmmMember = idxEmm & (emm.table.(memberVar) == member);
                         statsRow.(memberVarDisp) = string(memberDisp);
@@ -2431,13 +2461,13 @@ for iLevel = 1:nPosthocLevels
 
             % prepare to display variable names and levels
             displayMemberVar = memberVarDisp;
-            displayMembers = string(xLevels1);
+            displayMembers = string(memberLevels);
             displayGroupVar = groupVarDisp;
-            displayGroups = string(xLevels2);
+            displayGroups = string(groupLevels);
             displayColVar = colVarDisp;
-            displayCols = string(xLevels3);
+            displayCols = string(colLevels);
             displayRowVar = rowVarDisp;
-            displayRows = string(xLevels4);
+            displayRows = string(rowLevels);
             % capitalize names and/or levels, if needed
             if contains(showVarNames, 'Names')
                 displayMemberVar = string(capitalize(memberVarDisp));
@@ -2527,7 +2557,7 @@ for iLevel = 1:nPosthocLevels
                     if ~plotOutliers
                         myOutliers = [];
                     end
-                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize, myOutliers);
+                    plotGroups(myDataPoints, displayMembers, displayGroups, displayMemberVar, displayGroupVar, bar_pCorr(:, :, iRow, iCol, iVar), panelTitle, yLabelStr, plotStyle, panel, showVarNames, markerSize, myBarType, myBarCenter, myBarBottom, myBarTop, plotLines, sortValues, groupSize, myOutliers, connectPoints);
                 end
             end
 

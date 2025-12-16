@@ -1,3 +1,4 @@
+options.connectPoints = "true";
 options.distribution = "gamma";
 options.fitMethod = "MPL";
 options.formula = "Distance ~ Chocolate*Gender + (1|Subject)";
