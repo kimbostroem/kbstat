@@ -40,4 +40,4 @@ and the diagnostic plot
 
 When using this script in your publications, cite it using the following APA citation or its equivalent:
 
-Bostroem, K. J. (2024). kbstat (Version 1.1.4) [Computer software]. https://github.com/kimbostroem/kbstat
+Bostroem, K. J. (2024). kbstat (Version 1.1.5) [Computer software]. https://github.com/kimbostroem/kbstat

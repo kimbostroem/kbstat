@@ -1,5 +1,15 @@
 
 # Changes
+## [1.1.5] - 2025-12-16
+### Features
+
+- New option 'connectPoints' to draw a line between associated data points in the violin plots. This only works when the group sizes are equal, and it should only be applied when the data points in the group actually correspond, i.e. for paired data.
+- Added possibility to not plot the data points by setting 'markerSize' to zero.
+
+### Bugs
+
+- When posthocLevel > 1, data groups were wrongly labeled, and an error would be thrown when the number of levels would not be equal.
+
 ## [1.1.4] - 2025-06-12
 
 ### Features
