@@ -2777,14 +2777,6 @@ else
     end
 end
 
-isFailed = any(cell2mat(cellfun(@isempty, newOrder, 'un', 0)));
-
-if isFailed
-    error('Cannot reorder list [%s] using the string ''%s''', strjoin(list, ', '), orderStr);
-end
-
-newOrder = cell2mat(newOrder);
-
 end
 
 function output = makeStringsUniqueByAvoidingSubstrings(input)
