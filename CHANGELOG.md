@@ -1,5 +1,12 @@
 
 # Changes
+
+## [1.1.6] - 2026-02-02
+
+### Bugs
+
+- When options.xOrder or options.xOrder<n> were provided, kbstat would exit with an error.
+
 ## [1.1.5] - 2025-12-16
 ### Features
 
