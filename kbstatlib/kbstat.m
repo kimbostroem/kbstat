@@ -2773,7 +2773,7 @@ else
     if isnum
         newOrder = getValue(numValue);
     else
-        newOrder = arrayfun(@(s) find(contains(list,s),1), string(strtrim(strsplit(orderStr, ','))), 'un', 0);
+        newOrder = cell2mat(arrayfun(@(s) find(contains(list,s),1), string(strtrim(strsplit(orderStr, ','))), 'un', 0));
     end
 end
 
