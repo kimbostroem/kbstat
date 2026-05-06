@@ -541,8 +541,10 @@ if isfield(options, 'interact') && ~isempty(options.interact) % option provided 
     x = union(x, interact, 'stable'); % add interaction variables to independent variables
 elseif isfield(options, 'interact') && isempty(options.interact) % option provided as empty
     interact = {};
-else % option not provided
+elseif numel(x) > 1 % option not provided and more than 1 factor given
     interact = x;
+else
+    interact = {};
 end
 
 % covariates
@@ -1538,9 +1540,9 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
                     % compose random effects string
                     myRandomEffects = strjoin(myRandomEffectTerms, ' + ');
                 end
-            elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no interaction-effect variables and no covariates
-                myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, subject), randomSlopes, 'UniformOutput', false), ' + ');
-                myRandomEffects = '';
+            % elseif ~isRandomSlopes && ~isempty(union(interact, covariate)) % no interaction-effect variables and no covariates
+            %     myRandomIntercept = strjoin(cellfun(@(x) sprintf('(1|%s:%s)', x, subject), randomSlopes, 'UniformOutput', false), ' + ');
+            %     myRandomEffects = '';
             else
                 if ~isempty(trial)
                     myRandomIntercept = sprintf('(1|%s:%s)', subject, trial);
@@ -2807,4 +2809,3 @@ while changed
     end
 end
 end
-
