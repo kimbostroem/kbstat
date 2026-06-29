@@ -106,6 +106,19 @@ function results = kbstat(options)
 %                       options.xLevels1 = 'LevelBla, LevelBlo, LevelBli';
 %                       options.xLevels2 = {'LevelBlubb', 'LevelBlobb', 'LevelBlibb'};
 %
+%       rename          Rename variables (for display) and/or factor levels (in the data). Entries
+%                       are separated by ';' and come in two forms:
+%                         'orig -> Display'       Variable rename: sets the label shown in plots and
+%                                                 tables. The data column keeps its original name, so
+%                                                 the model fit is unaffected (equivalent to setting
+%                                                 'xName' / 'yLabel' for that variable).
+%                         'Var: old -> new, ...'  Level rename: relabels the level values of factor
+%                                                 'Var' in the data, so all downstream labels and
+%                                                 ordering follow.
+%                       OPTIONAL, default = ''.
+%                       Example:
+%                       options.rename = 'len -> ToothLength; supp -> Supplement; supp: OJ -> orange_juice, VC -> vitamin_c';
+%
 %       subject         Name of the subject variable.
 %                       OPTIONAL, default = ''.
 %
@@ -862,16 +875,62 @@ else
     showVarNames = 'levels';
 end
 
+%% Parse and apply the 'rename' option
+% Entries are separated by ';' and come in two forms:
+%   'orig -> Display'        Variable rename: sets the display label shown in plots
+%                            and tables. The data column keeps its original name, so
+%                            the model fit is unaffected.
+%   'Var: old -> new, ...'   Level rename: relabels the factor level values in the
+%                            data itself, so all downstream labels and ordering follow.
+renameDisplay = containers.Map('KeyType', 'char', 'ValueType', 'char'); % orig name -> display name
+if isfield(options, 'rename') && ~isempty(options.rename)
+    renameParts = strsplit(options.rename, ';');
+    for iPart = 1:numel(renameParts)
+        part = strtrim(renameParts{iPart});
+        if isempty(part)
+            continue
+        end
+        if contains(part, ':') % level rename for one variable
+            colonSplit = strsplit(part, ':');
+            renameVar = strtrim(colonSplit{1});
+            pairList = strsplit(strjoin(colonSplit(2:end), ':'), ',');
+            if ismember(renameVar, Data2.Properties.VariableNames)
+                colVals = string(Data2.(renameVar));
+                for iPair = 1:numel(pairList)
+                    if contains(pairList{iPair}, '->')
+                        ab = strsplit(pairList{iPair}, '->');
+                        colVals(colVals == strtrim(ab{1})) = strtrim(ab{2});
+                    end
+                end
+                Data2.(renameVar) = colVals;
+            end
+        elseif contains(part, '->') % variable display rename
+            ab = strsplit(part, '->');
+            renameDisplay(strtrim(ab{1})) = strtrim(ab{2});
+        end
+    end
+end
+
 if isfield(options, 'xName') && ~isempty(options.xName)
     xName = getList(options.xName);
 else
     xName = cellstr(x);
+    for iName = 1:numel(xName) % apply variable renames as display names
+        if isKey(renameDisplay, xName{iName})
+            xName{iName} = renameDisplay(xName{iName});
+        end
+    end
 end
 
 if isfield(options, 'yLabel') && ~isempty(options.yLabel)
     yLabel = getList(options.yLabel);
 else
     yLabel = cellstr(y);
+    for iName = 1:numel(yLabel) % apply variable renames as display names
+        if isKey(renameDisplay, yLabel{iName})
+            yLabel{iName} = renameDisplay(yLabel{iName});
+        end
+    end
 end
 
 if isfield(options, 'yUnits')

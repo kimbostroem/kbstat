@@ -1,6 +1,22 @@
 
 # Changes
 
+## [1.2.0] - 2026-06-29
+
+### Features
+
+- New option 'rename' to relabel variables for display ('orig -> Display') and/or rename factor levels in the data ('Var: old -> new, ...') in a single string.
+- Replaced the chocolate/reaction-time demos with a systematic demo set (demo_01 ... demo_12) ported from kbstatpy, each on a classic R dataset and illustrating one concept (t-tests, LMM, random slopes, transforms, gamma/binomial GLMM, partial interaction, outliers, multiple dependent variables). Added run_demos.m to run them all.
+
+### Changes
+
+- Pre- and post-fit outliers are now set to NaN in place instead of removing their rows. This keeps each data point's position in the data array fixed (which encodes its identity), and is statistically equivalent because the model fit ignores NaN responses.
+- Demo output is no longer tracked in the repository (gitignored under demo/results/).
+
+### Bugs
+
+- connectPoints in the violin plots now works with unbalanced data (unequal group sizes, e.g. after outlier removal), pairing points by their data slot instead of over-indexing.
+
 ## [1.1.6] - 2026-02-02
 
 ### Bugs
