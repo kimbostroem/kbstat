@@ -1377,10 +1377,14 @@ if ~strcmp(outlierRemoval, 'none')
         end
     end
 
-    % remove pre-fit outliers
+    % remove pre-fit outliers by setting their response to NaN, keeping the
+    % rows. This keeps every data point's position in the data array fixed,
+    % which encodes its identity (subject, trial, ...) via the array layout.
+    % The model fit ignores NaN responses, and all downstream code is NaN-aware,
+    % so this is statistically equivalent to deleting the rows.
     nPreOutliers = sum(idxOut);
     if nPreOutliers > 0
-        Data = Data(~idxOut, :);
+        Data.(transVar)(idxOut) = NaN;
     end
 end
 
@@ -1633,13 +1637,16 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
         fprintf(msg);
         fprintf(fidSummary, msg);
         if nPostOutliers > 0
-            % remove outliers from Data
-            Data(postOutliers, :) = [];
-            % remove outliers from DataOrig
+            % postOutliers is indexed over the observations actually used in
+            % the fit (rows with NaN response are excluded). Map it back to
+            % table rows via the model's observation subset, and set those
+            % responses to NaN, keeping the rows (see pre-fit removal above).
+            usedRows = find(mdl.ObservationInfo.Subset);
+            Data.(transVar)(usedRows(postOutliers)) = NaN;
+            % mirror into DataOrig for the separate-univariate case
             if nY > 1 && ~multiVariate
-                idxTmp = false(size(DataOrig, 1), 1);
-                idxTmp(idxDesc) =  postOutliers;
-                DataOrig(idxTmp, :) = [];
+                descRows = find(idxDesc);
+                DataOrig.(transVar)(descRows(usedRows(postOutliers))) = NaN;
             end
             msg = sprintf('Re-fitting model...');
             fprintf(msg);
@@ -1823,7 +1830,7 @@ for iFit = 1:nFits % if multiVariate, this loop is left after the 1st iteration
 
     % if separate multi, restore Data and formula
     if nY > 1 && ~multiVariate
-        Data = DataOrig; % set Data to original Data minus post-fit outliers
+        Data = DataOrig; % restore Data (with pre-/post-fit outliers set to NaN)
         formula = formulaOrig;
     end
 

@@ -168,11 +168,30 @@ for iGroup = 1:nGroups
             if connectPoints && markerSize > 0
                 violins = {violinAxes.ScatterPlot};
                 nViolins = length(violins);
+                % Map each violin's scatter points back to their original data
+                % slot (3rd dim of 'values'). violinplot drops NaN values but
+                % preserves order, so the p-th scatter point corresponds to the
+                % p-th non-NaN entry of the original data column. Connecting
+                % points that share the same slot keeps pairs aligned and works
+                % regardless of what the slot represents (subjects, trials, ...).
+                % It also tolerates unbalanced data (e.g. removed outliers or
+                % missing values), where violins hold different point counts.
+                slotOfPoint = cell(nViolins, 1);
+                for iViolin = 1:nViolins
+                    slotOfPoint{iViolin} = find(~isnan(squeeze(values(iGroup, iViolin, :))));
+                end
                 for iViolin = 1:nViolins-1
-                    nLines = length(violins{iViolin}.XData);
-                    for iLine = 1:nLines
-                        xData = [violins{iViolin}.XData(iLine), violins{iViolin+1}.XData(iLine)];
-                        yData = [violins{iViolin}.YData(iLine), violins{iViolin+1}.YData(iLine)];
+                    scatter1 = violins{iViolin};
+                    scatter2 = violins{iViolin+1};
+                    % a violin with fewer than 2 points has no ScatterPlot
+                    if isempty(scatter1) || isempty(scatter2)
+                        continue
+                    end
+                    % slots present (non-NaN) in both adjacent violins
+                    [~, p1, p2] = intersect(slotOfPoint{iViolin}, slotOfPoint{iViolin+1});
+                    for iShared = 1:numel(p1)
+                        xData = [scatter1.XData(p1(iShared)), scatter2.XData(p2(iShared))];
+                        yData = [scatter1.YData(p1(iShared)), scatter2.YData(p2(iShared))];
                         plot(xData, yData, 'Color', [0 0 0 0.2])
                     end
                 end
