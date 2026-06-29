@@ -10,6 +10,7 @@
 
 ### Changes
 
+- The default for 'isRandomSlopes' changed from true to false. The default mixed model now estimates random intercepts only; request random slopes explicitly with isRandomSlopes = true.
 - Pre- and post-fit outliers are now set to NaN in place instead of removing their rows. This keeps each data point's position in the data array fixed (which encodes its identity), and is statistically equivalent because the model fit ignores NaN responses.
 - Demo output is no longer tracked in the repository (gitignored under demo/results/).
 

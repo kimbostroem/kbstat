@@ -164,7 +164,7 @@ function results = kbstat(options)
 %                       OPTIONAL, default = false.
 %
 %       isRandomSlopes  Flag if random slopes should be estimated.
-%                       OPTIONAL, default = true.
+%                       OPTIONAL, default = false.
 %
 %       isRandomInteract Flag if the slopes of the interactions should also
 %                       be estimated. If isRandomSlopes = false, this parameter is ignored.
@@ -580,7 +580,7 @@ end
 if isfield(options, 'isRandomSlopes') && ~isempty(options.isRandomSlopes)
     isRandomSlopes = getValue(options.isRandomSlopes);
 else
-    isRandomSlopes = true;
+    isRandomSlopes = false;
 end
 
 % isRandomInteract
